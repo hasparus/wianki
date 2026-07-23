@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, worker]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run test:worker
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+          SUPABASE_SECRET_KEY: sb_secret_ci_placeholder
+          APP_ORIGIN: http://localhost:3000
+          NEXT_PUBLIC_APP_ORIGIN: http://localhost:3000
+          GUEST_ENTRY_TOKEN: ci_guest_entry_token_32_bytes_minimum
+          GUEST_ACCESS_PASSPHRASE: ci-long-invitation-passphrase
+          GUEST_SESSION_SECRET: ci_guest_session_secret_32_bytes_min
+          ADMIN_ENTRY_TOKEN: ci_admin_entry_token_32_bytes_minimum
+          ADMIN_SESSION_SECRET: ci_admin_session_secret_32_bytes_min
+          ARCHIVE_WORKER_URL: https://archive.example.workers.dev
+          NEXT_PUBLIC_ARCHIVE_WORKER_URL: https://archive.example.workers.dev
+          ARCHIVE_TOKEN_SECRET: ci_archive_token_secret_32_bytes_min
+          GOOGLE_CLOUD_PROJECT_ID: ci-project
+          GOOGLE_VISION_CLIENT_EMAIL: vision@example.iam.gserviceaccount.com
+          GOOGLE_VISION_PRIVATE_KEY: placeholder-key-not-used-during-build
+          DELETION_CONTACT_EMAIL: couple@example.com
+          CONSENT_VERSION: ci

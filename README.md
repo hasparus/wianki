@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wedding Photo Gallery
 
-## Getting Started
+Private, mobile-first wedding gallery for guests. The application keeps a small
+web derivative in private Supabase Storage, archives each original in Google
+Drive through a streaming Cloudflare Worker, and sends the derivative through
+Google Vision SafeSearch before publication.
 
-First, run the development server:
+The UI and operational documentation are Polish-first. Technical documentation
+is written in English so implementation agents can share precise contracts.
 
-```bash
+## Local prerequisites
+
+- Node.js 24
+- npm
+- Docker Desktop for local Supabase
+- Supabase CLI (`npx supabase`)
+- Cloudflare account and Wrangler for the archive Worker
+- Google Cloud project with Drive and Vision APIs
+
+Copy `.env.example` to `.env.local` and replace every placeholder. Never commit
+`.env.local`, `.dev.vars`, files under `private/`, or `oauth-output/`.
+
+```powershell
+npm install
+npx supabase start
+npx supabase db reset
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Quality checks:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```powershell
+npm run check
+npm run test:e2e
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Integration order
 
-## Learn More
+1. Create an EU Supabase project and link it with `npx supabase link`.
+2. Apply `npx supabase db push`; confirm the `gallery` bucket is private.
+3. Add the project URL, publishable key, and secret key to Vercel.
+4. Create a Google Cloud project with billing; enable Drive API and Vision API.
+5. Create a Vision-only service account and copy its project ID, email, and
+   private key into Vercel secrets.
+6. Create a Google OAuth desktop client with the `drive.file` scope. Set
+   `GOOGLE_DRIVE_OAUTH_CLIENT_ID` and `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET`, then
+   run `npm run drive:bootstrap`. Move the OAuth consent app to Production;
+   Testing refresh tokens expire after seven days.
+7. Copy the generated values from ignored `oauth-output/drive-oauth.json` into
+   Cloudflare secrets:
 
-To learn more about Next.js, take a look at the following resources:
+   ```powershell
+   cd workers/drive-archive
+   npx wrangler secret put GOOGLE_OAUTH_CLIENT_ID
+   npx wrangler secret put GOOGLE_OAUTH_CLIENT_SECRET
+   npx wrangler secret put GOOGLE_OAUTH_REFRESH_TOKEN
+   npx wrangler secret put GOOGLE_DRIVE_FOLDER_ID
+   npx wrangler secret put ARCHIVE_TOKEN_SECRET
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+8. Set `ALLOWED_ORIGIN` in `wrangler.jsonc`, deploy the Worker, then configure
+   both server and public Worker URLs in Vercel.
+9. Attach `wesele.weuniok.com` to Vercel and use the DNS record Vercel provides.
+10. Set the production origin, deletion-contact email, and three independent
+    random secrets for guest entry/session and admin entry/session.
+11. Generate private QR files with `npm run qr:generate`. Print the guest QR;
+    protect the admin QR like a shared administrator password.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+See [integration setup](docs/integrations.md) and the
+[event runbook](docs/operations.md) before production deployment.
 
-## Deploy on Vercel
+## Architecture map
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `proxy.ts`: token exchange, clean redirects, optimistic route checks.
+- `app/api/uploads`: capability issuance and verified finalization.
+- `app/api/gallery`: protected approved-photo pagination and statistics.
+- `app/api/admin`: moderation, reconciliation, and deletion operations.
+- `workers/drive-archive`: streaming original upload and Drive lifecycle.
+- `supabase/migrations`: tables, enums, indexes, RLS, and private bucket.
+- `docs/tasks`: dependency-ordered briefs for planning/implementation agents.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Recovery
+
+- Lost guest QR: rotate `GUEST_ENTRY_TOKEN` and regenerate/print the code.
+- Lost admin QR: rotate both `ADMIN_ENTRY_TOKEN` and
+  `ADMIN_SESSION_SECRET`; all existing admin cookies then stop working.
+- Invalid Drive refresh token: rerun `npm run drive:bootstrap` and replace the
+  Worker secret.
+- Supabase/Drive partial upload: use “Znajdź w Drive” from `/admin`.
+- Partial deletion: the admin queue retains the error and permits retry.

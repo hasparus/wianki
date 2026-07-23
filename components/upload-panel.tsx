@@ -184,7 +184,6 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
           headers: {
             Authorization: `Bearer ${init.archiveToken}`,
             "Content-Type": file.type,
-            "Content-Length": String(file.size),
           },
           body: file,
         },
