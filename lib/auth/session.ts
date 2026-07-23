@@ -100,7 +100,7 @@ export async function requireAdmin() {
 
 export const guestCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: true,
   sameSite: "lax" as const,
   path: "/",
   maxAge: 60 * 60 * 24 * 7,
@@ -108,7 +108,7 @@ export const guestCookieOptions = {
 
 export const adminCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: true,
   sameSite: "strict" as const,
   path: "/",
   maxAge: 60 * 60 * 12,

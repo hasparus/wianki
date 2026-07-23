@@ -30,10 +30,18 @@ Input: derivative dimensions/type/size, optional archive receipt, and optional
 archive error. The handler verifies ownership, downloads the private derivative,
 verifies its size and receipt, runs moderation, and returns the three outcomes.
 
+### `POST /api/uploads/:photoId/archive`
+
+`action=token` issues a fresh archive-only capability for a failed Drive upload.
+`action=complete` verifies the new Worker receipt and updates only archive state.
+This lets the same open browser retry its original without duplicating the hot
+photo row.
+
 ### `GET /api/gallery`
 
-Optional ISO timestamp cursor. Returns at most 25 approved items, one-hour signed
-read URLs, the next cursor, and approved-photo/approximate-guest statistics.
+Optional opaque cursor containing the last timestamp/UUID pair. Returns at most
+25 approved items, one-hour signed read URLs, the next cursor, and
+approved-photo/approximate-guest statistics.
 
 ## Worker API
 

@@ -60,7 +60,7 @@ npm run test:e2e
 
 8. Set `ALLOWED_ORIGIN` in `wrangler.jsonc`, deploy the Worker, then configure
    both server and public Worker URLs in Vercel.
-9. Attach `wesele.weuniok.com` to Vercel and use the DNS record Vercel provides.
+9. Attach `wedding.pawel.space` to Vercel and use the DNS record Vercel provides.
 10. Set the production origin, deletion-contact email, and three independent
     random secrets for guest entry/session and admin entry/session.
 11. Generate private QR files with `npm run qr:generate`. Print the guest QR;

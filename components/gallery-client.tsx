@@ -18,7 +18,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
   const [cursor, setCursor] = useState(initial.nextCursor);
   const [selected, setSelected] = useState<GalleryItem | null>(null);
   const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initial.error ?? "");
 
   useEffect(() => {
     if (!selected) return;

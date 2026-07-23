@@ -4,7 +4,7 @@ import {
   createArchiveToken,
   verifyArchiveReceipt,
 } from "@/lib/archive-token";
-import { GALLERY_BUCKET } from "@/lib/domain";
+import { GALLERY_BUCKET, type ArchiveStatus } from "@/lib/domain";
 import { serverEnv } from "@/lib/env";
 import { assertSameOrigin, jsonError, noStoreJson } from "@/lib/http";
 import { moderateImage } from "@/lib/moderation";
@@ -141,7 +141,9 @@ export async function DELETE(
     .remove([photo.storage_path]);
   if (storageError) errors.push("Nie usunięto kopii galeryjnej.");
 
-  let archiveStatus = photo.drive_file_id ? "deletion_error" : "failed";
+  let archiveStatus: ArchiveStatus = photo.drive_file_id
+    ? "deletion_error"
+    : "failed";
   if (photo.drive_file_id) {
     const token = await createArchiveToken({
       photoId,

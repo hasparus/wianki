@@ -32,7 +32,7 @@ export function isBrowserOriginAllowed(origin: string | null, allowed: string) {
   return origin === allowed;
 }
 
-function corsHeaders(origin: string | null, env: Env) {
+function corsHeaders(origin: string | null, env: Env): Record<string, string> {
   return isBrowserOriginAllowed(origin, env.ALLOWED_ORIGIN)
     ? {
         "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN,

@@ -45,11 +45,10 @@ async function googleAccessToken() {
 }
 
 export async function moderateImage(image: Blob) {
-  const env = serverEnv();
   const accessToken = await googleAccessToken();
   const content = Buffer.from(await image.arrayBuffer()).toString("base64");
   const response = await fetch(
-    `https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(env.GOOGLE_CLOUD_PROJECT_ID)}`,
+    "https://vision.googleapis.com/v1/images:annotate",
     {
       method: "POST",
       headers: {

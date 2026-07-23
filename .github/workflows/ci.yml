@@ -43,3 +43,16 @@ jobs:
           GOOGLE_VISION_PRIVATE_KEY: placeholder-key-not-used-during-build
           DELETION_CONTACT_EMAIL: couple@example.com
           CONSENT_VERSION: ci
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:e2e

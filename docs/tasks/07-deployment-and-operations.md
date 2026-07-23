@@ -6,7 +6,7 @@ Turn the integrated application into a rehearsed, recoverable event service.
 
 ## Fixed decisions
 
-Private GitHub repository; Vercel app; `wesele.weuniok.com`; Supabase Pro for
+Private GitHub repository; Vercel app; `wedding.pawel.space`; Supabase Pro for
 event month; Cloudflare Worker; Production OAuth consent; locally generated QR;
 manual retention.
 

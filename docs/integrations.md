@@ -27,6 +27,6 @@ from `workers/drive-archive`.
 ## Vercel and DNS
 
 Import the private GitHub repository, configure every `.env.example` value in
-the correct environment, and attach `wesele.weuniok.com`. Use Vercel's requested
+the correct environment, and attach `wedding.pawel.space`. Use Vercel's requested
 DNS record; this does not alter the root portfolio site. Preview deployments
 should use separate entry tokens and must not point at the production Worker.

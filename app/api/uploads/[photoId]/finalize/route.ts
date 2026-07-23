@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { readGuestSession } from "@/lib/auth/session";
 import { verifyArchiveReceipt } from "@/lib/archive-token";
-import { GALLERY_BUCKET, MAX_DERIVATIVE_BYTES } from "@/lib/domain";
+import {
+  GALLERY_BUCKET,
+  MAX_DERIVATIVE_BYTES,
+  type ArchiveStatus,
+  type ModerationStatus,
+} from "@/lib/domain";
 import { assertSameOrigin, jsonError, noStoreJson } from "@/lib/http";
 import { moderateImage } from "@/lib/moderation";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -51,7 +56,7 @@ export async function POST(
   }
 
   let driveFileId: string | null = null;
-  let archiveStatus = "failed";
+  let archiveStatus: ArchiveStatus = "failed";
   let archiveError = parsed.data.archiveError ?? null;
   if (parsed.data.archiveReceipt) {
     try {
@@ -71,7 +76,7 @@ export async function POST(
     }
   }
 
-  let moderationStatus = "review_required";
+  let moderationStatus: ModerationStatus = "review_required";
   let moderationScores: Record<string, string | undefined> | null = null;
   let moderationError: string | null = null;
   try {

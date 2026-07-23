@@ -14,6 +14,31 @@ type GalleryRow = {
   created_at: string;
 };
 
+type GalleryCursor = { createdAt: string; id: string };
+
+export function encodeGalleryCursor(cursor: GalleryCursor) {
+  return Buffer.from(JSON.stringify(cursor)).toString("base64url");
+}
+
+export function decodeGalleryCursor(value: string): GalleryCursor | null {
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8"),
+    ) as Partial<GalleryCursor>;
+    if (
+      typeof parsed.createdAt !== "string" ||
+      !Number.isFinite(Date.parse(parsed.createdAt)) ||
+      typeof parsed.id !== "string" ||
+      !/^[0-9a-f-]{36}$/i.test(parsed.id)
+    ) {
+      return null;
+    }
+    return { createdAt: parsed.createdAt, id: parsed.id };
+  } catch {
+    return null;
+  }
+}
+
 export async function getGalleryPage(cursor?: string | null) {
   const supabase = supabaseAdmin();
   let query = supabase
@@ -22,8 +47,15 @@ export async function getGalleryPage(cursor?: string | null) {
     .eq("hot_status", "uploaded")
     .eq("moderation_status", "approved")
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(GALLERY_PAGE_SIZE + 1);
-  if (cursor) query = query.lt("created_at", cursor);
+  if (cursor) {
+    const decoded = decodeGalleryCursor(cursor);
+    if (!decoded) throw new Error("Nieprawidłowy kursor galerii.");
+    query = query.or(
+      `created_at.lt.${decoded.createdAt},and(created_at.eq.${decoded.createdAt},id.lt.${decoded.id})`,
+    );
+  }
   const { data, error } = await query;
   if (error) throw error;
   const rows = (data ?? []) as GalleryRow[];
@@ -46,7 +78,13 @@ export async function getGalleryPage(cursor?: string | null) {
   );
   return {
     items: signed,
-    nextCursor: hasMore ? visible.at(-1)?.createdAt ?? null : null,
+    nextCursor:
+      hasMore && visible.length
+        ? encodeGalleryCursor({
+            createdAt: visible.at(-1)!.created_at,
+            id: visible.at(-1)!.id,
+          })
+        : null,
   };
 }
 

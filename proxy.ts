@@ -6,6 +6,7 @@ import {
   adminCookieOptions,
   createAdminSession,
   createGuestSession,
+  guestCookieOptions,
 } from "@/lib/auth/session";
 import { secretMatches } from "@/lib/auth/secrets";
 import { serverEnv } from "@/lib/env";

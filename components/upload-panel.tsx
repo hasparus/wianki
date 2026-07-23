@@ -16,6 +16,7 @@ type UploadPhase =
   | "compressing"
   | "uploading"
   | "moderating"
+  | "archive_failed"
   | "done"
   | "failed";
 
@@ -23,6 +24,7 @@ type UploadItem = {
   file: File;
   phase: UploadPhase;
   message: string;
+  photoId?: string;
 };
 
 type InitUpload = {
@@ -91,6 +93,7 @@ function phaseLabel(phase: UploadPhase) {
     compressing: "Przygotowujemy kopię",
     uploading: "Wysyłamy",
     moderating: "Sprawdzamy",
+    archive_failed: "Oryginał wymaga ponowienia",
     done: "Gotowe",
     failed: "Wymaga ponowienia",
   }[phase];
@@ -168,7 +171,7 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
   async function processOne(index: number, init: InitUpload) {
     const file = items[index].file;
     try {
-      update(index, { phase: "compressing", message: "" });
+      update(index, { phase: "compressing", message: "", photoId: init.photoId });
       const { compressed, width, height } = await compress(file);
       update(index, { phase: "uploading" });
       const hotPromise = supabaseBrowser().storage
@@ -217,11 +220,17 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
         moderationStatus?: ModerationStatus;
       };
       if (!finalize.ok) throw new Error(result.error ?? "Finalizacja nie powiodła się.");
+      if (result.warning) {
+        update(index, {
+          phase: "archive_failed",
+          message: "Kopia galeryjna dotarła. Kliknij ponownie, aby dosłać oryginał.",
+        });
+        return false;
+      }
       update(index, {
         phase: "done",
-        message: result.warning
-          ? "Kopia galeryjna dotarła; oryginał wymaga naszej kontroli."
-          : result.moderationStatus === "approved"
+        message:
+          result.moderationStatus === "approved"
             ? "Zdjęcie jest gotowe do pokazania."
             : "Zdjęcie czeka na naszą kontrolę.",
       });
@@ -235,47 +244,122 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
     }
   }
 
+  async function retryArchive(index: number) {
+    const item = items[index];
+    if (!item.photoId) return false;
+    try {
+      update(index, { phase: "uploading", message: "Ponawiamy wysyłkę oryginału." });
+      const tokenResponse = await fetch(`/api/uploads/${item.photoId}/archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "token" }),
+      });
+      const tokenBody = (await tokenResponse.json()) as {
+        archiveToken?: string;
+        alreadyComplete?: boolean;
+        error?: string;
+      };
+      if (tokenBody.alreadyComplete) {
+        update(index, { phase: "done", message: "Oryginał jest już w archiwum." });
+        return true;
+      }
+      if (!tokenResponse.ok || !tokenBody.archiveToken) {
+        throw new Error(tokenBody.error ?? "Nie udało się odnowić wysyłki.");
+      }
+      const archiveResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_ARCHIVE_WORKER_URL ?? ""}/v1/archive/${item.photoId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${tokenBody.archiveToken}`,
+            "Content-Type": item.file.type,
+          },
+          body: item.file,
+        },
+      );
+      const archive = (await archiveResponse.json()) as {
+        receipt?: string;
+        error?: string;
+      };
+      if (!archiveResponse.ok || !archive.receipt) {
+        throw new Error(archive.error ?? "Drive nie przyjął oryginału.");
+      }
+      const complete = await fetch(`/api/uploads/${item.photoId}/archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "complete", receipt: archive.receipt }),
+      });
+      const completeBody = (await complete.json()) as { error?: string };
+      if (!complete.ok) {
+        throw new Error(completeBody.error ?? "Nie zapisano potwierdzenia.");
+      }
+      update(index, { phase: "done", message: "Oryginał bezpiecznie dotarł." });
+      return true;
+    } catch (error) {
+      update(index, {
+        phase: "archive_failed",
+        message: error instanceof Error ? error.message : "Nie udało się ponowić.",
+      });
+      return false;
+    }
+  }
+
   async function upload() {
     if (!consent || !items.length || busy) return;
     setBusy(true);
     setSummary("");
     try {
-      const response = await fetch("/api/uploads/init", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          consent: true,
-          files: items.map(({ file }) => ({
-            name: file.name,
-            type: file.type,
-            size: file.size,
-          })),
-        }),
-      });
-      const initialized = (await response.json()) as {
-        error?: string;
-        uploads?: InitUpload[];
-      };
-      if (!response.ok || !initialized.uploads) {
-        throw new Error(initialized.error ?? "Nie udało się rozpocząć.");
+      const retryIndices = items
+        .map((item, index) => (item.phase === "archive_failed" ? index : -1))
+        .filter((index) => index >= 0);
+      const freshIndices = items
+        .map((item, index) =>
+          item.phase === "queued" || item.phase === "failed" ? index : -1,
+        )
+        .filter((index) => index >= 0);
+      let freshUploads: InitUpload[] = [];
+      if (freshIndices.length) {
+        const response = await fetch("/api/uploads/init", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            consent: true,
+            files: freshIndices.map((index) => {
+              const file = items[index].file;
+              return { name: file.name, type: file.type, size: file.size };
+            }),
+          }),
+        });
+        const initialized = (await response.json()) as {
+          error?: string;
+          uploads?: InitUpload[];
+        };
+        if (!response.ok || !initialized.uploads) {
+          throw new Error(initialized.error ?? "Nie udało się rozpocząć.");
+        }
+        freshUploads = initialized.uploads;
       }
       const results: boolean[] = [];
       let next = 0;
       async function worker() {
-        while (next < initialized.uploads!.length) {
-          const index = next++;
-          results[index] = await processOne(index, initialized.uploads![index]);
+        while (next < freshUploads.length) {
+          const localIndex = next++;
+          results.push(
+            await processOne(freshIndices[localIndex], freshUploads[localIndex]),
+          );
         }
       }
+      const retryResults = await Promise.all(retryIndices.map(retryArchive));
       await Promise.all([worker(), worker()]);
+      results.push(...retryResults);
       const succeeded = results.filter(Boolean).length;
-      if (succeeded === results.length) {
+      if (results.length && succeeded === results.length) {
         setSummary(
           successMessages[Math.floor(Math.random() * successMessages.length)],
         );
         onComplete();
       } else {
-        setSummary(`Dotarło ${succeeded} z ${results.length} zdjęć. Sprawdź błędy poniżej.`);
+        setSummary(`Udało się ${succeeded} z ${results.length} operacji. Sprawdź błędy poniżej.`);
       }
     } catch (error) {
       setSummary(error instanceof Error ? error.message : "Nie udało się wysłać.");
