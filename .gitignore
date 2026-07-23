@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+.dev.vars*
+!.dev.vars.example
 
 # vercel
 .vercel
@@ -39,3 +42,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated framework declarations
+/types/routes.d.ts
+/types/cache-life.d.ts
+
+# local secrets and generated QR codes
+/private/
+/oauth-output/
+
+# Cloudflare
+/.wrangler/
+workers/**/.wrangler/
