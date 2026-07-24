@@ -1,14 +1,15 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import {
 	type GalleryResponse,
 	useGalleryFeed,
 } from "@/components/gallery/gallery-feed";
+import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import { PhotoLightbox } from "@/components/gallery/photo-lightbox";
 import { UploadPanel } from "@/components/upload-panel";
 import type { GalleryItem } from "@/lib/domain";
+import { formatGalleryStats } from "@/lib/i18n";
 
 export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 	const [selected, setSelected] = useState<GalleryItem | null>(null);
@@ -31,8 +32,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 						zobaczcie ten dzień oczami wszystkich gości.
 					</p>
 					<p className="font-bold" aria-live="polite">
-						{stats.contributingGuests} gości dodało już {stats.approvedPhotos}{" "}
-						zdjęć
+						{formatGalleryStats(stats.contributingGuests, stats.approvedPhotos)}
 					</p>
 				</header>
 
