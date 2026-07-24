@@ -377,8 +377,8 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
         Dodaj swoje zdjęcia
       </h2>
       <p className="mt-2 leading-7">
-        Jednorazowo wybierz maksymalnie 10 zdjęć. Oryginały zachowamy, a do
-        galerii przygotujemy lekkie kopie.
+        Jednorazowo wybierz maksymalnie 10 zdjęć. Folder do dysku ze zdjęciami
+        zostanie udostępniony po weselu.
       </p>
       <input
         ref={inputRef}

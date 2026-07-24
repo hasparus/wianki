@@ -77,7 +77,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
             Wspomnienia z naszego dnia
           </p>
           <h1 className="font-serif text-5xl font-bold sm:text-7xl">
-            Nasze wesele
+            Paweł & Magdicia
           </h1>
           <p className="mx-auto max-w-2xl text-lg leading-8">
             Dziękujemy, że świętujecie razem z nami. Dodajcie swoje kadry i
