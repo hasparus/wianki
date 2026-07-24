@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  isBrowserOriginAllowed,
-  sanitizeDriveFilename,
-} from "../src/index";
+import { isBrowserOriginAllowed, sanitizeDriveFilename } from "../src/index";
 
 describe("Drive archive boundary", () => {
   it("sanitizes unsafe Drive filenames", () => {
@@ -14,14 +11,14 @@ describe("Drive archive boundary", () => {
   it("allows only the exact configured browser origin", () => {
     expect(
       isBrowserOriginAllowed(
-        "https://wesele.weuniok.com",
-        "https://wesele.weuniok.com",
+        "https://wedding.pawel.space",
+        "https://wedding.pawel.space",
       ),
     ).toBe(true);
     expect(
       isBrowserOriginAllowed(
         "https://evil.example",
-        "https://wesele.weuniok.com",
+        "https://wedding.pawel.space",
       ),
     ).toBe(false);
   });
