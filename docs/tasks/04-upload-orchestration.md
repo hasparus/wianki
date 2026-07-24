@@ -6,7 +6,7 @@ Give mobile guests a reliable 1–10-photo upload with clear per-file recovery.
 
 ## Fixed decisions
 
-25 MiB originals; 1920px/500 KiB derivative; WebP/JPEG; EXIF stripped; maximum
+25 MiB originals; 1920px/500 KiB derivative; WebP/JPEG/PNG; EXIF stripped; maximum
 two originals in flight; private signed Supabase uploads; Drive and hot paths
 run in parallel; complete-batch success message only.
 

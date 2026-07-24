@@ -65,7 +65,6 @@ export function useUploadBatch(onComplete: () => void) {
 					uploadDerivative(init, derivative),
 					uploadArchive(init.photoId, item.file, init.archiveToken),
 				]);
-				if (hot.error) throw hot.error;
 				updateItem(item.id, { phase: "moderating" });
 				const result = await finalizeUpload(init.photoId, {
 					archiveReceipt: archive.receipt,
@@ -75,6 +74,7 @@ export function useUploadBatch(onComplete: () => void) {
 					width,
 					height,
 				});
+				if (hot.error) throw hot.error;
 				if (result.warning) {
 					updateItem(item.id, {
 						phase: "archive_failed",

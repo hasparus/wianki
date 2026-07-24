@@ -1,13 +1,25 @@
 import "client-only";
 
 import imageCompression from "browser-image-compression";
-import { supabaseBrowser } from "@/lib/supabase/browser";
 import type { FinalizeResult, InitUpload } from "@/components/upload/types";
+import { acceptedDerivativeTypes } from "@/lib/domain";
+import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type ArchiveUploadResult = {
 	receipt: string | null;
 	error: string | null;
 };
+
+async function compressDerivative(file: File) {
+	return imageCompression(file, {
+		maxSizeMB: 0.488,
+		maxWidthOrHeight: 1920,
+		useWebWorker: true,
+		fileType: "image/webp",
+		preserveExif: false,
+		initialQuality: 0.86,
+	});
+}
 
 export async function prepareDerivative(file: File) {
 	if (file.type === "image/heic" || file.type === "image/heif") {
@@ -20,14 +32,16 @@ export async function prepareDerivative(file: File) {
 			);
 		}
 	}
-	const derivative = await imageCompression(file, {
-		maxSizeMB: 0.488,
-		maxWidthOrHeight: 1920,
-		useWebWorker: true,
-		fileType: "image/webp",
-		preserveExif: false,
-		initialQuality: 0.86,
-	});
+	const derivative = await compressDerivative(file);
+	if (
+		!acceptedDerivativeTypes.includes(
+			derivative.type as (typeof acceptedDerivativeTypes)[number],
+		)
+	) {
+		throw new Error(
+			"Ta przeglądarka nie potrafi przygotować zdjęcia jako WebP, JPEG ani PNG.",
+		);
+	}
 	const bitmap = await createImageBitmap(derivative);
 	const dimensions = { width: bitmap.width, height: bitmap.height };
 	bitmap.close();

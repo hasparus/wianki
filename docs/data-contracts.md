@@ -29,6 +29,7 @@ and archive-operation token.
 Input: derivative dimensions/type/size, optional archive receipt, and optional
 archive error. The handler verifies ownership, downloads the private derivative,
 verifies its size and receipt, runs moderation, and returns the three outcomes.
+Canvas-reencoded WebP, JPEG, and PNG derivatives are accepted.
 
 ### `POST /api/uploads/:photoId/archive`
 
