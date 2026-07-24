@@ -1,0 +1,2 @@
+-- Production contains no seeded wedding photos.
+-- Tests create disposable rows and storage objects explicitly.

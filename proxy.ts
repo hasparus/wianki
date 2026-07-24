@@ -1,0 +1,71 @@
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import {
+  ADMIN_COOKIE,
+  GUEST_COOKIE,
+  adminCookieOptions,
+  createAdminSession,
+  createGuestSession,
+  guestCookieOptions,
+} from "@/lib/auth/session";
+import { secretMatches } from "@/lib/auth/secrets";
+import { serverEnv } from "@/lib/env";
+
+export async function proxy(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+  const env = serverEnv();
+
+  if (pathname === "/" && searchParams.has("token")) {
+    const candidate = searchParams.get("token") ?? "";
+    const cleanUrl = request.nextUrl.clone();
+    cleanUrl.searchParams.delete("token");
+    const response = NextResponse.redirect(cleanUrl);
+    if (secretMatches(candidate, env.GUEST_ENTRY_TOKEN)) {
+      response.cookies.set(
+        GUEST_COOKIE,
+        await createGuestSession(),
+        guestCookieOptions,
+      );
+    }
+    return response;
+  }
+
+  if (pathname === "/admin" && searchParams.has("token")) {
+    const candidate = searchParams.get("token") ?? "";
+    const cleanUrl = request.nextUrl.clone();
+    cleanUrl.searchParams.delete("token");
+    const response = NextResponse.redirect(cleanUrl);
+    if (secretMatches(candidate, env.ADMIN_ENTRY_TOKEN)) {
+      response.cookies.set(
+        ADMIN_COOKIE,
+        await createAdminSession(),
+        adminCookieOptions,
+      );
+    }
+    return response;
+  }
+
+  const publicPath =
+    pathname === "/login" ||
+    pathname === "/privacy" ||
+    pathname.startsWith("/api/auth/");
+  if (publicPath) return NextResponse.next();
+
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
+    if (!request.cookies.has(ADMIN_COOKIE)) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (!request.cookies.has(GUEST_COOKIE)) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)",
+  ],
+};

@@ -1,26 +1,75 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --wedding-rose: #f3b0b7;
+  --wedding-rose-soft: #f2aebd;
+  --wedding-green: #2a482f;
+  --wedding-green-soft: #36533a;
+  --wedding-ivory: #fbf6ef;
+  --wedding-cream: #fcf8f2;
+  --wedding-error: #9f2d2d;
+  --wedding-warning: #7a4b00;
+  --wedding-success: #21653a;
+  --wedding-disabled: #74746f;
+  --wedding-overlay: rgb(20 34 23 / 82%);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-wedding-rose: var(--wedding-rose);
+  --color-wedding-rose-soft: var(--wedding-rose-soft);
+  --color-wedding-green: var(--wedding-green);
+  --color-wedding-green-soft: var(--wedding-green-soft);
+  --color-wedding-ivory: var(--wedding-ivory);
+  --color-wedding-cream: var(--wedding-cream);
+  --color-wedding-error: var(--wedding-error);
+  --color-wedding-warning: var(--wedding-warning);
+  --color-wedding-success: var(--wedding-success);
+  --color-wedding-disabled: var(--wedding-disabled);
+  --font-sans: "Aptos", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--wedding-ivory);
+  color: var(--wedding-green);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(circle at 8% 2%, rgb(243 176 183 / 30%), transparent 28rem),
+    linear-gradient(180deg, var(--wedding-ivory), var(--wedding-cream));
+  color: var(--wedding-green);
+  font-family: var(--font-sans);
+}
+
+button,
+a,
+input {
+  outline-color: var(--wedding-green);
+  outline-offset: 3px;
+}
+
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--wedding-rose);
+  color: var(--wedding-green);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
