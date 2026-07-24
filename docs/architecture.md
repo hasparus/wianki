@@ -35,6 +35,8 @@ derivative server-side; no public image URL is given to Google.
   attempts Drive reconciliation by `appProperties.photoId`.
 - Vision failure: `review_required`, hidden, admin may retry or approve.
 - Flagged: hidden until explicit admin decision.
-- Partial delete: retain a tombstone-like row and error for safe retry.
+- Partial delete: retain a tombstone-like row and error for safe retry. Completed
+  deletion also retains the row as an audit tombstone; only the Supabase Storage
+  derivative is removed and the Drive original is moved to trash.
 
 No operation treats a missing external response as success.

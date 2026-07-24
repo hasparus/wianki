@@ -57,10 +57,13 @@ Browser CORS permits only the configured exact application origin.
 
 ## Admin API
 
-`GET /api/admin/photos` returns non-settled moderation/archive items.
+`GET /api/admin/photos` returns every photo state, newest first, with an optional
+opaque cursor for older records. This lets an administrator retract an approved
+photo as well as handle flagged and failed items.
 
 `PATCH /api/admin/photos/:photoId` supports `approve`, `hide`,
 `retry_moderation`, and `reconcile_archive`.
 
 `DELETE /api/admin/photos/:photoId` removes the derivative, trashes the
-original, and records any partial failure.
+original, and records any partial failure. It retains the photo row as an audit
+and retry tombstone instead of deleting it from Postgres.

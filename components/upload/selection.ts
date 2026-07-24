@@ -1,9 +1,9 @@
+import type { UploadFileMetadata } from "@/components/upload/types";
 import {
 	acceptedOriginalTypes,
 	MAX_BATCH_FILES,
 	MAX_ORIGINAL_BYTES,
 } from "@/lib/domain";
-import type { UploadFileMetadata } from "@/components/upload/types";
 
 type SelectionResult<T> =
 	| { valid: true; files: T[] }

@@ -1,6 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 import { randomSuccessMessage } from "@/components/upload/messages";
 import { validateUploadSelection } from "@/components/upload/selection";
+import type {
+	InitUpload,
+	UploadItem,
+	UploadJob,
+} from "@/components/upload/types";
 import {
 	completeArchive,
 	finalizeUpload,
@@ -11,11 +16,6 @@ import {
 	uploadDerivative,
 } from "@/components/upload/upload-client";
 import { runWithConcurrency } from "@/components/upload/upload-queue";
-import type {
-	InitUpload,
-	UploadItem,
-	UploadJob,
-} from "@/components/upload/types";
 
 const ORIGINAL_UPLOAD_CONCURRENCY = 2;
 

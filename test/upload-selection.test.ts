@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MAX_ORIGINAL_BYTES } from "@/lib/domain";
 import { validateUploadSelection } from "@/components/upload/selection";
+import { MAX_ORIGINAL_BYTES } from "@/lib/domain";
 
 const validPhoto = {
 	name: "wesele.jpg",
