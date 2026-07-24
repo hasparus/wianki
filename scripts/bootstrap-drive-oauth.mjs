@@ -2,6 +2,11 @@ import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
+import nextEnv from "@next/env";
+
+const { loadEnvConfig } = nextEnv;
+
+loadEnvConfig(process.cwd());
 
 const clientId = process.env.GOOGLE_DRIVE_OAUTH_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_DRIVE_OAUTH_CLIENT_SECRET;
