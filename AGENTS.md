@@ -1,5 +1,41 @@
 # Wedding Gallery Agent Guide
 
+## Project in one minute
+
+This repository is a private, Polish-first wedding photo gallery. Guests enter
+through a shared QR token or manual invitation passphrase, receive a signed
+guest cookie, accept the privacy notice, and upload photos from their phones.
+There are no named guest accounts and uploads must not be associated with names,
+email addresses, or IP addresses.
+
+For each photo, the browser creates an EXIF-free gallery derivative and uploads
+it directly to the private Supabase `gallery` bucket. The original streams
+through `workers/drive-archive` into the couple's private Google Drive folder.
+Finalization verifies both destinations, then Google Vision SafeSearch checks
+the derivative. Only successfully uploaded, moderation-approved derivatives
+appear in the manually refreshed, newest-first gallery.
+
+Administrators enter through a separate private QR token and 12-hour signed
+cookie. `/admin` exposes moderation and recovery queues plus approve, hide,
+moderation retry, Drive reconciliation, and confirmed deletion actions.
+Deletion can partially fail, so Supabase deletion and Drive trashing remain
+retryable.
+
+The sole canonical production site is `https://wedding.pawel.space`. Do not add
+or restore alternative production domains without an explicit user request.
+
+V1 intentionally excludes videos, comments, likes, facial recognition, named
+accounts, Realtime subscriptions, and background polling. External services are
+Supabase (database and private derivatives), a Cloudflare Worker (streaming
+boundary), Google Drive (private originals), Google Vision (moderation), and
+Vercel (Next.js hosting). Do not assume those services are already configured;
+follow `README.md`, `docs/integrations.md`, and `docs/operations.md`.
+
+Use this summary as the baseline for a new task, then inspect only the relevant
+source files and focused document under `docs/`. `docs/architecture.md` explains
+the full request flow, `docs/data-contracts.md` defines persisted states, and
+`docs/tasks/` contains delegatable workstream briefs.
+
 ## Next.js 16 rule
 
 This is not the Next.js remembered from older training data. Before changing a
