@@ -26,6 +26,7 @@ export function useUploadBatch(onComplete: () => void) {
 	const [items, setItems] = useState<UploadItem[]>([]);
 	const [busy, setBusy] = useState(false);
 	const [summary, setSummary] = useState("");
+	const [activeBatchIds, setActiveBatchIds] = useState<readonly string[]>([]);
 
 	const itemsRef = useRef<UploadItem[]>([]);
 	itemsRef.current = items;
@@ -79,10 +80,13 @@ export function useUploadBatch(onComplete: () => void) {
 				const { derivative, width, height } = await prepareDerivative(
 					item.file,
 				);
-				updateItem(item.id, { phase: "uploading" });
+				updateItem(item.id, { phase: "uploading", progress: 0 });
 				const [hot, archive] = await Promise.all([
 					uploadDerivative(init, derivative),
-					uploadArchive(init.photoId, item.file, init.archiveToken),
+					uploadArchive(init.photoId, item.file, init.archiveToken, {
+						onProgress: (fraction) =>
+							updateItem(item.id, { progress: fraction }),
+					}),
 				]);
 				let result: FinalizeResult;
 				try {
@@ -131,6 +135,7 @@ export function useUploadBatch(onComplete: () => void) {
 				updateItem(item.id, {
 					phase: "uploading",
 					message: "Ponawiamy wysyłkę oryginału.",
+					progress: 0,
 				});
 				const token = await requestArchiveToken(item.photoId);
 				if (token.alreadyComplete) {
@@ -144,7 +149,11 @@ export function useUploadBatch(onComplete: () => void) {
 					item.photoId,
 					item.file,
 					token.archiveToken,
-					true,
+					{
+						readFailureMessage: true,
+						onProgress: (fraction) =>
+							updateItem(item.id, { progress: fraction }),
+					},
 				);
 				if (!archive.receipt) {
 					throw new Error(archive.error ?? "Drive nie przyjął oryginału.");
@@ -189,6 +198,7 @@ export function useUploadBatch(onComplete: () => void) {
 				})),
 				...retryItems.map((item) => ({ kind: "archive_retry" as const, item })),
 			];
+			setActiveBatchIds(jobs.map((job) => job.item.id));
 			const results = await runWithConcurrency(
 				jobs,
 				ORIGINAL_UPLOAD_CONCURRENCY,
@@ -212,12 +222,14 @@ export function useUploadBatch(onComplete: () => void) {
 			);
 		} finally {
 			setBusy(false);
+			setActiveBatchIds([]);
 		}
 	}, [busy, items, onComplete, processFreshUpload, retryArchive]);
 
 	return {
 		inputRef,
 		items,
+		activeBatchIds,
 		busy,
 		summary,
 		chooseFiles,

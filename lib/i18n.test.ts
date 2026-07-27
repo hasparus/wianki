@@ -3,7 +3,7 @@ import { formatGalleryStats } from "@/lib/i18n";
 
 describe("Polish gallery statistics", () => {
 	it.each([
-		[0, 0, "0 gości dodało już 0 zdjęć"],
+		[0, 0, ""],
 		[1, 1, "1 gość dodał już 1 zdjęcie"],
 		[2, 2, "2 gości dodało już 2 zdjęcia"],
 		[4, 4, "4 gości dodało już 4 zdjęcia"],

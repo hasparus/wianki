@@ -77,31 +77,53 @@ export async function uploadDerivative(
 	}
 }
 
-export async function uploadArchive(
+// XMLHttpRequest instead of fetch: it is the only way to observe upload
+// progress for the multi-megabyte original.
+export function uploadArchive(
 	photoId: string,
 	file: File,
 	archiveToken: string,
-	readFailureMessage = false,
+	options: {
+		readFailureMessage?: boolean;
+		onProgress?: (fraction: number) => void;
+	} = {},
 ): Promise<ArchiveUploadResult> {
-	const response = await fetch(archiveUrl(photoId), {
-		method: "PUT",
-		headers: {
-			Authorization: `Bearer ${archiveToken}`,
-			"Content-Type": file.type,
-		},
-		body: file,
+	return new Promise((resolve, reject) => {
+		const xhr = new XMLHttpRequest();
+		xhr.open("PUT", archiveUrl(photoId));
+		xhr.setRequestHeader("Authorization", `Bearer ${archiveToken}`);
+		xhr.setRequestHeader("Content-Type", file.type);
+		xhr.upload.onprogress = (event) => {
+			if (event.lengthComputable) {
+				options.onProgress?.(event.loaded / event.total);
+			}
+		};
+		xhr.onload = () => {
+			try {
+				if (xhr.status >= 200 && xhr.status < 300) {
+					const body = JSON.parse(xhr.responseText) as { receipt?: string };
+					resolve({ receipt: body.receipt ?? null, error: null });
+					return;
+				}
+				const body = options.readFailureMessage
+					? (JSON.parse(xhr.responseText) as { error?: string })
+					: null;
+				resolve({
+					receipt: null,
+					error: body?.error ?? "Oryginał nie dotarł do archiwum Drive.",
+				});
+			} catch (error) {
+				reject(
+					error instanceof Error
+						? error
+						: new Error("Oryginał nie dotarł do archiwum Drive."),
+				);
+			}
+		};
+		xhr.onerror = () =>
+			reject(new Error("Oryginał nie dotarł do archiwum Drive."));
+		xhr.send(file);
 	});
-	if (response.ok) {
-		const body = (await response.json()) as { receipt?: string };
-		return { receipt: body.receipt ?? null, error: null };
-	}
-	const body = readFailureMessage
-		? ((await response.json()) as { error?: string })
-		: null;
-	return {
-		receipt: null,
-		error: body?.error ?? "Oryginał nie dotarł do archiwum Drive.",
-	};
 }
 
 export async function finalizeUpload(

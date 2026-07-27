@@ -28,6 +28,20 @@ export function UploadItemList({ items }: { items: UploadItem[] }) {
 							</span>
 							<span className="shrink-0 text-sm">{phaseLabel(item.phase)}</span>
 						</div>
+						{item.phase === "uploading" ? (
+							<div
+								role="progressbar"
+								aria-valuenow={Math.round((item.progress ?? 0) * 100)}
+								aria-valuemin={0}
+								aria-valuemax={100}
+								className="mt-2 h-1.5 overflow-hidden rounded-full bg-wedding-rose/40"
+							>
+								<div
+									className="h-full rounded-full bg-wedding-green transition-[width] duration-300"
+									style={{ width: `${(item.progress ?? 0) * 100}%` }}
+								/>
+							</div>
+						) : null}
 						{item.message ? (
 							<p className="mt-1 text-sm">{item.message}</p>
 						) : null}
