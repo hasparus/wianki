@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { retainDeliveredItems } from "@/components/upload/items";
 import { completedUploadMessage } from "@/components/upload/messages";
 import { validateUploadSelection } from "@/components/upload/selection";
 import type {
@@ -27,6 +28,17 @@ export function useUploadBatch(onComplete: () => void) {
 	const [busy, setBusy] = useState(false);
 	const [summary, setSummary] = useState("");
 
+	const itemsRef = useRef<UploadItem[]>([]);
+	itemsRef.current = items;
+	useEffect(
+		() => () => {
+			for (const item of itemsRef.current) {
+				if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+			}
+		},
+		[],
+	);
+
 	const updateItem = useCallback((id: string, patch: Partial<UploadItem>) => {
 		setItems((current) =>
 			current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
@@ -36,18 +48,25 @@ export function useUploadBatch(onComplete: () => void) {
 	const chooseFiles = useCallback((files: FileList | null) => {
 		setSummary("");
 		const selection = validateUploadSelection(Array.from(files ?? []));
+		if (inputRef.current) inputRef.current.value = "";
 		if (!selection.valid) {
 			setSummary(selection.error);
 			return;
 		}
-		setItems(
-			selection.files.map((file) => ({
-				id: crypto.randomUUID(),
-				file,
-				phase: "queued",
-				message: "",
-			})),
-		);
+		setItems((current) => {
+			const { kept, droppedPreviewUrls } = retainDeliveredItems(current);
+			for (const url of droppedPreviewUrls) URL.revokeObjectURL(url);
+			return [
+				...kept,
+				...selection.files.map((file) => ({
+					id: crypto.randomUUID(),
+					file,
+					phase: "queued" as const,
+					message: "",
+					previewUrl: URL.createObjectURL(file),
+				})),
+			];
+		});
 	}, []);
 
 	const processFreshUpload = useCallback(

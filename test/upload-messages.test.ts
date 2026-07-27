@@ -9,12 +9,13 @@ describe("upload completion message", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("keeps the rotating success copy and clearly permits closing the page", () => {
+	it("keeps the rotating success copy and invites further uploads", () => {
 		vi.spyOn(Math, "random").mockReturnValue(0);
 
 		expect(completedUploadMessage()).toBe(
 			`Niezły z Ciebie fotograf! 📸 ${uploadCompleteInstruction}`,
 		);
-		expect(uploadCompleteInstruction).toContain("możesz już zamknąć tę stronę");
+		expect(uploadCompleteInstruction).not.toContain("zamknąć tę stronę");
+		expect(uploadCompleteInstruction).toContain("dodawaj kolejne");
 	});
 });

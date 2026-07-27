@@ -3,6 +3,7 @@
 import { UploadFilePicker } from "@/components/upload/upload-file-picker";
 import { UploadItemList } from "@/components/upload/upload-item-list";
 import { UploadSubmitControls } from "@/components/upload/upload-submit-controls";
+import { UploadedPhotos } from "@/components/upload/uploaded-photos";
 import { useUploadBatch } from "@/components/upload/use-upload-batch";
 
 export function UploadPanel({ onComplete }: { onComplete: () => void }) {
@@ -16,6 +17,8 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 		setConsent,
 		upload,
 	} = useUploadBatch(onComplete);
+	const deliveredItems = items.filter((item) => item.phase === "done");
+	const pendingItems = items.filter((item) => item.phase !== "done");
 
 	return (
 		<section
@@ -32,13 +35,16 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 			<UploadFilePicker
 				inputRef={inputRef}
 				busy={busy}
+				label={
+					deliveredItems.length ? "Dodaj kolejne zdjęcia" : "Wybierz zdjęcia"
+				}
 				onSelect={chooseFiles}
 			/>
-			<UploadItemList items={items} />
+			<UploadItemList items={pendingItems} />
 			<UploadSubmitControls
 				consent={consent}
 				busy={busy}
-				hasItems={items.some((item) =>
+				hasItems={pendingItems.some((item) =>
 					["queued", "failed", "archive_failed"].includes(item.phase),
 				)}
 				onConsentChange={setConsent}
@@ -49,6 +55,7 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 					{summary}
 				</p>
 			) : null}
+			<UploadedPhotos items={deliveredItems} />
 		</section>
 	);
 }
