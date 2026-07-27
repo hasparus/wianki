@@ -21,6 +21,8 @@
 - Keep the admin QR with the couple or a trusted helper.
 - Watch the moderation/archive-error queues, not raw logs containing metadata.
 - If Vision fails, approve safe images manually; do not make the bucket public.
+- With `MODERATION_ENABLED=false`, photos publish instantly; use the admin
+  panel to hide anything unwanted after the fact.
 - If Drive fails, keep the hot gallery running and reconcile later.
 
 ## Recovery and rotation

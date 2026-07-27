@@ -30,7 +30,10 @@ Input: derivative dimensions/type/size, optional archive receipt, and optional
 archive error. The handler verifies ownership, downloads the private derivative,
 verifies its size and receipt, persists both upload outcomes, and returns with
 `moderation_status=pending`. SafeSearch continues after the response; it updates
-moderation to `approved`, `flagged`, or `review_required`. New clients create
+moderation to `approved`, `flagged`, or `review_required`. When
+`MODERATION_ENABLED=false`, the handler instead returns
+`moderation_status=approved` right away, skips SafeSearch, and logs an
+`approved` moderation event with actor `system`. New clients create
 JPEG derivatives; WebP and PNG remain accepted for compatibility.
 
 ### `POST /api/uploads/:photoId/archive`

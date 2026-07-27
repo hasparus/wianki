@@ -9,6 +9,7 @@ import {
 	MAX_DERIVATIVE_BYTES,
 	type ModerationStatus,
 } from "@/lib/domain";
+import { serverEnv } from "@/lib/env";
 import { assertSameOrigin, jsonError, noStoreJson } from "@/lib/http";
 import { moderateImage } from "@/lib/moderation";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -64,6 +65,18 @@ async function moderateFinalizedPhoto(
 			details: moderationScores ?? { error: moderationError },
 		});
 	if (eventError) throw eventError;
+}
+
+async function recordAutoApproval(photoId: string) {
+	const { error } = await supabaseAdmin()
+		.from("moderation_events")
+		.insert({
+			photo_id: photoId,
+			actor: "system",
+			action: "approved",
+			details: { reason: "moderation_disabled" },
+		});
+	if (error) throw error;
 }
 
 export async function POST(
@@ -134,12 +147,16 @@ export async function POST(
 		return jsonError("Nie udało się zweryfikować kopii galeryjnej.", 400);
 	}
 
+	const moderationEnabled = serverEnv().MODERATION_ENABLED;
+	const moderationStatus: ModerationStatus = moderationEnabled
+		? "pending"
+		: "approved";
 	const { error: updateError } = await supabase
 		.from("photos")
 		.update({
 			hot_status: "uploaded",
 			archive_status: archiveStatus,
-			moderation_status: "pending",
+			moderation_status: moderationStatus,
 			drive_file_id: driveFileId,
 			derivative_size: parsed.data.derivativeSize,
 			derivative_content_type: parsed.data.derivativeType,
@@ -152,12 +169,16 @@ export async function POST(
 	if (updateError)
 		return jsonError("Nie udało się zapisać wyniku zdjęcia.", 500);
 
-	after(() => moderateFinalizedPhoto(photoId, image, archiveError));
+	after(() =>
+		moderationEnabled
+			? moderateFinalizedPhoto(photoId, image, archiveError)
+			: recordAutoApproval(photoId),
+	);
 
 	return noStoreJson({
 		ok: true,
 		archiveStatus,
-		moderationStatus: "pending",
+		moderationStatus,
 		warning: archiveError,
 	});
 }

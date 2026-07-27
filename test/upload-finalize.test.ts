@@ -6,9 +6,11 @@ const mocks = vi.hoisted(() => ({
 	verifyArchiveReceipt: vi.fn(),
 	moderateImage: vi.fn(),
 	supabaseAdmin: vi.fn(),
+	serverEnv: vi.fn(),
 }));
 
 vi.mock("next/server", () => ({ after: mocks.after }));
+vi.mock("@/lib/env", () => ({ serverEnv: mocks.serverEnv }));
 vi.mock("@/lib/auth/session", () => ({
 	readGuestSession: mocks.readGuestSession,
 }));
@@ -94,6 +96,7 @@ describe("upload finalization", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.readGuestSession.mockResolvedValue({ guestId: "guest-1" });
+		mocks.serverEnv.mockReturnValue({ MODERATION_ENABLED: true });
 		mocks.verifyArchiveReceipt.mockResolvedValue({
 			photoId: "photo-1",
 			size: 8,
@@ -186,6 +189,41 @@ describe("upload finalization", () => {
 			actor: "vision",
 			action: "approved",
 			details: scores,
+		});
+	});
+
+	it("auto-approves the photo and skips Vision when moderation is disabled", async () => {
+		mocks.serverEnv.mockReturnValue({ MODERATION_ENABLED: false });
+		const image = new Blob(["jpeg"], { type: "image/jpeg" });
+		const { update, eventInsert } = mockBackend(image);
+
+		const response = await POST(finalizeRequest(), {
+			params: Promise.resolve({ photoId: "photo-1" }),
+		});
+		const body = await response.json();
+
+		expect(response.status).toBe(200);
+		expect(body).toMatchObject({
+			ok: true,
+			archiveStatus: "uploaded",
+			moderationStatus: "approved",
+		});
+		expect(update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				hot_status: "uploaded",
+				moderation_status: "approved",
+			}),
+		);
+
+		const auditTask = mocks.after.mock.calls[0][0] as () => Promise<void>;
+		await auditTask();
+
+		expect(mocks.moderateImage).not.toHaveBeenCalled();
+		expect(eventInsert).toHaveBeenCalledWith({
+			photo_id: "photo-1",
+			actor: "system",
+			action: "approved",
+			details: { reason: "moderation_disabled" },
 		});
 	});
 

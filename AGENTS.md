@@ -12,8 +12,10 @@ For each photo, the browser creates an EXIF-free gallery derivative and uploads
 it directly to the private Supabase `gallery` bucket. The original streams
 through `workers/drive-archive` into the couple's private Google Drive folder.
 Finalization verifies both destinations, then Google Vision SafeSearch checks
-the derivative. Only successfully uploaded, moderation-approved derivatives
-appear in the manually refreshed, newest-first gallery.
+the derivative — unless `MODERATION_ENABLED=false`, in which case finalization
+auto-approves the photo and skips Vision entirely. Only successfully uploaded,
+moderation-approved derivatives appear in the manually refreshed, newest-first
+gallery; the gallery eligibility rule itself never changes.
 
 Administrators enter through a separate private QR token and 12-hour signed
 cookie. `/admin` exposes moderation and recovery queues plus approve, hide,
