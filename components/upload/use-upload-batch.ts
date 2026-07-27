@@ -1,6 +1,12 @@
 import { useCallback, useRef, useState } from "react";
-import { randomSuccessMessage } from "@/components/upload/messages";
+import { completedUploadMessage } from "@/components/upload/messages";
 import { validateUploadSelection } from "@/components/upload/selection";
+import type {
+	FinalizeResult,
+	InitUpload,
+	UploadItem,
+	UploadJob,
+} from "@/components/upload/types";
 import {
 	completeArchive,
 	finalizeUpload,
@@ -11,11 +17,6 @@ import {
 	uploadDerivative,
 } from "@/components/upload/upload-client";
 import { runWithConcurrency } from "@/components/upload/upload-queue";
-import type {
-	InitUpload,
-	UploadItem,
-	UploadJob,
-} from "@/components/upload/types";
 
 const ORIGINAL_UPLOAD_CONCURRENCY = 2;
 
@@ -65,30 +66,32 @@ export function useUploadBatch(onComplete: () => void) {
 					uploadDerivative(init, derivative),
 					uploadArchive(init.photoId, item.file, init.archiveToken),
 				]);
-				updateItem(item.id, { phase: "moderating" });
-				const result = await finalizeUpload(init.photoId, {
-					archiveReceipt: archive.receipt,
-					archiveError: archive.error,
-					derivativeSize: derivative.size,
-					derivativeType: derivative.type,
-					width,
-					height,
-				});
+				let result: FinalizeResult;
+				try {
+					result = await finalizeUpload(init.photoId, {
+						archiveReceipt: archive.receipt,
+						archiveError: archive.error,
+						derivativeSize: derivative.size,
+						derivativeType: derivative.type,
+						width,
+						height,
+					});
+				} catch (error) {
+					throw hot.error ?? error;
+				}
 				if (hot.error) throw hot.error;
 				if (result.warning) {
 					updateItem(item.id, {
 						phase: "archive_failed",
 						message:
-							"Kopia galeryjna dotarła. Kliknij ponownie, aby dosłać oryginał.",
+							"Zdjęcie zostało przesłane na stronę, ale nie doszło na nasz dysk :(. Kliknij ponownie, aby spróbować jeszcze raz.",
 					});
 					return false;
 				}
 				updateItem(item.id, {
 					phase: "done",
 					message:
-						result.moderationStatus === "approved"
-							? "Zdjęcie jest gotowe do pokazania."
-							: "Zdjęcie czeka na naszą kontrolę.",
+						"Zdjęcie dotarło i zostanie przetworzone w ciągu kilku minut.",
 				});
 				return true;
 			} catch (error) {
@@ -178,7 +181,7 @@ export function useUploadBatch(onComplete: () => void) {
 			);
 			const succeeded = results.filter(Boolean).length;
 			if (results.length && succeeded === results.length) {
-				setSummary(randomSuccessMessage());
+				setSummary(completedUploadMessage());
 				onComplete();
 			} else {
 				setSummary(

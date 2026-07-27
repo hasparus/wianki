@@ -4,7 +4,6 @@ export type UploadPhase =
 	| "queued"
 	| "compressing"
 	| "uploading"
-	| "moderating"
 	| "archive_failed"
 	| "done"
 	| "failed";
@@ -26,7 +25,7 @@ export type InitUpload = {
 
 export type FinalizeResult = {
 	warning?: string | null;
-	moderationStatus?: ModerationStatus;
+	moderationStatus: ModerationStatus;
 };
 
 export type UploadJob =

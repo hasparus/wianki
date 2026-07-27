@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 			original_filename: safeFilename(file.name),
 			original_content_type: file.type,
 			original_size: file.size,
-			storage_path: `${batchId}/${id}.webp`,
+			storage_path: `${batchId}/${id}.jpg`,
 		};
 	});
 

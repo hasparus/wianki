@@ -6,9 +6,9 @@ Give mobile guests a reliable 1–10-photo upload with clear per-file recovery.
 
 ## Fixed decisions
 
-25 MiB originals; 1920px/500 KiB derivative; WebP/JPEG/PNG; EXIF stripped; maximum
-two originals in flight; private signed Supabase uploads; Drive and hot paths
-run in parallel; complete-batch success message only.
+25 MiB originals; 1920px/500 KiB JPEG derivative; EXIF stripped; maximum two
+originals in flight; private signed Supabase uploads; Drive and hot paths run in
+parallel; complete-batch success message only.
 
 ## Owned surfaces
 
@@ -34,4 +34,5 @@ capability expiry, and false “success” after partial failure.
 
 Client/server enforce limits; unsupported HEIC fails before upload; two-worker
 queue is bounded; every file has phase/error state; finalization verifies object
-and receipt; partial results remain honest and recoverable.
+and receipt before acknowledging the batch; partial results remain honest and
+recoverable.

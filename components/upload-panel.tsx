@@ -38,7 +38,9 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 			<UploadSubmitControls
 				consent={consent}
 				busy={busy}
-				hasItems={Boolean(items.length)}
+				hasItems={items.some((item) =>
+					["queued", "failed", "archive_failed"].includes(item.phase),
+				)}
 				onConsentChange={setConsent}
 				onUpload={upload}
 			/>

@@ -1,8 +1,8 @@
-import { getAdminQueue } from "@/lib/admin";
+import { getAdminPhotosPage } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth/session";
 import { AdminClient } from "./admin-client";
 
 export default async function AdminPage() {
 	await requireAdmin();
-	return <AdminClient initial={await getAdminQueue()} />;
+	return <AdminClient initial={await getAdminPhotosPage()} />;
 }

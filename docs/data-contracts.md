@@ -28,8 +28,10 @@ and archive-operation token.
 
 Input: derivative dimensions/type/size, optional archive receipt, and optional
 archive error. The handler verifies ownership, downloads the private derivative,
-verifies its size and receipt, runs moderation, and returns the three outcomes.
-Canvas-reencoded WebP, JPEG, and PNG derivatives are accepted.
+verifies its size and receipt, persists both upload outcomes, and returns with
+`moderation_status=pending`. SafeSearch continues after the response; it updates
+moderation to `approved`, `flagged`, or `review_required`. New clients create
+JPEG derivatives; WebP and PNG remain accepted for compatibility.
 
 ### `POST /api/uploads/:photoId/archive`
 
@@ -57,10 +59,15 @@ Browser CORS permits only the configured exact application origin.
 
 ## Admin API
 
-`GET /api/admin/photos` returns non-settled moderation/archive items.
+`GET /api/admin/photos` returns every actionable photo state, newest first, with
+an optional opaque cursor for older records. Fully deleted tombstones stay in
+Postgres for audit but are omitted once neither copy has a retryable action.
+This lets an administrator retract an approved photo as well as handle flagged,
+failed, and partially deleted items.
 
 `PATCH /api/admin/photos/:photoId` supports `approve`, `hide`,
 `retry_moderation`, and `reconcile_archive`.
 
 `DELETE /api/admin/photos/:photoId` removes the derivative, trashes the
-original, and records any partial failure.
+original, and records any partial failure. It retains the photo row as an audit
+and retry tombstone instead of deleting it from Postgres.

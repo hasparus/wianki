@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import type { AdminPhoto } from "@/lib/admin";
+import type { AdminPhotoPage } from "@/lib/admin";
 
 type AdminAction =
 	| "approve"
@@ -11,26 +11,54 @@ type AdminAction =
 	| "reconcile_archive";
 
 const labels: Record<AdminAction, string> = {
-	approve: "Zatwierdź",
-	hide: "Ukryj",
+	approve: "Zatwierdź i pokaż",
+	hide: "Ukryj z galerii",
 	retry_moderation: "Sprawdź ponownie",
 	reconcile_archive: "Znajdź w Drive",
 };
 
-export function AdminClient({ initial }: { initial: AdminPhoto[] }) {
-	const [photos, setPhotos] = useState(initial);
+export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
+	const [photos, setPhotos] = useState(initial.photos);
+	const [nextCursor, setNextCursor] = useState(initial.nextCursor);
 	const [pendingId, setPendingId] = useState<string | null>(null);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
 	const [message, setMessage] = useState("");
 
 	async function refresh() {
 		const response = await fetch("/api/admin/photos", { cache: "no-store" });
-		const body = (await response.json()) as {
-			photos?: AdminPhoto[];
+		const body = (await response.json()) as Partial<AdminPhotoPage> & {
 			error?: string;
 		};
-		if (!response.ok || !body.photos)
-			throw new Error(body.error ?? "Błąd kolejki.");
+		if (!response.ok || !body.photos) {
+			throw new Error(body.error ?? "Błąd listy zdjęć.");
+		}
 		setPhotos(body.photos);
+		setNextCursor(body.nextCursor ?? null);
+	}
+
+	async function loadMore() {
+		if (!nextCursor || isLoadingMore) return;
+		setIsLoadingMore(true);
+		setMessage("");
+		try {
+			const response = await fetch(
+				`/api/admin/photos?cursor=${encodeURIComponent(nextCursor)}`,
+				{ cache: "no-store" },
+			);
+			const body = (await response.json()) as Partial<AdminPhotoPage> & {
+				error?: string;
+			};
+			if (!response.ok || !body.photos) {
+				throw new Error(body.error ?? "Nie udało się pobrać kolejnych zdjęć.");
+			}
+			const olderPhotos = body.photos;
+			setPhotos((current) => [...current, ...olderPhotos]);
+			setNextCursor(body.nextCursor ?? null);
+		} catch (error) {
+			setMessage(error instanceof Error ? error.message : "Błąd listy zdjęć.");
+		} finally {
+			setIsLoadingMore(false);
+		}
 	}
 
 	async function act(photoId: string, action: AdminAction) {
@@ -56,7 +84,7 @@ export function AdminClient({ initial }: { initial: AdminPhoto[] }) {
 	async function remove(photoId: string) {
 		if (
 			!window.confirm(
-				"Usunąć kopię galeryjną i przenieść oryginał do kosza Drive?",
+				"Usunąć kopię galeryjną i przenieść oryginał do kosza Drive? W bazie pozostanie zapis potrzebny do audytu i ponowienia częściowo nieudanego usuwania.",
 			)
 		) {
 			return;
@@ -88,8 +116,14 @@ export function AdminClient({ initial }: { initial: AdminPhoto[] }) {
 				<p className="text-sm font-bold uppercase tracking-[0.25em]">
 					Panel pary młodej
 				</p>
-				<h1 className="mt-2 font-serif text-5xl font-bold">Kolejka zdjęć</h1>
+				<h1 className="mt-2 font-serif text-5xl font-bold">
+					Wszystkie zdjęcia
+				</h1>
 				<p className="mt-3">
+					W panelu są zdjęcia widoczne, ukryte, oznaczone i wymagające reakcji.
+					Ukrycie wycofuje zdjęcie z galerii bez usuwania jego kopii.
+				</p>
+				<p className="mt-2 text-sm">
 					Kod QR administratora działa jak wspólne hasło. Nie udostępniaj go
 					gościom.
 				</p>
@@ -122,6 +156,12 @@ export function AdminClient({ initial }: { initial: AdminPhoto[] }) {
 							)}
 							<div className="p-4">
 								<p className="truncate font-bold">{photo.originalFilename}</p>
+								<p className="mt-2 text-sm font-bold">
+									{photo.hotStatus === "uploaded" &&
+									photo.moderationStatus === "approved"
+										? "Widoczne w galerii"
+										: "Niewidoczne w galerii"}
+								</p>
 								<dl className="mt-2 grid grid-cols-2 gap-1 text-sm">
 									<dt>Galeria</dt>
 									<dd>{photo.hotStatus}</dd>
@@ -136,32 +176,60 @@ export function AdminClient({ initial }: { initial: AdminPhoto[] }) {
 									</p>
 								) : null}
 								<div className="mt-4 flex flex-wrap gap-2">
-									{(
-										[
-											"approve",
-											"hide",
-											"retry_moderation",
-											"reconcile_archive",
-										] as const
-									).map((action) => (
+									{photo.hotStatus === "uploaded" ? (
 										<button
-											key={action}
 											type="button"
 											disabled={pendingId === photo.id}
-											onClick={() => act(photo.id, action)}
+											onClick={() =>
+												act(
+													photo.id,
+													photo.moderationStatus === "approved"
+														? "hide"
+														: "approve",
+												)
+											}
 											className="min-h-10 rounded-full border border-wedding-green px-3 text-sm font-bold hover:bg-wedding-rose/40 disabled:opacity-50"
 										>
-											{labels[action]}
+											{photo.moderationStatus === "approved"
+												? labels.hide
+												: labels.approve}
 										</button>
-									))}
-									<button
-										type="button"
-										disabled={pendingId === photo.id}
-										onClick={() => remove(photo.id)}
-										className="min-h-10 rounded-full bg-wedding-error px-3 text-sm font-bold text-white disabled:opacity-50"
-									>
-										Usuń
-									</button>
+									) : null}
+									{["flagged", "review_required"].includes(
+										photo.moderationStatus,
+									) && photo.hotStatus === "uploaded" ? (
+										<button
+											type="button"
+											disabled={pendingId === photo.id}
+											onClick={() => act(photo.id, "retry_moderation")}
+											className="min-h-10 rounded-full border border-wedding-green px-3 text-sm font-bold hover:bg-wedding-rose/40 disabled:opacity-50"
+										>
+											{labels.retry_moderation}
+										</button>
+									) : null}
+									{["pending", "failed"].includes(photo.archiveStatus) ? (
+										<button
+											type="button"
+											disabled={pendingId === photo.id}
+											onClick={() => act(photo.id, "reconcile_archive")}
+											className="min-h-10 rounded-full border border-wedding-green px-3 text-sm font-bold hover:bg-wedding-rose/40 disabled:opacity-50"
+										>
+											{labels.reconcile_archive}
+										</button>
+									) : null}
+									{photo.hotStatus !== "deleted" ||
+									photo.archiveStatus !== "trashed" ? (
+										<button
+											type="button"
+											disabled={pendingId === photo.id}
+											onClick={() => remove(photo.id)}
+											className="min-h-10 rounded-full bg-wedding-error px-3 text-sm font-bold text-white disabled:opacity-50"
+										>
+											Usuń kopie
+										</button>
+									) : (
+										<p className="py-2 text-sm font-bold">Usunięto kopie</p>
+									)}
 								</div>
 							</div>
 						</li>
@@ -169,9 +237,21 @@ export function AdminClient({ initial }: { initial: AdminPhoto[] }) {
 				</ul>
 			) : (
 				<p className="mt-10 rounded-3xl bg-wedding-cream p-8 text-center text-lg">
-					Kolejka jest pusta. Wszystko pod kontrolą.
+					Nie ma jeszcze żadnych zdjęć.
 				</p>
 			)}
+			{nextCursor ? (
+				<div className="mt-8 text-center">
+					<button
+						type="button"
+						disabled={isLoadingMore}
+						onClick={loadMore}
+						className="min-h-11 rounded-full border border-wedding-green px-5 font-bold hover:bg-wedding-rose/40 disabled:opacity-50"
+					>
+						{isLoadingMore ? "Pobieranie…" : "Pokaż starsze zdjęcia"}
+					</button>
+				</div>
+			) : null}
 		</main>
 	);
 }
