@@ -7,16 +7,8 @@ import { UploadedPhotos } from "@/components/upload/uploaded-photos";
 import { useUploadBatch } from "@/components/upload/use-upload-batch";
 
 export function UploadPanel({ onComplete }: { onComplete: () => void }) {
-	const {
-		inputRef,
-		items,
-		consent,
-		busy,
-		summary,
-		chooseFiles,
-		setConsent,
-		upload,
-	} = useUploadBatch(onComplete);
+	const { inputRef, items, busy, summary, chooseFiles, upload } =
+		useUploadBatch(onComplete);
 	const deliveredItems = items.filter((item) => item.phase === "done");
 	const pendingItems = items.filter((item) => item.phase !== "done");
 
@@ -42,12 +34,10 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 			/>
 			<UploadItemList items={pendingItems} />
 			<UploadSubmitControls
-				consent={consent}
 				busy={busy}
 				hasItems={pendingItems.some((item) =>
 					["queued", "failed", "archive_failed"].includes(item.phase),
 				)}
-				onConsentChange={setConsent}
 				onUpload={upload}
 			/>
 			{summary ? (

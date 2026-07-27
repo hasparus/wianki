@@ -22,9 +22,8 @@ test("guest can keep uploading after a batch completes and sees previews of sent
 	const pendingList = page.getByRole("list").filter({ hasText: "Oczekuje" });
 	await expect(pendingList.locator("img")).toHaveCount(2);
 
-	await page
-		.getByLabel(/Zgadzam się na przechowanie i sprawdzenie zdjęć/)
-		.check();
+	// No consent checkbox: pressing upload implies consent, stated below it.
+	await expect(page.getByText(/Wysyłając zdjęcia, zgadzasz się/)).toBeVisible();
 	await page.getByRole("button", { name: "Wyślij zdjęcia" }).click();
 
 	// Completion is not a dead end: no "close the page" copy, sent photos stay
