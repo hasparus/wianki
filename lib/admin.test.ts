@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { decodeAdminCursor, encodeAdminCursor } from "./admin";
+import {
+	decodeAdminCursor,
+	encodeAdminCursor,
+	isAdminPhotoActionable,
+} from "./admin";
 
 describe("admin photo cursor", () => {
 	it("round-trips a stable timestamp and UUID pair", () => {
@@ -19,5 +23,41 @@ describe("admin photo cursor", () => {
 				).toString("base64url"),
 			),
 		).toBeNull();
+	});
+});
+
+describe("admin photo visibility", () => {
+	it("hides terminal tombstones with no remaining actionable copy", () => {
+		expect(
+			isAdminPhotoActionable({
+				hot_status: "deleted",
+				archive_status: "trashed",
+				drive_file_id: "drive-file",
+			}),
+		).toBe(false);
+		expect(
+			isAdminPhotoActionable({
+				hot_status: "deleted",
+				archive_status: "failed",
+				drive_file_id: null,
+			}),
+		).toBe(false);
+	});
+
+	it("keeps partial deletions that the admin can retry", () => {
+		expect(
+			isAdminPhotoActionable({
+				hot_status: "deleted",
+				archive_status: "deletion_error",
+				drive_file_id: "drive-file",
+			}),
+		).toBe(true);
+		expect(
+			isAdminPhotoActionable({
+				hot_status: "failed",
+				archive_status: "trashed",
+				drive_file_id: "drive-file",
+			}),
+		).toBe(true);
 	});
 });

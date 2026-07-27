@@ -57,9 +57,11 @@ Browser CORS permits only the configured exact application origin.
 
 ## Admin API
 
-`GET /api/admin/photos` returns every photo state, newest first, with an optional
-opaque cursor for older records. This lets an administrator retract an approved
-photo as well as handle flagged and failed items.
+`GET /api/admin/photos` returns every actionable photo state, newest first, with
+an optional opaque cursor for older records. Fully deleted tombstones stay in
+Postgres for audit but are omitted once neither copy has a retryable action.
+This lets an administrator retract an approved photo as well as handle flagged,
+failed, and partially deleted items.
 
 `PATCH /api/admin/photos/:photoId` supports `approve`, `hide`,
 `retry_moderation`, and `reconcile_archive`.

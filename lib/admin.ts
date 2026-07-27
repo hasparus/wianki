@@ -22,6 +22,7 @@ export type AdminPhotoPage = {
 type AdminRow = {
 	id: string;
 	storage_path: string;
+	drive_file_id: string | null;
 	original_filename: string;
 	hot_status: string;
 	archive_status: string;
@@ -31,6 +32,15 @@ type AdminRow = {
 };
 
 type AdminCursor = { createdAt: string; id: string };
+
+export function isAdminPhotoActionable(
+	photo: Pick<AdminRow, "hot_status" | "archive_status" | "drive_file_id">,
+) {
+	return !(
+		photo.hot_status === "deleted" &&
+		(photo.archive_status === "trashed" || photo.drive_file_id === null)
+	);
+}
 
 export function encodeAdminCursor(cursor: AdminCursor) {
 	return Buffer.from(JSON.stringify(cursor)).toString("base64url");
@@ -62,7 +72,10 @@ export async function getAdminPhotosPage(
 	let query = supabase
 		.from("photos")
 		.select(
-			"id,storage_path,original_filename,hot_status,archive_status,moderation_status,last_error,created_at",
+			"id,storage_path,drive_file_id,original_filename,hot_status,archive_status,moderation_status,last_error,created_at",
+		)
+		.or(
+			"hot_status.neq.deleted,and(archive_status.neq.trashed,drive_file_id.not.is.null)",
 		)
 		.order("created_at", { ascending: false })
 		.order("id", { ascending: false })
@@ -76,7 +89,7 @@ export async function getAdminPhotosPage(
 	}
 	const { data, error } = await query;
 	if (error) throw error;
-	const rows = (data ?? []) as AdminRow[];
+	const rows = ((data ?? []) as AdminRow[]).filter(isAdminPhotoActionable);
 	const hasMore = rows.length > ADMIN_PAGE_SIZE;
 	const visible = rows.slice(0, ADMIN_PAGE_SIZE);
 	const lastVisible = visible.at(-1);
