@@ -28,8 +28,10 @@ and archive-operation token.
 
 Input: derivative dimensions/type/size, optional archive receipt, and optional
 archive error. The handler verifies ownership, downloads the private derivative,
-verifies its size and receipt, runs moderation, and returns the three outcomes.
-Canvas-reencoded WebP, JPEG, and PNG derivatives are accepted.
+verifies its size and receipt, persists both upload outcomes, and returns with
+`moderation_status=pending`. SafeSearch continues after the response; it updates
+moderation to `approved`, `flagged`, or `review_required`. New clients create
+JPEG derivatives; WebP and PNG remain accepted for compatibility.
 
 ### `POST /api/uploads/:photoId/archive`
 

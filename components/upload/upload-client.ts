@@ -2,7 +2,7 @@ import "client-only";
 
 import imageCompression from "browser-image-compression";
 import type { FinalizeResult, InitUpload } from "@/components/upload/types";
-import { acceptedDerivativeTypes } from "@/lib/domain";
+import { MAX_DERIVATIVE_BYTES } from "@/lib/domain";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type ArchiveUploadResult = {
@@ -10,42 +10,44 @@ type ArchiveUploadResult = {
 	error: string | null;
 };
 
-async function compressDerivative(file: File) {
-	return imageCompression(file, {
-		maxSizeMB: 0.488,
-		maxWidthOrHeight: 1920,
-		useWebWorker: true,
-		fileType: "image/webp",
-		preserveExif: false,
-		initialQuality: 0.86,
-	});
-}
+type GalleryUploadResult = {
+	error: Error | null;
+};
 
 export async function prepareDerivative(file: File) {
-	if (file.type === "image/heic" || file.type === "image/heif") {
-		try {
-			const bitmap = await createImageBitmap(file);
-			bitmap.close();
-		} catch {
-			throw new Error(
-				"To urządzenie nie potrafi przygotować pliku HEIC. Wyeksportuj zdjęcie jako JPEG.",
-			);
-		}
-	}
-	const derivative = await compressDerivative(file);
-	if (
-		!acceptedDerivativeTypes.includes(
-			derivative.type as (typeof acceptedDerivativeTypes)[number],
-		)
-	) {
+	let derivative: File;
+	try {
+		derivative = await imageCompression(file, {
+			maxSizeMB: 0.4,
+			maxWidthOrHeight: 1920,
+			useWebWorker: true,
+			fileType: "image/jpeg",
+			preserveExif: false,
+		});
+	} catch {
 		throw new Error(
-			"Ta przeglądarka nie potrafi przygotować zdjęcia jako WebP, JPEG ani PNG.",
+			"Nie udało się przygotować zdjęcia. Spróbuj wybrać plik JPEG.",
 		);
 	}
-	const bitmap = await createImageBitmap(derivative);
-	const dimensions = { width: bitmap.width, height: bitmap.height };
-	bitmap.close();
-	return { derivative, ...dimensions };
+
+	if (
+		derivative.size <= 0 ||
+		derivative.size > MAX_DERIVATIVE_BYTES ||
+		derivative.type !== "image/jpeg"
+	) {
+		throw new Error("Nie udało się przygotować zdjęcia mniejszego niż 500 KB.");
+	}
+
+	try {
+		const bitmap = await createImageBitmap(derivative);
+		const dimensions = { width: bitmap.width, height: bitmap.height };
+		bitmap.close();
+		return { derivative, ...dimensions };
+	} catch {
+		throw new Error(
+			"Nie udało się odczytać przygotowanego zdjęcia. Spróbuj wybrać plik JPEG.",
+		);
+	}
 }
 
 function archiveUrl(photoId: string) {
@@ -55,13 +57,24 @@ function archiveUrl(photoId: string) {
 export async function uploadDerivative(
 	init: InitUpload,
 	derivative: File | Blob,
-) {
-	return supabaseBrowser()
-		.storage.from("gallery")
-		.uploadToSignedUrl(init.path, init.uploadToken, derivative, {
-			contentType: derivative.type,
-			cacheControl: "3600",
-		});
+): Promise<GalleryUploadResult> {
+	try {
+		const body = await derivative.arrayBuffer();
+		const { error } = await supabaseBrowser()
+			.storage.from("gallery")
+			.uploadToSignedUrl(init.path, init.uploadToken, body, {
+				contentType: "image/jpeg",
+				cacheControl: "3600",
+			});
+		return { error };
+	} catch (error) {
+		return {
+			error:
+				error instanceof Error
+					? error
+					: new Error("Kopia galeryjna nie dotarła."),
+		};
+	}
 }
 
 export async function uploadArchive(

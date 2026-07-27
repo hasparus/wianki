@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { verifyArchiveReceipt } from "@/lib/archive-token";
 import { readGuestSession } from "@/lib/auth/session";
@@ -20,6 +21,50 @@ const bodySchema = z.object({
 	width: z.number().int().positive().max(20_000),
 	height: z.number().int().positive().max(20_000),
 });
+
+async function moderateFinalizedPhoto(
+	photoId: string,
+	image: Blob,
+	archiveError: string | null,
+) {
+	const supabase = supabaseAdmin();
+	let moderationStatus: ModerationStatus = "review_required";
+	let moderationScores: Record<string, string | undefined> | null = null;
+	let moderationError: string | null = null;
+
+	try {
+		const moderation = await moderateImage(image);
+		moderationStatus = moderation.status;
+		moderationScores = moderation.scores;
+	} catch (error) {
+		moderationError =
+			error instanceof Error
+				? error.message
+				: "Nie udało się sprawdzić zdjęcia.";
+	}
+
+	const lastError =
+		[archiveError, moderationError].filter(Boolean).join(" | ") || null;
+	const { error: updateError } = await supabase
+		.from("photos")
+		.update({
+			moderation_status: moderationStatus,
+			moderation_scores: moderationScores,
+			last_error: lastError,
+		})
+		.eq("id", photoId);
+	if (updateError) throw updateError;
+
+	const { error: eventError } = await supabase
+		.from("moderation_events")
+		.insert({
+			photo_id: photoId,
+			actor: moderationScores ? "vision" : "system",
+			action: moderationStatus,
+			details: moderationScores ?? { error: moderationError },
+		});
+	if (eventError) throw eventError;
+}
 
 export async function POST(
 	request: Request,
@@ -89,51 +134,30 @@ export async function POST(
 		return jsonError("Nie udało się zweryfikować kopii galeryjnej.", 400);
 	}
 
-	let moderationStatus: ModerationStatus = "review_required";
-	let moderationScores: Record<string, string | undefined> | null = null;
-	let moderationError: string | null = null;
-	try {
-		const moderation = await moderateImage(image);
-		moderationStatus = moderation.status;
-		moderationScores = moderation.scores;
-	} catch (error) {
-		moderationError =
-			error instanceof Error
-				? error.message
-				: "Nie udało się sprawdzić zdjęcia.";
-	}
-
-	const lastError =
-		[archiveError, moderationError].filter(Boolean).join(" | ") || null;
 	const { error: updateError } = await supabase
 		.from("photos")
 		.update({
 			hot_status: "uploaded",
 			archive_status: archiveStatus,
-			moderation_status: moderationStatus,
+			moderation_status: "pending",
 			drive_file_id: driveFileId,
 			derivative_size: parsed.data.derivativeSize,
 			derivative_content_type: parsed.data.derivativeType,
 			width: parsed.data.width,
 			height: parsed.data.height,
-			moderation_scores: moderationScores,
-			last_error: lastError,
+			moderation_scores: null,
+			last_error: archiveError,
 		})
 		.eq("id", photoId);
 	if (updateError)
 		return jsonError("Nie udało się zapisać wyniku zdjęcia.", 500);
 
-	await supabase.from("moderation_events").insert({
-		photo_id: photoId,
-		actor: moderationScores ? "vision" : "system",
-		action: moderationStatus,
-		details: moderationScores ?? { error: moderationError },
-	});
+	after(() => moderateFinalizedPhoto(photoId, image, archiveError));
 
 	return noStoreJson({
 		ok: true,
 		archiveStatus,
-		moderationStatus,
-		warning: lastError,
+		moderationStatus: "pending",
+		warning: archiveError,
 	});
 }

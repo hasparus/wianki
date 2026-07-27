@@ -20,13 +20,14 @@ derivative server-side; no public image URL is given to Google.
 1. Guest consents and submits metadata for 1–10 originals.
 2. Next.js creates a batch and pending photo rows.
 3. Next.js returns signed Supabase upload tokens and archive-operation JWTs.
-4. Browser compresses each image and uploads derivative/original in parallel,
-   with at most two original uploads in flight.
+4. Browser creates an EXIF-free JPEG derivative and uploads it alongside the
+   original, with at most two originals in flight.
 5. Worker streams the original to a resumable Drive session.
-6. Browser sends the hot-upload metadata and Worker receipt to finalization.
-7. Finalization downloads and validates the private derivative, verifies the
-   archive receipt, runs SafeSearch, and updates each independent state.
-8. Only approved, hot-uploaded rows appear in the manually refreshed gallery.
+6. Browser sends the derivative metadata and Worker receipt to finalization.
+7. Finalization validates both private copies, persists their independent
+   states, and responds as soon as the upload is safely accounted for.
+8. SafeSearch runs after the response and updates moderation independently.
+9. Only approved, hot-uploaded rows appear in the manually refreshed gallery.
 
 ## Failure policy
 
