@@ -28,9 +28,7 @@ test("guest can keep uploading after a batch completes and sees previews of sent
 
 	// Completion is not a dead end: no "close the page" copy, sent photos stay
 	// visible with previews, and the picker invites another batch.
-	await expect(page.getByRole("status")).toContainText(
-		"Zdjęcia bezpiecznie dotarły",
-	);
+	await expect(page.getByRole("status")).toContainText("pojawią się w galerii");
 	await expect(page.getByRole("status")).not.toContainText("zamknąć tę stronę");
 	const sentSection = page.getByRole("region", {
 		name: "Twoje wysłane zdjęcia",
@@ -58,9 +56,7 @@ test("guest can keep uploading after a batch completes and sees previews of sent
 
 	await page.getByRole("button", { name: "Wyślij zdjęcia" }).click();
 	await expect(sentSection.locator("img")).toHaveCount(3);
-	await expect(page.getByRole("status")).toContainText(
-		"Zdjęcia bezpiecznie dotarły",
-	);
+	await expect(page.getByRole("status")).toContainText("pojawią się w galerii");
 	await page.screenshot({
 		path: testInfo.outputPath("after-second-batch.png"),
 		fullPage: true,
