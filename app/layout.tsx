@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-	title: "Paweł & Magdicia — galeria zdjęć",
+	title: "Paweł & Magdalena — galeria zdjęć",
 	description: "Prywatna galeria zdjęć ślubnych dla naszych gości.",
 	robots: {
 		index: false,

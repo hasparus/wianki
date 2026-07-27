@@ -49,3 +49,24 @@ test("invalid manual passphrase stays on login", async ({ page }) => {
 		page.getByText("Nieprawidłowe hasło z zaproszenia."),
 	).toBeVisible();
 });
+
+test("upload selection rejects more than ten photos before a network upload", async ({
+	page,
+	browserName,
+}) => {
+	test.skip(
+		browserName === "webkit",
+		"WebKit cannot retain the secure guest session on the local HTTP test origin.",
+	);
+	await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
+	await page.locator('input[type="file"]').setInputFiles(
+		Array.from({ length: 11 }, (_, index) => ({
+			name: `wesele-${index}.jpg`,
+			mimeType: "image/jpeg",
+			buffer: Buffer.from("photo"),
+		})),
+	);
+	await expect(
+		page.getByText("W jednym podejściu możesz wybrać maksymalnie 10 zdjęć."),
+	).toBeVisible();
+});
