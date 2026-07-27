@@ -27,7 +27,8 @@
 		"test:e2e": "playwright test",
 		"check": "npm run lint && npm run typecheck && npm run test && npm run test:worker && npm run build",
 		"qr:generate": "node scripts/generate-qr.mjs",
-		"drive:bootstrap": "node scripts/bootstrap-drive-oauth.mjs"
+		"drive:bootstrap": "node scripts/bootstrap-drive-oauth.mjs",
+		"pre-commit": "lint-staged"
 	},
 	"dependencies": {
 		"@biomejs/biome": "^2.5.5",
@@ -52,8 +53,14 @@
 		"eslint": "^9",
 		"eslint-config-next": "16.2.11",
 		"git-format-staged": "^4.0.1",
+		"lint-staged": "^17.2.0",
 		"tailwindcss": "^4",
 		"typescript": "^5",
 		"vitest": "^3.2.4"
+	},
+	"lint-staged": {
+		"*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,css}": [
+			"biome check --write --no-errors-on-unmatched"
+		]
 	}
 }
