@@ -53,8 +53,15 @@ const successMessages = [
 	"Dzięki — to naprawdę wiele dla nas znaczy.",
 ];
 
+export const uploadCompleteInstruction =
+	"Zdjęcia bezpiecznie dotarły. Pojawią się w galerii za kilka minut — możesz już zamknąć tę stronę.";
+
 export function randomSuccessMessage() {
 	return successMessages[Math.floor(Math.random() * successMessages.length)];
+}
+
+export function completedUploadMessage() {
+	return `${randomSuccessMessage()} ${uploadCompleteInstruction}`;
 }
 
 export function phaseLabel(phase: UploadPhase) {
@@ -62,7 +69,6 @@ export function phaseLabel(phase: UploadPhase) {
 		queued: "Oczekuje",
 		compressing: "Przygotowujemy kopię",
 		uploading: "Wysyłamy",
-		moderating: "Sprawdzamy",
 		archive_failed: "Oryginał wymaga ponowienia",
 		done: "Gotowe",
 		failed: "Wymaga ponowienia",
