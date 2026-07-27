@@ -125,3 +125,8 @@ export async function getAdminPhotosPage(
 				: null,
 	};
 }
+
+export async function getAdminQueue(): Promise<AdminPhoto[]> {
+	const page = await getAdminPhotosPage();
+	return page.photos;
+}
