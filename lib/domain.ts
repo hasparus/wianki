@@ -12,6 +12,12 @@ export const acceptedOriginalTypes = [
 	"image/heif",
 ] as const;
 
+export const acceptedDerivativeTypes = [
+	"image/webp",
+	"image/jpeg",
+	"image/png",
+] as const;
+
 export type HotStatus = "pending" | "uploaded" | "failed" | "deleted";
 export type ArchiveStatus =
 	| "pending"

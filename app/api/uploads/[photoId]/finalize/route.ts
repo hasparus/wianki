@@ -3,6 +3,7 @@ import { verifyArchiveReceipt } from "@/lib/archive-token";
 import { readGuestSession } from "@/lib/auth/session";
 import {
 	type ArchiveStatus,
+	acceptedDerivativeTypes,
 	GALLERY_BUCKET,
 	MAX_DERIVATIVE_BYTES,
 	type ModerationStatus,
@@ -15,7 +16,7 @@ const bodySchema = z.object({
 	archiveReceipt: z.string().min(1).nullable(),
 	archiveError: z.string().max(500).nullable().optional(),
 	derivativeSize: z.number().int().positive().max(MAX_DERIVATIVE_BYTES),
-	derivativeType: z.enum(["image/webp", "image/jpeg"]),
+	derivativeType: z.enum(acceptedDerivativeTypes),
 	width: z.number().int().positive().max(20_000),
 	height: z.number().int().positive().max(20_000),
 });
@@ -39,28 +40,15 @@ export async function POST(
 	const supabase = supabaseAdmin();
 	const { data: photo, error: photoError } = await supabase
 		.from("photos")
-		.select("id,storage_path,original_size")
+		.select("id,storage_path,original_size,archive_status,drive_file_id")
 		.eq("id", photoId)
 		.eq("guest_id", session.guestId)
 		.single();
 	if (photoError || !photo) return jsonError("Nie znaleziono zdjęcia.", 404);
 
-	const { data: image, error: downloadError } = await supabase.storage
-		.from(GALLERY_BUCKET)
-		.download(photo.storage_path as string);
-	if (downloadError || !image || image.size > MAX_DERIVATIVE_BYTES) {
-		await supabase
-			.from("photos")
-			.update({
-				hot_status: "failed",
-				last_error: "Nieprawidłowa kopia galeryjna.",
-			})
-			.eq("id", photoId);
-		return jsonError("Nie udało się zweryfikować kopii galeryjnej.", 400);
-	}
-
-	let driveFileId: string | null = null;
-	let archiveStatus: ArchiveStatus = "failed";
+	let driveFileId: string | null = photo.drive_file_id;
+	let archiveStatus: ArchiveStatus =
+		photo.archive_status === "uploaded" ? "uploaded" : "failed";
 	let archiveError = parsed.data.archiveError ?? null;
 	if (parsed.data.archiveReceipt) {
 		try {
@@ -80,6 +68,25 @@ export async function POST(
 					? error.message
 					: "Błędne potwierdzenie archiwum.";
 		}
+	}
+
+	const { data: image, error: downloadError } = await supabase.storage
+		.from(GALLERY_BUCKET)
+		.download(photo.storage_path as string);
+	if (downloadError || !image || image.size > MAX_DERIVATIVE_BYTES) {
+		const galleryError = "Nieprawidłowa kopia galeryjna.";
+		const lastError =
+			[galleryError, archiveError].filter(Boolean).join(" | ") || galleryError;
+		await supabase
+			.from("photos")
+			.update({
+				hot_status: "failed",
+				archive_status: archiveStatus,
+				drive_file_id: driveFileId,
+				last_error: lastError,
+			})
+			.eq("id", photoId);
+		return jsonError("Nie udało się zweryfikować kopii galeryjnej.", 400);
 	}
 
 	let moderationStatus: ModerationStatus = "review_required";
