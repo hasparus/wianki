@@ -27,6 +27,8 @@ derivative server-side; no public image URL is given to Google.
 7. Finalization validates both private copies, persists their independent
    states, and responds as soon as the upload is safely accounted for.
 8. SafeSearch runs after the response and updates moderation independently.
+   With `MODERATION_ENABLED=false`, finalization skips SafeSearch and marks the
+   photo `approved` immediately, recording a system moderation event.
 9. Only approved, hot-uploaded rows appear in the manually refreshed gallery.
 
 ## Failure policy

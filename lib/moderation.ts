@@ -16,6 +16,9 @@ export function classifySafeSearch(scores: SafeSearchScores) {
 
 async function googleAccessToken() {
 	const env = serverEnv();
+	if (!env.GOOGLE_VISION_CLIENT_EMAIL || !env.GOOGLE_VISION_PRIVATE_KEY) {
+		throw new Error("Google Vision nie jest skonfigurowany.");
+	}
 	const privateKey = await importPKCS8(
 		env.GOOGLE_VISION_PRIVATE_KEY.replaceAll("\\n", "\n"),
 		"RS256",

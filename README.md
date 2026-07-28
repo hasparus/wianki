@@ -3,7 +3,10 @@
 Private, mobile-first wedding gallery for guests. The application keeps a small
 web derivative in private Supabase Storage, archives each original in Google
 Drive through a streaming Cloudflare Worker, and sends the derivative through
-Google Vision SafeSearch before publication.
+Google Vision SafeSearch before publication. Couples who trust their guests can
+set `MODERATION_ENABLED=false` to skip SafeSearch entirely — photos are
+auto-approved at finalization and show up in the gallery immediately, and no
+Google Vision credentials are needed.
 
 The UI and operational documentation are Polish-first. Technical documentation
 is written in English so implementation agents can share precise contracts.
@@ -41,7 +44,8 @@ npm run test:e2e
 3. Add the project URL, publishable key, and secret key to Vercel.
 4. Create a Google Cloud project with billing; enable Drive API and Vision API.
 5. Create a Vision-only service account and copy its project ID, email, and
-   private key into Vercel secrets.
+   private key into Vercel secrets. (Skip the Vision parts of steps 4–5 when
+   running with `MODERATION_ENABLED=false`.)
 6. Create a Google OAuth desktop client with the `drive.file` scope. Set
    `GOOGLE_DRIVE_OAUTH_CLIENT_ID` and `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET`, then
    run `npm run drive:bootstrap`. Move the OAuth consent app to Production;
