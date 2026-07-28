@@ -61,7 +61,7 @@ export function randomSuccessMessage() {
 }
 
 export function completedUploadMessage() {
-	return `${randomSuccessMessage()} ${uploadCompleteInstruction}`;
+	return `${randomSuccessMessage()} \n\n${uploadCompleteInstruction}`;
 }
 
 export function phaseLabel(phase: UploadPhase) {
