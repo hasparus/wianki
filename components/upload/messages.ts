@@ -54,7 +54,7 @@ const successMessages = [
 ];
 
 export const uploadCompleteInstruction =
-	"Zdjęcia bezpiecznie dotarły. Pojawią się w galerii za kilka minut — możesz już zamknąć tę stronę.";
+	"Zdjęcia bezpiecznie dotarły i za kilka minut pojawią się w galerii. Poniżej widzisz ich podgląd — śmiało dodawaj kolejne.";
 
 export function randomSuccessMessage() {
 	return successMessages[Math.floor(Math.random() * successMessages.length)];

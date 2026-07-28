@@ -14,6 +14,7 @@ export type UploadItem = {
 	phase: UploadPhase;
 	message: string;
 	photoId?: string;
+	previewUrl?: string;
 };
 
 export type InitUpload = {
