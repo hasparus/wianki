@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { retainDeliveredItems } from "@/components/upload/items";
-import { completedUploadMessage } from "@/components/upload/messages";
+import { completedUploadMessages } from "@/components/upload/messages";
 import { validateUploadSelection } from "@/components/upload/selection";
 import type {
 	FinalizeResult,
@@ -212,9 +212,9 @@ export function useUploadBatch(onComplete: () => void) {
 			);
 			const succeeded = results.filter(Boolean).length;
 			if (results.length && succeeded === results.length) {
-				const message = completedUploadMessage();
-				setSummary(message);
-				setCelebrationMessage(message);
+				const messages = completedUploadMessages();
+				setSummary(messages.summary);
+				setCelebrationMessage(messages.celebration);
 				onComplete();
 			} else {
 				setSummary(

@@ -60,8 +60,11 @@ export function randomSuccessMessage() {
 	return successMessages[Math.floor(Math.random() * successMessages.length)];
 }
 
-export function completedUploadMessage() {
-	return `${randomSuccessMessage()} \n\n${uploadCompleteInstruction}`;
+export function completedUploadMessages() {
+	return {
+		celebration: randomSuccessMessage(),
+		summary: uploadCompleteInstruction,
+	};
 }
 
 export function phaseLabel(phase: UploadPhase) {
