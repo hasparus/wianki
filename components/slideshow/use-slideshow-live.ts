@@ -30,7 +30,6 @@ export type LiveStatus = "connecting" | "on" | "off";
 
 export type SlideshowControl =
 	| { action: "steer" }
-	| { action: "release" }
 	| { action: "goto"; index: number; slideId: string | null; playing: boolean };
 
 const MAX_BUBBLES = 60;

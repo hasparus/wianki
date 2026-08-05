@@ -92,7 +92,7 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 	const [index, setIndex] = useState(0);
 	const [previousIndex, setPreviousIndex] = useState<number | null>(null);
 	const [playing, setPlaying] = useState(true);
-	const [steering, setSteering] = useState(false);
+	const [yielded, setYielded] = useState(false);
 	const [detached, setDetached] = useState(false);
 	const [notice, setNotice] = useState("");
 	const [comment, setComment] = useState("");
@@ -103,8 +103,12 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 	);
 	const live = useSlideshowLive();
 
+	const isAdmin = live.role === "admin" && live.status === "on";
+	// The presenter always steers: an admin device claims the show as soon as
+	// it connects, unless another admin has taken over since (last wins).
+	const claiming = isAdmin && !yielded;
 	// A live show exists and this device neither drives it nor opted out.
-	const following = live.show.live && !steering && !detached;
+	const following = live.show.live && !live.isPresenter && !detached;
 	// Local autoplay runs whenever this device owns its own timeline.
 	const autoplaying = playing && !following;
 
@@ -148,46 +152,35 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 		return () => clearTimeout(timer);
 	}, [autoplaying, index, slides.length, goTo]);
 
-	// Steering: (re-)claim the show on every (re)connection…
+	// Claim the show on every (re)connection and whenever the claim returns.
 	useEffect(() => {
-		if (!steering || live.connectionEpoch === 0) return;
+		if (!claiming || live.connectionEpoch === 0) return;
 		live.sendControl({ action: "steer" });
-	}, [steering, live.connectionEpoch, live.sendControl]);
+	}, [claiming, live.connectionEpoch, live.sendControl]);
 
-	// …and mirror every local position/play change to the room.
+	// Mirror every local position/play change to the room while presenting.
 	useEffect(() => {
-		if (!steering || live.connectionEpoch === 0) return;
+		if (!live.isPresenter) return;
 		live.sendControl({
 			action: "goto",
 			index,
 			slideId: slides[index]?.id ?? null,
 			playing,
 		});
-	}, [
-		steering,
-		live.connectionEpoch,
-		live.sendControl,
-		index,
-		playing,
-		slides,
-	]);
+	}, [live.isPresenter, live.sendControl, index, playing, slides]);
 
-	// Another admin took over: stop pretending to steer.
+	// Another admin took over: become a viewer until taken back.
 	useEffect(() => {
-		if (!steering) {
-			wasPresenterRef.current = false;
+		if (live.isPresenter) {
+			wasPresenterRef.current = true;
 			return;
 		}
-		if (live.isPresenter) wasPresenterRef.current = true;
-		if (
-			wasPresenterRef.current &&
-			live.show.presenterId !== null &&
-			!live.isPresenter
-		) {
-			setSteering(false);
-			showNotice("Ktoś inny prowadzi teraz pokaz.");
+		if (wasPresenterRef.current && live.show.presenterId !== null) {
+			wasPresenterRef.current = false;
+			setYielded(true);
+			showNotice("Pokaz prowadzi teraz inne urządzenie.");
 		}
-	}, [steering, live.show.presenterId, live.isPresenter, showNotice]);
+	}, [live.isPresenter, live.show.presenterId, showNotice]);
 
 	// Follow the presenter.
 	useEffect(() => {
@@ -199,9 +192,13 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 		if (target !== null && target !== index) goTo(target);
 	}, [following, live.show, slides, index, goTo]);
 
-	// When the show ends, everyone resumes their own pace.
+	// When the show ends (presenter left), viewers resume their own pace and
+	// remaining admin devices are free to claim it again.
 	useEffect(() => {
-		if (!live.show.live) setDetached(false);
+		if (!live.show.live) {
+			setDetached(false);
+			setYielded(false);
+		}
 	}, [live.show.live]);
 
 	useEffect(() => {
@@ -237,14 +234,9 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 		};
 	}, [playing, following]);
 
-	function toggleSteering() {
-		if (steering) {
-			setSteering(false);
-			live.sendControl({ action: "release" });
-			return;
-		}
+	function takeBack() {
 		setDetached(false);
-		setSteering(true);
+		setYielded(false);
 	}
 
 	function onPointerDown(event: ReactPointerEvent) {
@@ -333,7 +325,7 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 								aria-hidden
 								className="size-2.5 animate-pulse rounded-full bg-wedding-rose"
 							/>
-							{steering ? "Prowadzisz" : "Na żywo"}
+							{live.isPresenter ? "Prowadzisz" : "Na żywo"}
 						</span>
 					) : null}
 				</div>
@@ -349,18 +341,13 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 					<span className="whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 py-2.5 text-sm font-bold tabular-nums backdrop-blur">
 						{index + 1} / {slides.length}
 					</span>
-					{live.role === "admin" && live.status === "on" ? (
+					{isAdmin && yielded && live.show.live ? (
 						<button
 							type="button"
-							onClick={toggleSteering}
-							aria-pressed={steering}
-							className={`min-h-11 rounded-full px-4 text-sm font-bold backdrop-blur ${
-								steering
-									? "bg-wedding-rose text-wedding-green"
-									: "bg-wedding-green-deep/60 hover:bg-wedding-green-deep/80"
-							}`}
+							onClick={takeBack}
+							className="min-h-11 whitespace-nowrap rounded-full bg-wedding-rose px-4 text-sm font-bold text-wedding-green"
 						>
-							{steering ? "Oddaj pokaz" : "Prowadź pokaz"}
+							Przejmij pokaz
 						</button>
 					) : null}
 					{!following ? (

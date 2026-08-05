@@ -16,7 +16,6 @@ export type LiveRole = "guest" | "admin";
 
 export type ControlMessage =
 	| { type: "control"; action: "steer" }
-	| { type: "control"; action: "release" }
 	| {
 			type: "control";
 			action: "goto";
@@ -78,9 +77,9 @@ export function showMessage(state: ShowState): ServerMessage {
  * null when the sender is not allowed to make that change (guests never
  * steer; `goto` is honored only from the current presenter).
  *
- * Any admin may `steer` (take over — the couple shares the admin QR) and any
- * admin may `release` a live show, so a zombie presenter connection can
- * always be cleaned up from another device.
+ * The presenter always steers: admin devices claim the show automatically,
+ * and any admin's `steer` takes over (last wins — the couple shares the
+ * admin QR). A presenter disconnect resets the room to idle.
  */
 export function applyControl(
 	state: ShowState,
@@ -91,9 +90,6 @@ export function applyControl(
 	if (role !== "admin") return null;
 	if (message.action === "steer") {
 		return { ...state, presenterId: connectionId };
-	}
-	if (message.action === "release") {
-		return state.presenterId === null ? null : { ...IDLE_SHOW_STATE };
 	}
 	if (state.presenterId !== connectionId) return null;
 	return {
@@ -141,8 +137,8 @@ export function sanitizeComment(value: string): string | null {
 function parseControlMessage(
 	message: Record<string, unknown>,
 ): ControlMessage | null {
-	if (message.action === "steer" || message.action === "release") {
-		return { type: "control", action: message.action };
+	if (message.action === "steer") {
+		return { type: "control", action: "steer" };
 	}
 	if (
 		message.action === "goto" &&

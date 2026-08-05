@@ -2,7 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { type FormEvent, useCallback, useRef, useState } from "react";
+import {
+	type FormEvent,
+	type PointerEvent as ReactPointerEvent,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import type { GalleryItem } from "@/lib/domain";
 import type { AdminSlide } from "@/lib/slideshow";
 
@@ -44,8 +51,13 @@ export function SlideEditor({
 	const [editTitle, setEditTitle] = useState("");
 	const [editSubtitle, setEditSubtitle] = useState("");
 
-	const dragIndex = useRef<number | null>(null);
-	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+	const [dragId, setDragId] = useState<string | null>(null);
+	const rowRefs = useRef(new Map<string, HTMLLIElement>());
+	const endDragRef = useRef<((commit: boolean) => void) | null>(null);
+	// Mirrors `slides` so the drop handler can persist the just-dragged order
+	// without waiting for a re-render.
+	const slidesRef = useRef(initialSlides);
+	slidesRef.current = slides;
 
 	const refresh = useCallback(async () => {
 		const response = await fetch("/api/admin/slides", { cache: "no-store" });
@@ -72,13 +84,12 @@ export function SlideEditor({
 		}
 	}
 
-	async function saveOrder(next: AdminSlide[]) {
-		setSlides(next);
+	async function persistOrder(order: AdminSlide[]) {
 		await run(async () => {
 			const response = await fetch("/api/admin/slides", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ order: next.map((slide) => slide.id) }),
+				body: JSON.stringify({ order: order.map((slide) => slide.id) }),
 			});
 			if (!response.ok) {
 				await refresh();
@@ -94,8 +105,61 @@ export function SlideEditor({
 		const next = [...slides];
 		const [slide] = next.splice(from, 1);
 		next.splice(to, 0, slide);
-		void saveOrder(next);
+		setSlides(next);
+		void persistOrder(next);
 	}
+
+	// Handle-based drag that works with mouse and touch alike. Move/up
+	// listeners live on `window`, not on the handle: reordering re-parents the
+	// row's DOM node, which would break pointer capture mid-drag.
+	function onDragStart(event: ReactPointerEvent, slideId: string) {
+		event.preventDefault();
+		endDragRef.current?.(false);
+		setDragId(slideId);
+
+		const onMove = (moveEvent: PointerEvent) => {
+			const y = moveEvent.clientY;
+			setSlides((current) => {
+				const from = current.findIndex((slide) => slide.id === slideId);
+				if (from === -1) return current;
+				let to = from;
+				current.forEach((slide, i) => {
+					if (i === from) return;
+					const row = rowRefs.current.get(slide.id);
+					if (!row) return;
+					const rect = row.getBoundingClientRect();
+					const middle = rect.top + rect.height / 2;
+					if (i < from && y < middle) to = Math.min(to, i);
+					if (i > from && y > middle) to = Math.max(to, i);
+				});
+				if (to === from) return current;
+				const next = [...current];
+				const [slide] = next.splice(from, 1);
+				next.splice(to, 0, slide);
+				// Keep the mirror current even if the drop lands before React
+				// re-renders this last swap.
+				slidesRef.current = next;
+				return next;
+			});
+		};
+		const endDrag = (commit: boolean) => {
+			window.removeEventListener("pointermove", onMove);
+			window.removeEventListener("pointerup", onUp);
+			window.removeEventListener("pointercancel", onCancel);
+			endDragRef.current = null;
+			setDragId(null);
+			if (commit) void persistOrder(slidesRef.current);
+		};
+		const onUp = () => endDrag(true);
+		const onCancel = () => endDrag(false);
+		endDragRef.current = endDrag;
+		window.addEventListener("pointermove", onMove);
+		window.addEventListener("pointerup", onUp);
+		window.addEventListener("pointercancel", onCancel);
+	}
+
+	// Tear down window listeners if the editor unmounts mid-drag.
+	useEffect(() => () => endDragRef.current?.(false), []);
 
 	async function loadPickerPage(cursor?: string | null) {
 		const url = cursor
@@ -222,14 +286,6 @@ export function SlideEditor({
 		});
 	}
 
-	function onDrop(targetIndex: number) {
-		const from = dragIndex.current;
-		dragIndex.current = null;
-		setDragOverIndex(null);
-		if (from === null) return;
-		move(from, targetIndex);
-	}
-
 	return (
 		<main className="mx-auto min-h-screen w-full max-w-5xl px-5 py-10">
 			<header className="flex flex-wrap items-end justify-between gap-4">
@@ -286,23 +342,24 @@ export function SlideEditor({
 						{slides.map((slide, index) => (
 							<li
 								key={slide.id}
-								draggable
-								onDragStart={() => {
-									dragIndex.current = index;
+								ref={(element) => {
+									if (element) rowRefs.current.set(slide.id, element);
+									else rowRefs.current.delete(slide.id);
 								}}
-								onDragOver={(event) => {
-									event.preventDefault();
-									setDragOverIndex(index);
-								}}
-								onDragLeave={() => setDragOverIndex(null)}
-								onDrop={() => onDrop(index)}
-								className={`flex items-center gap-4 rounded-3xl border bg-wedding-cream p-3 shadow-sm ${
-									dragOverIndex === index
-										? "border-wedding-green"
+								className={`flex items-center gap-3 rounded-3xl border bg-wedding-cream p-3 shadow-sm ${
+									dragId === slide.id
+										? "relative z-10 scale-[1.01] border-wedding-green shadow-lg"
 										: "border-wedding-rose"
 								}`}
 							>
-								<span className="w-8 shrink-0 text-center font-serif text-xl font-bold">
+								<span
+									aria-hidden
+									onPointerDown={(event) => onDragStart(event, slide.id)}
+									className="shrink-0 cursor-grab touch-none select-none px-1.5 py-3 text-xl leading-none text-wedding-green/60 active:cursor-grabbing"
+								>
+									⠿
+								</span>
+								<span className="w-6 shrink-0 text-center font-serif text-xl font-bold">
 									{index + 1}
 								</span>
 								{slide.kind === "photo" ? (
@@ -313,15 +370,16 @@ export function SlideEditor({
 											width={160}
 											height={120}
 											unoptimized
-											className="h-20 w-28 shrink-0 rounded-2xl object-cover"
+											draggable={false}
+											className="h-16 w-20 shrink-0 rounded-2xl object-cover sm:h-20 sm:w-28"
 										/>
 									) : (
-										<div className="grid h-20 w-28 shrink-0 place-items-center rounded-2xl bg-wedding-rose/30 px-2 text-center text-xs font-bold">
+										<div className="grid h-16 w-20 shrink-0 place-items-center rounded-2xl bg-wedding-rose/30 px-2 text-center text-xs font-bold sm:h-20 sm:w-28">
 											Zdjęcie ukryte
 										</div>
 									)
 								) : (
-									<div className="grid h-20 w-28 shrink-0 place-items-center rounded-2xl bg-wedding-green px-2 text-center">
+									<div className="grid h-16 w-20 shrink-0 place-items-center rounded-2xl bg-wedding-green px-2 text-center sm:h-20 sm:w-28">
 										<span className="font-serif text-xs font-bold text-wedding-ivory">
 											Aa
 										</span>
@@ -389,7 +447,7 @@ export function SlideEditor({
 										</>
 									)}
 								</div>
-								<div className="flex shrink-0 items-center gap-1.5">
+								<div className="flex shrink-0 flex-col items-center gap-1.5 sm:flex-row">
 									<button
 										type="button"
 										onClick={() => move(index, index - 1)}
