@@ -6,6 +6,14 @@
   telefonie: autoodtwarzanie, przesuwanie gestem, klawisze strzałek. Reakcje
   emoji ulatują do góry, a komentarze płyną przez ekran w bąbelkach — u
   wszystkich oglądających jednocześnie.
+- **Tryb prowadzącego**: administrator widzi na `/pokaz` przycisk „Prowadź
+  pokaz”. Gdy go włączy, wszystkie urządzenia śledzą jego slajd (dopasowanie po
+  id slajdu, z awaryjnym indeksem, gdy talie się różnią). Goście mogą w każdej
+  chwili przeglądać samodzielnie — pojawia się wtedy przycisk „Wróć do pokazu
+  na żywo”. Prowadzenie może przejąć drugi telefon administratora (ostatni
+  wygrywa), a zerwanie połączenia prowadzącego automatycznie kończy tryb na
+  żywo. Stan pokazu jest wznawiane przez klienta prowadzącego po
+  ponownym połączeniu, więc restart workera nie przerywa wieczoru.
 - `/admin/pokaz` — edytor pokazu dla pary młodej: dodawanie zdjęć z
   zatwierdzonej galerii, slajdy tekstowe, zmiana kolejności (przeciąganie na
   komputerze, strzałki na telefonie).

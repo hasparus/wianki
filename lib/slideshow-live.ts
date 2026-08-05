@@ -20,7 +20,43 @@ export type SlideshowLiveAccess = {
 	party: string;
 	room: string;
 	token: string;
+	role: SlideshowLiveRole;
 };
+
+/** Presenter state broadcast by the worker as `{type:"show", ...}`. */
+export type ShowStatePayload = {
+	live: boolean;
+	index: number;
+	slideId: string | null;
+	playing: boolean;
+	presenterId: string | null;
+};
+
+export const IDLE_SHOW: ShowStatePayload = {
+	live: false,
+	index: 0,
+	slideId: null,
+	playing: false,
+	presenterId: null,
+};
+
+/**
+ * Maps the presenter's show state onto a locally loaded deck. Decks can
+ * drift between viewers (a photo hidden after one of them loaded the page),
+ * so slides are matched by id first and the raw index is only a clamped
+ * fallback.
+ */
+export function resolveShowIndex(
+	show: ShowStatePayload,
+	slideIds: string[],
+): number | null {
+	if (slideIds.length === 0) return null;
+	if (show.slideId) {
+		const byId = slideIds.indexOf(show.slideId);
+		if (byId !== -1) return byId;
+	}
+	return Math.min(Math.max(show.index, 0), slideIds.length - 1);
+}
 
 export function slideshowLiveConfigured() {
 	const env = serverEnv();
@@ -43,6 +79,7 @@ export async function createSlideshowLiveAccess(
 		party: SLIDESHOW_PARTY,
 		room: SLIDESHOW_ROOM,
 		token,
+		role,
 	};
 }
 

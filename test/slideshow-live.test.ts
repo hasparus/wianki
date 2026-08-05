@@ -5,6 +5,8 @@ vi.mock("@/lib/env", () => ({ serverEnv: mocks.serverEnv }));
 
 import {
 	createSlideshowLiveAccess,
+	IDLE_SHOW,
+	resolveShowIndex,
 	verifySlideshowLiveToken,
 } from "@/lib/slideshow-live";
 
@@ -27,9 +29,22 @@ describe("slideshow live tokens", () => {
 		const access = await createSlideshowLiveAccess("guest");
 		expect(access?.host).toBe("wedding-slideshow-live.example.workers.dev");
 		expect(access?.room).toBe("wesele");
+		expect(access?.role).toBe("guest");
 		expect(await verifySlideshowLiveToken(access?.token ?? "", secret)).toBe(
 			"guest",
 		);
+	});
+
+	it("maps show state onto a local deck by slide id, then clamped index", () => {
+		const show = { ...IDLE_SHOW, live: true, index: 5, slideId: "b" };
+		expect(resolveShowIndex(show, ["a", "b", "c"])).toBe(1);
+		expect(resolveShowIndex({ ...show, slideId: "missing" }, ["a", "b"])).toBe(
+			1,
+		);
+		expect(resolveShowIndex({ ...show, slideId: null, index: -3 }, ["a"])).toBe(
+			0,
+		);
+		expect(resolveShowIndex(show, [])).toBeNull();
 	});
 
 	it("rejects a token signed with another secret", async () => {

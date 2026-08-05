@@ -13,11 +13,16 @@ import {
 import { BubbleLayer } from "@/components/slideshow/bubble-layer";
 import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
 import type { SlideshowDeck, SlideshowSlide } from "@/lib/slideshow";
-import { MAX_COMMENT_LENGTH, REACTION_EMOJI } from "@/lib/slideshow-live";
+import {
+	MAX_COMMENT_LENGTH,
+	REACTION_EMOJI,
+	resolveShowIndex,
+} from "@/lib/slideshow-live";
 
 const SLIDE_MS = 8000;
 const CROSSFADE_MS = 900;
 const SWIPE_THRESHOLD_PX = 48;
+const NOTICE_MS = 4000;
 
 const reactionLabels: Record<string, string> = {
 	"❤️": "serce",
@@ -62,6 +67,7 @@ function SlideView({
 					height={slide.height ?? 1200}
 					unoptimized
 					priority
+					draggable={false}
 					className="h-full w-full object-contain"
 				/>
 			) : null}
@@ -86,9 +92,21 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 	const [index, setIndex] = useState(0);
 	const [previousIndex, setPreviousIndex] = useState<number | null>(null);
 	const [playing, setPlaying] = useState(true);
+	const [steering, setSteering] = useState(false);
+	const [detached, setDetached] = useState(false);
+	const [notice, setNotice] = useState("");
 	const [comment, setComment] = useState("");
 	const pointerStart = useRef<{ x: number; y: number } | null>(null);
+	const wasPresenterRef = useRef(false);
+	const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+		undefined,
+	);
 	const live = useSlideshowLive();
+
+	// A live show exists and this device neither drives it nor opted out.
+	const following = live.show.live && !steering && !detached;
+	// Local autoplay runs whenever this device owns its own timeline.
+	const autoplaying = playing && !following;
 
 	const goTo = useCallback(
 		(target: number) => {
@@ -102,6 +120,22 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 		[slides.length],
 	);
 
+	const navigate = useCallback(
+		(target: number) => {
+			if (following) setDetached(true);
+			goTo(target);
+		},
+		[following, goTo],
+	);
+
+	const showNotice = useCallback((text: string) => {
+		setNotice(text);
+		clearTimeout(noticeTimerRef.current);
+		noticeTimerRef.current = setTimeout(() => setNotice(""), NOTICE_MS);
+	}, []);
+
+	useEffect(() => () => clearTimeout(noticeTimerRef.current), []);
+
 	useEffect(() => {
 		if (previousIndex === null) return;
 		const timer = setTimeout(() => setPreviousIndex(null), CROSSFADE_MS);
@@ -109,10 +143,66 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 	}, [previousIndex]);
 
 	useEffect(() => {
-		if (!playing || slides.length < 2) return;
+		if (!autoplaying || slides.length < 2) return;
 		const timer = setTimeout(() => goTo(index + 1), SLIDE_MS);
 		return () => clearTimeout(timer);
-	}, [playing, index, slides.length, goTo]);
+	}, [autoplaying, index, slides.length, goTo]);
+
+	// Steering: (re-)claim the show on every (re)connection…
+	useEffect(() => {
+		if (!steering || live.connectionEpoch === 0) return;
+		live.sendControl({ action: "steer" });
+	}, [steering, live.connectionEpoch, live.sendControl]);
+
+	// …and mirror every local position/play change to the room.
+	useEffect(() => {
+		if (!steering || live.connectionEpoch === 0) return;
+		live.sendControl({
+			action: "goto",
+			index,
+			slideId: slides[index]?.id ?? null,
+			playing,
+		});
+	}, [
+		steering,
+		live.connectionEpoch,
+		live.sendControl,
+		index,
+		playing,
+		slides,
+	]);
+
+	// Another admin took over: stop pretending to steer.
+	useEffect(() => {
+		if (!steering) {
+			wasPresenterRef.current = false;
+			return;
+		}
+		if (live.isPresenter) wasPresenterRef.current = true;
+		if (
+			wasPresenterRef.current &&
+			live.show.presenterId !== null &&
+			!live.isPresenter
+		) {
+			setSteering(false);
+			showNotice("Ktoś inny prowadzi teraz pokaz.");
+		}
+	}, [steering, live.show.presenterId, live.isPresenter, showNotice]);
+
+	// Follow the presenter.
+	useEffect(() => {
+		if (!following) return;
+		const target = resolveShowIndex(
+			live.show,
+			slides.map((slide) => slide.id),
+		);
+		if (target !== null && target !== index) goTo(target);
+	}, [following, live.show, slides, index, goTo]);
+
+	// When the show ends, everyone resumes their own pace.
+	useEffect(() => {
+		if (!live.show.live) setDetached(false);
+	}, [live.show.live]);
 
 	useEffect(() => {
 		const next = slides[(index + 1) % slides.length];
@@ -125,16 +215,16 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 	useEffect(() => {
 		function onKeyDown(event: KeyboardEvent) {
 			if (event.target instanceof HTMLInputElement) return;
-			if (event.key === "ArrowRight") goTo(index + 1);
-			if (event.key === "ArrowLeft") goTo(index - 1);
+			if (event.key === "ArrowRight") navigate(index + 1);
+			if (event.key === "ArrowLeft") navigate(index - 1);
 		}
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [goTo, index]);
+	}, [navigate, index]);
 
 	// The show often runs propped up on a phone — keep the screen awake.
 	useEffect(() => {
-		if (!playing || !("wakeLock" in navigator)) return;
+		if ((!playing && !following) || !("wakeLock" in navigator)) return;
 		let lock: WakeLockSentinel | null = null;
 		navigator.wakeLock
 			.request("screen")
@@ -145,7 +235,17 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 		return () => {
 			lock?.release().catch(() => {});
 		};
-	}, [playing]);
+	}, [playing, following]);
+
+	function toggleSteering() {
+		if (steering) {
+			setSteering(false);
+			live.sendControl({ action: "release" });
+			return;
+		}
+		setDetached(false);
+		setSteering(true);
+	}
 
 	function onPointerDown(event: ReactPointerEvent) {
 		pointerStart.current = { x: event.clientX, y: event.clientY };
@@ -159,7 +259,7 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 		const dy = event.clientY - start.y;
 		if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) < Math.abs(dy))
 			return;
-		goTo(dx < 0 ? index + 1 : index - 1);
+		navigate(dx < 0 ? index + 1 : index - 1);
 	}
 
 	function submitComment(event: FormEvent<HTMLFormElement>) {
@@ -193,9 +293,12 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 
 	return (
 		<main
-			className="slideshow-stage relative h-dvh w-full touch-pan-y overflow-hidden text-wedding-ivory"
+			className="slideshow-stage relative h-dvh w-full touch-pan-y select-none overflow-hidden text-wedding-ivory"
 			onPointerDown={onPointerDown}
 			onPointerUp={onPointerUp}
+			onPointerCancel={() => {
+				pointerStart.current = null;
+			}}
 		>
 			{previousSlide ? (
 				<SlideView
@@ -217,40 +320,90 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 			</p>
 
 			<header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 p-4">
-				<Link
-					href="/"
-					className="min-h-11 rounded-full bg-wedding-green-deep/60 px-5 py-2.5 text-sm font-bold backdrop-blur hover:bg-wedding-green-deep/80"
-				>
-					‹ Galeria
-				</Link>
+				<div className="flex items-center gap-2">
+					<Link
+						href="/"
+						className="min-h-11 rounded-full bg-wedding-green-deep/60 px-5 py-2.5 text-sm font-bold backdrop-blur hover:bg-wedding-green-deep/80"
+					>
+						‹ Galeria
+					</Link>
+					{live.show.live ? (
+						<span className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 text-sm font-bold backdrop-blur">
+							<span
+								aria-hidden
+								className="size-2.5 animate-pulse rounded-full bg-wedding-rose"
+							/>
+							{steering ? "Prowadzisz" : "Na żywo"}
+						</span>
+					) : null}
+				</div>
 				<div className="flex items-center gap-2">
 					{live.status === "on" ? (
 						<span
-							className="rounded-full bg-wedding-green-deep/60 px-4 py-2.5 text-sm font-bold backdrop-blur"
+							className="whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 py-2.5 text-sm font-bold backdrop-blur"
 							title="Liczba oglądających"
 						>
 							{live.viewers} 👀
 						</span>
 					) : null}
-					<span className="rounded-full bg-wedding-green-deep/60 px-4 py-2.5 text-sm font-bold tabular-nums backdrop-blur">
+					<span className="whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 py-2.5 text-sm font-bold tabular-nums backdrop-blur">
 						{index + 1} / {slides.length}
 					</span>
-					<button
-						type="button"
-						onClick={() => setPlaying((value) => !value)}
-						aria-label={playing ? "Zatrzymaj pokaz" : "Wznów pokaz"}
-						className="min-h-11 min-w-11 rounded-full bg-wedding-green-deep/60 text-sm font-bold backdrop-blur hover:bg-wedding-green-deep/80"
-					>
-						{playing ? "⏸" : "▶"}
-					</button>
+					{live.role === "admin" && live.status === "on" ? (
+						<button
+							type="button"
+							onClick={toggleSteering}
+							aria-pressed={steering}
+							className={`min-h-11 rounded-full px-4 text-sm font-bold backdrop-blur ${
+								steering
+									? "bg-wedding-rose text-wedding-green"
+									: "bg-wedding-green-deep/60 hover:bg-wedding-green-deep/80"
+							}`}
+						>
+							{steering ? "Oddaj pokaz" : "Prowadź pokaz"}
+						</button>
+					) : null}
+					{!following ? (
+						<button
+							type="button"
+							onClick={() => setPlaying((value) => !value)}
+							aria-label={playing ? "Zatrzymaj pokaz" : "Wznów pokaz"}
+							className="min-h-11 min-w-11 rounded-full bg-wedding-green-deep/60 text-sm font-bold backdrop-blur hover:bg-wedding-green-deep/80"
+						>
+							{playing ? "⏸" : "▶"}
+						</button>
+					) : null}
 				</div>
 			</header>
+
+			{notice ? (
+				<p
+					aria-live="polite"
+					className="absolute inset-x-0 top-20 z-30 mx-auto w-fit rounded-full bg-wedding-ivory/95 px-5 py-2 text-sm font-bold text-wedding-green shadow-lg"
+				>
+					{notice}
+				</p>
+			) : null}
+
+			{detached && live.show.live ? (
+				<button
+					type="button"
+					onClick={() => setDetached(false)}
+					className="absolute inset-x-0 top-20 z-30 mx-auto flex w-fit items-center gap-2 rounded-full bg-wedding-ivory/95 px-5 py-2.5 text-sm font-bold text-wedding-green shadow-lg hover:bg-wedding-cream"
+				>
+					<span
+						aria-hidden
+						className="size-2.5 animate-pulse rounded-full bg-wedding-error"
+					/>
+					Wróć do pokazu na żywo
+				</button>
+			) : null}
 
 			{slides.length > 1 ? (
 				<>
 					<button
 						type="button"
-						onClick={() => goTo(index - 1)}
+						onClick={() => navigate(index - 1)}
 						aria-label="Poprzedni slajd"
 						className="absolute left-3 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 rounded-full bg-wedding-green-deep/50 text-xl font-bold backdrop-blur hover:bg-wedding-green-deep/80 sm:block"
 					>
@@ -258,7 +411,7 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 					</button>
 					<button
 						type="button"
-						onClick={() => goTo(index + 1)}
+						onClick={() => navigate(index + 1)}
 						aria-label="Następny slajd"
 						className="absolute right-3 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 rounded-full bg-wedding-green-deep/50 text-xl font-bold backdrop-blur hover:bg-wedding-green-deep/80 sm:block"
 					>

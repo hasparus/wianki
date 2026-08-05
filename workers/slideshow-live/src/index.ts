@@ -1,14 +1,20 @@
 import {
 	type Connection,
+	type ConnectionContext,
 	routePartykitRequest,
 	Server,
 	type WSMessage,
 } from "partyserver";
 import {
+	applyControl,
+	IDLE_SHOW_STATE,
 	isBrowserOriginAllowed,
+	type LiveRole,
 	parseClientMessage,
 	RateLimiter,
 	type ServerMessage,
+	type ShowState,
+	showMessage,
 	verifyLiveToken,
 } from "./protocol";
 
@@ -18,30 +24,47 @@ export interface Env {
 	LIVE_TOKEN_SECRET: string;
 }
 
+type ConnectionState = { role: LiveRole };
+
 /**
- * One room per wedding. Everything here is ephemeral by design: reactions and
- * comments are broadcast to whoever is watching right now and never stored.
+ * One room per wedding. Reactions and comments are ephemeral by design:
+ * broadcast to whoever is watching right now and never stored. The show
+ * state (which slide the presenter is on) is authoritative here, but its
+ * source of truth is the presenter's device — if this object restarts, the
+ * presenter's client re-claims the show on reconnect.
  */
 export class SlideshowParty extends Server<Env> {
 	static options = { hibernate: false };
 
 	private readonly limiters = new Map<string, RateLimiter>();
+	private show: ShowState = { ...IDLE_SHOW_STATE };
 
-	onConnect() {
+	async onConnect(
+		connection: Connection<ConnectionState>,
+		ctx: ConnectionContext,
+	) {
+		// The worker-level onBeforeConnect already rejected bad tokens; verify
+		// again here to bind the role to the connection (defense in depth).
+		const token = new URL(ctx.request.url).searchParams.get("token");
+		const role = await verifyLiveToken(token, this.env.LIVE_TOKEN_SECRET);
+		if (!role) {
+			connection.close(4401, "Brak dostępu.");
+			return;
+		}
+		connection.setState({ role });
+		connection.send(JSON.stringify(showMessage(this.show)));
 		this.broadcastPresence();
 	}
 
 	onClose(connection: Connection) {
-		this.limiters.delete(connection.id);
-		this.broadcastPresence();
+		this.dropConnection(connection);
 	}
 
 	onError(connection: Connection) {
-		this.limiters.delete(connection.id);
-		this.broadcastPresence();
+		this.dropConnection(connection);
 	}
 
-	onMessage(connection: Connection, raw: WSMessage) {
+	onMessage(connection: Connection<ConnectionState>, raw: WSMessage) {
 		const message = parseClientMessage(raw);
 		if (!message) return;
 		let limiter = this.limiters.get(connection.id);
@@ -49,8 +72,17 @@ export class SlideshowParty extends Server<Env> {
 			limiter = new RateLimiter();
 			this.limiters.set(connection.id, limiter);
 		}
-		if (!limiter.allow(message.type)) {
-			this.send(connection, { type: "throttled", kind: message.type });
+		const kind = message.type === "control" ? "control" : message.type;
+		if (!limiter.allow(kind)) {
+			this.send(connection, { type: "throttled", kind });
+			return;
+		}
+		if (message.type === "control") {
+			const role = connection.state?.role ?? "guest";
+			const next = applyControl(this.show, message, connection.id, role);
+			if (!next) return;
+			this.show = next;
+			this.broadcast(JSON.stringify(showMessage(next)));
 			return;
 		}
 		this.broadcast(
@@ -60,6 +92,15 @@ export class SlideshowParty extends Server<Env> {
 
 	onRequest() {
 		return new Response("Nie znaleziono.", { status: 404 });
+	}
+
+	private dropConnection(connection: Connection) {
+		this.limiters.delete(connection.id);
+		if (this.show.presenterId === connection.id) {
+			this.show = { ...IDLE_SHOW_STATE };
+			this.broadcast(JSON.stringify(showMessage(this.show)));
+		}
+		this.broadcastPresence();
 	}
 
 	private send(connection: Connection, message: ServerMessage) {

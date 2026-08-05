@@ -2,7 +2,12 @@
 
 import PartySocket from "partysocket";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SlideshowLiveAccess } from "@/lib/slideshow-live";
+import {
+	IDLE_SHOW,
+	type ShowStatePayload,
+	type SlideshowLiveAccess,
+	type SlideshowLiveRole,
+} from "@/lib/slideshow-live";
 
 export type SlideshowBubble =
 	| {
@@ -23,6 +28,11 @@ export type SlideshowBubble =
 
 export type LiveStatus = "connecting" | "on" | "off";
 
+export type SlideshowControl =
+	| { action: "steer" }
+	| { action: "release" }
+	| { action: "goto"; index: number; slideId: string | null; playing: boolean };
+
 const MAX_BUBBLES = 60;
 const COMMENT_LANES = [8, 16, 24, 32, 40];
 
@@ -30,11 +40,16 @@ type ServerMessage =
 	| { type: "presence"; viewers: number }
 	| { type: "reaction"; id: string; emoji: string }
 	| { type: "comment"; id: string; text: string }
-	| { type: "throttled"; kind: "reaction" | "comment" };
+	| { type: "throttled"; kind: "reaction" | "comment" | "control" }
+	| ({ type: "show" } & ShowStatePayload);
 
 export function useSlideshowLive() {
 	const [status, setStatus] = useState<LiveStatus>("connecting");
+	const [role, setRole] = useState<SlideshowLiveRole | null>(null);
 	const [viewers, setViewers] = useState(0);
+	const [show, setShow] = useState<ShowStatePayload>(IDLE_SHOW);
+	const [socketId, setSocketId] = useState<string | null>(null);
+	const [connectionEpoch, setConnectionEpoch] = useState(0);
 	const [bubbles, setBubbles] = useState<SlideshowBubble[]>([]);
 	const [lastComment, setLastComment] = useState("");
 	const [throttled, setThrottled] = useState(false);
@@ -64,6 +79,16 @@ export function useSlideshowLive() {
 			}
 			if (message.type === "presence") {
 				setViewers(message.viewers);
+				return;
+			}
+			if (message.type === "show") {
+				setShow({
+					live: message.live,
+					index: message.index,
+					slideId: message.slideId,
+					playing: message.playing,
+					presenterId: message.presenterId,
+				});
 				return;
 			}
 			if (message.type === "reaction") {
@@ -110,6 +135,7 @@ export function useSlideshowLive() {
 					setStatus("off");
 					return;
 				}
+				setRole(body.live.role);
 				const socket = new PartySocket({
 					host: body.live.host,
 					party: body.live.party,
@@ -117,7 +143,11 @@ export function useSlideshowLive() {
 					query: { token: body.live.token },
 				});
 				socketRef.current = socket;
-				socket.addEventListener("open", () => setStatus("on"));
+				setSocketId(socket.id);
+				socket.addEventListener("open", () => {
+					setStatus("on");
+					setConnectionEpoch((epoch) => epoch + 1);
+				});
 				socket.addEventListener("message", (event) => {
 					if (typeof event.data === "string") handleMessage(event.data);
 				});
@@ -145,14 +175,28 @@ export function useSlideshowLive() {
 		socketRef.current?.send(JSON.stringify({ type: "comment", text: trimmed }));
 	}, []);
 
+	const sendControl = useCallback((control: SlideshowControl) => {
+		socketRef.current?.send(JSON.stringify({ type: "control", ...control }));
+	}, []);
+
+	const isPresenter =
+		socketId !== null &&
+		show.presenterId !== null &&
+		show.presenterId === socketId;
+
 	return {
 		status,
+		role,
 		viewers,
+		show,
+		isPresenter,
+		connectionEpoch,
 		bubbles,
 		lastComment,
 		throttled,
 		dismissBubble,
 		sendReaction,
 		sendComment,
+		sendControl,
 	};
 }
