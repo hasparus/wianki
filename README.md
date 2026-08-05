@@ -80,6 +80,9 @@ See [integration setup](docs/integrations.md) and the
 - `app/api/gallery`: protected approved-photo pagination and statistics.
 - `app/api/admin`: moderation, reconciliation, and deletion operations.
 - `workers/drive-archive`: streaming original upload and Drive lifecycle.
+- `app/pokaz` + `app/admin/pokaz`: live slideshow and its slide editor.
+- `workers/slideshow-live`: PartyServer room for ephemeral reactions and
+  comments during the slideshow (`docs/slideshow.md`).
 - `supabase/migrations`: tables, enums, indexes, RLS, and private bucket.
 - `docs/tasks`: dependency-ordered briefs for planning/implementation agents.
 

@@ -27,7 +27,12 @@ The sole canonical production site is `https://wedding.pawel.space`. Do not add
 or restore alternative production domains without an explicit user request.
 
 V1 intentionally excludes videos, comments, likes, facial recognition, named
-accounts, Realtime subscriptions, and background polling. External services are
+accounts, Realtime subscriptions, and background polling. One later addition
+sits on top of that baseline: the live slideshow (`/pokaz`, editor at
+`/admin/pokaz`, worker `workers/slideshow-live` on PartyServer/Durable
+Objects) streams anonymous, ephemeral emoji reactions and comments that are
+never persisted; the gallery itself still has no comments or likes, and
+gallery eligibility rules are unchanged. See `docs/slideshow.md`. External services are
 Supabase (database and private derivatives), a Cloudflare Worker (streaming
 boundary), Google Drive (private originals), Google Vision (moderation), and
 Vercel (Next.js hosting). Do not assume those services are already configured;

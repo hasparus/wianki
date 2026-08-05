@@ -85,6 +85,40 @@ export type Database = {
 					},
 				];
 			};
+			slideshow_slides: {
+				Row: {
+					id: string;
+					position: number;
+					kind: "photo" | "text";
+					photo_id: string | null;
+					title: string | null;
+					subtitle: string | null;
+					created_at: string;
+					updated_at: string;
+				};
+				Insert: {
+					id?: string;
+					position: number;
+					kind: "photo" | "text";
+					photo_id?: string | null;
+					title?: string | null;
+					subtitle?: string | null;
+					created_at?: string;
+					updated_at?: string;
+				};
+				Update: Partial<
+					Database["public"]["Tables"]["slideshow_slides"]["Insert"]
+				>;
+				Relationships: [
+					{
+						foreignKeyName: "slideshow_slides_photo_id_fkey";
+						columns: ["photo_id"];
+						isOneToOne: false;
+						referencedRelation: "photos";
+						referencedColumns: ["id"];
+					},
+				];
+			};
 			moderation_events: {
 				Row: {
 					id: number;

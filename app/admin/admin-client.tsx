@@ -127,6 +127,14 @@ export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
 					Kod QR administratora działa jak wspólne hasło. Nie udostępniaj go
 					gościom.
 				</p>
+				<p className="mt-4">
+					<a
+						href="/admin/pokaz"
+						className="inline-block min-h-11 rounded-full border-2 border-wedding-green px-5 py-2 font-bold hover:bg-wedding-rose/40"
+					>
+						Ułóż pokaz slajdów
+					</a>
+				</p>
 			</header>
 			{message ? (
 				<p role="alert" className="mt-6 font-bold text-wedding-error">

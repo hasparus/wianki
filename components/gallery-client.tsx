@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import {
 	type GalleryResponse,
@@ -33,6 +34,14 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 					</p>
 					<p className="font-bold" aria-live="polite">
 						{formatGalleryStats(stats.contributingGuests, stats.approvedPhotos)}
+					</p>
+					<p>
+						<Link
+							href="/pokaz"
+							className="inline-block min-h-11 rounded-full border-2 border-wedding-green px-6 py-2 font-bold hover:bg-wedding-rose/40"
+						>
+							Obejrzyj pokaz slajdów
+						</Link>
 					</p>
 				</header>
 

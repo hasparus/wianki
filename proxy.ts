@@ -59,6 +59,11 @@ export async function proxy(request: NextRequest) {
 	}
 
 	if (!request.cookies.has(GUEST_COOKIE)) {
+		const adminPreviewPath =
+			pathname === "/pokaz" || pathname.startsWith("/api/slideshow");
+		if (adminPreviewPath && request.cookies.has(ADMIN_COOKIE)) {
+			return NextResponse.next();
+		}
 		return NextResponse.redirect(new URL("/login", request.url));
 	}
 	return NextResponse.next();

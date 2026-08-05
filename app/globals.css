@@ -12,6 +12,7 @@
 	--wedding-success: #21653a;
 	--wedding-disabled: #74746f;
 	--wedding-overlay: rgb(20 34 23 / 82%);
+	--wedding-green-deep: #1d3322;
 }
 
 @theme inline {
@@ -25,6 +26,7 @@
 	--color-wedding-warning: var(--wedding-warning);
 	--color-wedding-success: var(--wedding-success);
 	--color-wedding-disabled: var(--wedding-disabled);
+	--color-wedding-green-deep: var(--wedding-green-deep);
 	--font-sans: "Aptos", "Segoe UI", system-ui, -apple-system, sans-serif;
 	--font-serif:
 		"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -197,6 +199,106 @@ a {
 		opacity: 0;
 		transform: rotate(var(--spark-angle)) translateY(-5.5rem) scaleY(1);
 	}
+}
+
+/*
+ * Evening slideshow stage. The gallery stays ivory; the projected show plays
+ * on the deep-forest night variant of the palette, with rose used only as a
+ * decorative glow and for accents on green.
+ */
+.slideshow-stage {
+	background:
+		radial-gradient(
+			circle at 88% 112%,
+			rgb(243 176 183 / 16%),
+			transparent 34rem
+		),
+		radial-gradient(circle at 8% -12%, rgb(243 176 183 / 9%), transparent 26rem),
+		linear-gradient(180deg, var(--wedding-green), var(--wedding-green-deep));
+}
+
+@keyframes slideshow-slide-in {
+	from {
+		opacity: 0;
+		transform: scale(1.02);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes slideshow-slide-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+.slideshow-slide-enter {
+	animation: slideshow-slide-in 900ms ease both;
+}
+
+.slideshow-slide-exit {
+	animation: slideshow-slide-out 900ms ease both;
+}
+
+@keyframes slideshow-float-up {
+	0% {
+		transform: translateY(0) scale(0.5);
+		opacity: 0;
+	}
+	12% {
+		transform: translateY(-8vh) scale(1);
+		opacity: 1;
+	}
+	85% {
+		opacity: 1;
+	}
+	100% {
+		transform: translateY(-108vh) scale(1.15);
+		opacity: 0;
+	}
+}
+
+.slideshow-reaction {
+	position: absolute;
+	bottom: -3.5rem;
+	animation: slideshow-float-up linear both;
+	will-change: transform, opacity;
+}
+
+@keyframes slideshow-sway {
+	from {
+		transform: translateX(-0.8rem) rotate(-7deg);
+	}
+	to {
+		transform: translateX(0.8rem) rotate(7deg);
+	}
+}
+
+.slideshow-reaction > span {
+	display: inline-block;
+	animation: slideshow-sway 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes slideshow-drift {
+	from {
+		transform: translateX(100vw);
+	}
+	to {
+		transform: translateX(-102%);
+	}
+}
+
+.slideshow-comment {
+	position: absolute;
+	left: 0;
+	white-space: nowrap;
+	animation: slideshow-drift linear both;
+	will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
