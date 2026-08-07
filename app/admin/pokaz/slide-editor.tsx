@@ -10,6 +10,13 @@ import {
 	useRef,
 	useState,
 } from "react";
+import {
+	ArrowDownIcon,
+	ArrowUpIcon,
+	ChevronLeftIcon,
+	GripIcon,
+	XIcon,
+} from "@/components/slideshow/icons";
 import type { GalleryItem } from "@/lib/domain";
 import type { AdminSlide } from "@/lib/slideshow";
 
@@ -304,9 +311,10 @@ export function SlideEditor({
 				<div className="flex gap-2">
 					<Link
 						href="/admin"
-						className="min-h-11 rounded-full border border-wedding-green px-5 py-2.5 font-bold hover:bg-wedding-rose/40"
+						className="flex min-h-11 items-center gap-1.5 rounded-full border border-wedding-green px-5 py-2.5 font-bold hover:bg-wedding-rose/40"
 					>
-						‹ Zdjęcia
+						<ChevronLeftIcon />
+						Zdjęcia
 					</Link>
 					<Link
 						href="/pokaz"
@@ -357,7 +365,7 @@ export function SlideEditor({
 									onPointerDown={(event) => onDragStart(event, slide.id)}
 									className="shrink-0 cursor-grab touch-none select-none px-1.5 py-3 text-xl leading-none text-wedding-green/60 active:cursor-grabbing"
 								>
-									⠿
+									<GripIcon />
 								</span>
 								<span className="w-6 shrink-0 text-center font-serif text-xl font-bold">
 									{index + 1}
@@ -425,13 +433,19 @@ export function SlideEditor({
 										</form>
 									) : (
 										<>
-											<p className="truncate font-bold">
-												{slide.kind === "photo"
-													? slide.photoVisible
-														? "Zdjęcie z galerii"
-														: "Zdjęcie niewidoczne — pominięte w pokazie"
-													: slide.title}
-											</p>
+											{slide.kind === "photo" ? (
+												slide.photoVisible ? (
+													<p className="truncate text-sm text-wedding-green-soft">
+														Zdjęcie z galerii
+													</p>
+												) : (
+													<p className="text-sm font-bold text-wedding-warning">
+														Zdjęcie niewidoczne — pominięte w pokazie
+													</p>
+												)
+											) : (
+												<p className="truncate font-bold">{slide.title}</p>
+											)}
 											{slide.kind === "text" && slide.subtitle ? (
 												<p className="truncate text-sm">{slide.subtitle}</p>
 											) : null}
@@ -453,27 +467,27 @@ export function SlideEditor({
 										onClick={() => move(index, index - 1)}
 										disabled={pending || index === 0}
 										aria-label="Przesuń wyżej"
-										className="min-h-10 min-w-10 rounded-full border border-wedding-green font-bold hover:bg-wedding-rose/40 disabled:opacity-40"
+										className="grid min-h-10 min-w-10 place-items-center rounded-full border border-wedding-green hover:bg-wedding-rose/40 disabled:opacity-40"
 									>
-										↑
+										<ArrowUpIcon />
 									</button>
 									<button
 										type="button"
 										onClick={() => move(index, index + 1)}
 										disabled={pending || index === slides.length - 1}
 										aria-label="Przesuń niżej"
-										className="min-h-10 min-w-10 rounded-full border border-wedding-green font-bold hover:bg-wedding-rose/40 disabled:opacity-40"
+										className="grid min-h-10 min-w-10 place-items-center rounded-full border border-wedding-green hover:bg-wedding-rose/40 disabled:opacity-40"
 									>
-										↓
+										<ArrowDownIcon />
 									</button>
 									<button
 										type="button"
 										onClick={() => removeSlide(slide.id)}
 										disabled={pending}
 										aria-label="Usuń slajd"
-										className="min-h-10 min-w-10 rounded-full bg-wedding-error font-bold text-white disabled:opacity-40"
+										className="grid min-h-10 min-w-10 place-items-center rounded-full bg-wedding-error text-white disabled:opacity-40"
 									>
-										✕
+										<XIcon />
 									</button>
 								</div>
 							</li>
@@ -497,7 +511,14 @@ export function SlideEditor({
 				</div>
 				{pickerOpen ? (
 					<div className="mt-5">
-						{pickerPhotos.length === 0 && pickerLoaded ? (
+						{!pickerLoaded ? (
+							<p
+								aria-live="polite"
+								className="rounded-3xl bg-wedding-cream p-6 text-center"
+							>
+								Wczytujemy zdjęcia z galerii…
+							</p>
+						) : pickerPhotos.length === 0 ? (
 							<p className="rounded-3xl bg-wedding-cream p-6 text-center">
 								W galerii nie ma jeszcze zatwierdzonych zdjęć.
 							</p>

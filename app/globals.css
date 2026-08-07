@@ -39,6 +39,8 @@
 html {
 	background: var(--wedding-ivory);
 	color: var(--wedding-green);
+	scrollbar-color: var(--wedding-green-soft) transparent;
+	scrollbar-width: thin;
 }
 
 body {
@@ -215,6 +217,23 @@ a {
 		),
 		radial-gradient(circle at 8% -12%, rgb(243 176 183 / 9%), transparent 26rem),
 		linear-gradient(180deg, var(--wedding-green), var(--wedding-green-deep));
+}
+
+/* On the night stage the light-page browser surfaces would disappear:
+ * retint focus rings, the caret, and text selection from the stage palette. */
+.slideshow-stage button,
+.slideshow-stage a,
+.slideshow-stage input {
+	outline-color: var(--wedding-ivory);
+}
+
+.slideshow-stage input {
+	caret-color: var(--wedding-rose);
+}
+
+.slideshow-stage ::selection {
+	background: var(--wedding-rose);
+	color: var(--wedding-green-deep);
 }
 
 @keyframes slideshow-slide-in {

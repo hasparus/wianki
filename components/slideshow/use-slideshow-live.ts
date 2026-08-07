@@ -33,7 +33,9 @@ export type SlideshowControl =
 	| { action: "goto"; index: number; slideId: string | null; playing: boolean };
 
 const MAX_BUBBLES = 60;
-const COMMENT_LANES = [8, 16, 24, 32, 40];
+// Lanes start below the header pills so drifting comments never collide
+// with the chrome on small screens.
+const COMMENT_LANES = [13, 20, 27, 34, 41];
 
 type ServerMessage =
 	| { type: "presence"; viewers: number }

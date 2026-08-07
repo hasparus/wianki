@@ -11,6 +11,13 @@ import {
 	useState,
 } from "react";
 import { BubbleLayer } from "@/components/slideshow/bubble-layer";
+import {
+	ChevronLeftIcon,
+	ChevronRightIcon,
+	EyeIcon,
+	PauseIcon,
+	PlayIcon,
+} from "@/components/slideshow/icons";
 import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
 import type { SlideshowDeck, SlideshowSlide } from "@/lib/slideshow";
 import {
@@ -315,9 +322,10 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 				<div className="flex items-center gap-2">
 					<Link
 						href="/"
-						className="min-h-11 rounded-full bg-wedding-green-deep/60 px-5 py-2.5 text-sm font-bold backdrop-blur hover:bg-wedding-green-deep/80"
+						className="flex min-h-11 items-center gap-1.5 rounded-full bg-wedding-green-deep/60 px-4 py-2.5 text-sm font-bold backdrop-blur hover:bg-wedding-green-deep/80"
 					>
-						‹ Galeria
+						<ChevronLeftIcon />
+						Galeria
 					</Link>
 					{live.show.live ? (
 						<span className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 text-sm font-bold backdrop-blur">
@@ -332,10 +340,11 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 				<div className="flex items-center gap-2">
 					{live.status === "on" ? (
 						<span
-							className="whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 py-2.5 text-sm font-bold backdrop-blur"
+							className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 text-sm font-bold tabular-nums backdrop-blur"
 							title="Liczba oglądających"
 						>
-							{live.viewers} 👀
+							<EyeIcon />
+							{live.viewers}
 						</span>
 					) : null}
 					<span className="whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 py-2.5 text-sm font-bold tabular-nums backdrop-blur">
@@ -355,36 +364,37 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 							type="button"
 							onClick={() => setPlaying((value) => !value)}
 							aria-label={playing ? "Zatrzymaj pokaz" : "Wznów pokaz"}
-							className="min-h-11 min-w-11 rounded-full bg-wedding-green-deep/60 text-sm font-bold backdrop-blur hover:bg-wedding-green-deep/80"
+							className="grid min-h-11 min-w-11 place-items-center rounded-full bg-wedding-green-deep/60 text-base backdrop-blur hover:bg-wedding-green-deep/80"
 						>
-							{playing ? "⏸" : "▶"}
+							{playing ? <PauseIcon /> : <PlayIcon />}
 						</button>
 					) : null}
 				</div>
 			</header>
 
-			{notice ? (
-				<p
-					aria-live="polite"
-					className="absolute inset-x-0 top-20 z-30 mx-auto w-fit rounded-full bg-wedding-ivory/95 px-5 py-2 text-sm font-bold text-wedding-green shadow-lg"
-				>
-					{notice}
-				</p>
-			) : null}
-
-			{detached && live.show.live ? (
-				<button
-					type="button"
-					onClick={() => setDetached(false)}
-					className="absolute inset-x-0 top-20 z-30 mx-auto flex w-fit items-center gap-2 rounded-full bg-wedding-ivory/95 px-5 py-2.5 text-sm font-bold text-wedding-green shadow-lg hover:bg-wedding-cream"
-				>
-					<span
-						aria-hidden
-						className="size-2.5 animate-pulse rounded-full bg-wedding-error"
-					/>
-					Wróć do pokazu na żywo
-				</button>
-			) : null}
+			<div className="absolute inset-x-0 top-20 z-30 flex flex-col items-center gap-2 px-4">
+				{notice ? (
+					<p
+						aria-live="polite"
+						className="rounded-full bg-wedding-ivory/95 px-5 py-2 text-center text-sm font-bold text-wedding-green shadow-lg"
+					>
+						{notice}
+					</p>
+				) : null}
+				{detached && live.show.live ? (
+					<button
+						type="button"
+						onClick={() => setDetached(false)}
+						className="flex min-h-11 items-center gap-2 rounded-full bg-wedding-ivory/95 px-5 text-sm font-bold text-wedding-green shadow-lg hover:bg-wedding-cream"
+					>
+						<span
+							aria-hidden
+							className="size-2.5 animate-pulse rounded-full bg-wedding-error"
+						/>
+						Wróć do pokazu na żywo
+					</button>
+				) : null}
+			</div>
 
 			{slides.length > 1 ? (
 				<>
@@ -392,17 +402,17 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 						type="button"
 						onClick={() => navigate(index - 1)}
 						aria-label="Poprzedni slajd"
-						className="absolute left-3 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 rounded-full bg-wedding-green-deep/50 text-xl font-bold backdrop-blur hover:bg-wedding-green-deep/80 sm:block"
+						className="absolute left-3 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 place-items-center rounded-full bg-wedding-green-deep/50 text-xl backdrop-blur hover:bg-wedding-green-deep/80 sm:grid"
 					>
-						‹
+						<ChevronLeftIcon />
 					</button>
 					<button
 						type="button"
 						onClick={() => navigate(index + 1)}
 						aria-label="Następny slajd"
-						className="absolute right-3 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 rounded-full bg-wedding-green-deep/50 text-xl font-bold backdrop-blur hover:bg-wedding-green-deep/80 sm:block"
+						className="absolute right-3 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 place-items-center rounded-full bg-wedding-green-deep/50 text-xl backdrop-blur hover:bg-wedding-green-deep/80 sm:grid"
 					>
-						›
+						<ChevronRightIcon />
 					</button>
 				</>
 			) : null}
@@ -435,7 +445,7 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 								maxLength={MAX_COMMENT_LENGTH}
 								placeholder="Napisz życzenia…"
 								aria-label="Komentarz do pokazu"
-								className="min-h-12 w-full rounded-full border border-wedding-ivory/25 bg-wedding-green-deep/50 px-5 text-wedding-ivory [outline-color:var(--wedding-ivory)] placeholder:text-wedding-ivory/70 backdrop-blur"
+								className="min-h-12 w-full rounded-full border border-wedding-ivory/25 bg-wedding-green-deep/50 px-5 text-wedding-ivory placeholder:text-wedding-ivory/75 backdrop-blur"
 							/>
 							<button
 								type="submit"
