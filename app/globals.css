@@ -64,7 +64,152 @@ a {
 	color: var(--wedding-green);
 }
 
+.celebration-splash {
+	position: fixed;
+	z-index: 80;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+	padding: 1.5rem;
+	pointer-events: none;
+	background: var(--wedding-overlay);
+	animation: celebration-splash 4.4s ease-in-out both;
+}
+
+.celebration-card {
+	position: relative;
+	z-index: 1;
+	width: min(100%, 36rem);
+	padding: 2rem 1.5rem;
+	border: 2px solid var(--wedding-rose);
+	border-radius: 2rem;
+	background: var(--wedding-cream);
+	box-shadow: 0 1.5rem 4rem
+		color-mix(in srgb, var(--wedding-green) 35%, transparent);
+	color: var(--wedding-green);
+	text-align: center;
+	animation: celebration-card 700ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+.celebration-card__icon {
+	display: grid;
+	width: 3rem;
+	height: 3rem;
+	margin: 0 auto 1rem;
+	place-items: center;
+	border-radius: 999px;
+	background: var(--wedding-rose);
+	color: var(--wedding-green);
+	font-family: var(--font-serif);
+	font-size: 1.5rem;
+	animation: celebration-heart 900ms 500ms ease-in-out both;
+}
+
+.celebration-firework {
+	position: absolute;
+	width: 0;
+	height: 0;
+}
+
+.celebration-firework--left {
+	top: 24%;
+	left: 17%;
+}
+
+.celebration-firework--right {
+	top: 23%;
+	right: 17%;
+}
+
+.celebration-firework--top {
+	top: 13%;
+	left: 50%;
+}
+
+.celebration-spark {
+	--spark-angle: calc(var(--spark-index) * 30deg);
+
+	position: absolute;
+	top: -0.55rem;
+	left: -0.15rem;
+	width: 0.3rem;
+	height: 1.1rem;
+	border-radius: 999px;
+	background: var(--wedding-rose);
+	transform-origin: 50% 0.55rem;
+	animation: celebration-spark 1.15s var(--firework-delay) ease-out both;
+}
+
+.celebration-spark:nth-child(3n + 2) {
+	background: var(--wedding-ivory);
+}
+
+.celebration-spark:nth-child(3n) {
+	background: var(--wedding-green-soft);
+}
+
+@keyframes celebration-splash {
+	0% {
+		opacity: 0;
+	}
+	8%,
+	82% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+
+@keyframes celebration-card {
+	from {
+		opacity: 0;
+		transform: translateY(1.5rem) scale(0.88);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes celebration-heart {
+	0% {
+		transform: scale(0.7);
+	}
+	45% {
+		transform: scale(1.25) rotate(-8deg);
+	}
+	100% {
+		transform: scale(1) rotate(0);
+	}
+}
+
+@keyframes celebration-spark {
+	0% {
+		opacity: 0;
+		transform: rotate(var(--spark-angle)) translateY(0) scaleY(0.2);
+	}
+	18% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		transform: rotate(var(--spark-angle)) translateY(-5.5rem) scaleY(1);
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
+	.celebration-splash,
+	.celebration-card,
+	.celebration-card__icon {
+		animation-name: none;
+	}
+
+	.celebration-spark {
+		display: none;
+	}
+
 	*,
 	*::before,
 	*::after {

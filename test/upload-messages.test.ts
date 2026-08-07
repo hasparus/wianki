@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-	completedUploadMessage,
+	completedUploadMessages,
 	uploadCompleteInstruction,
 } from "@/components/upload/messages";
 
@@ -9,12 +9,13 @@ describe("upload completion message", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("keeps the rotating success copy and invites further uploads", () => {
+	it("separates the short celebration from the persistent instruction", () => {
 		vi.spyOn(Math, "random").mockReturnValue(0);
 
-		expect(completedUploadMessage()).toBe(
-			`Niezły z Ciebie fotograf! 📸 ${uploadCompleteInstruction}`,
-		);
+		expect(completedUploadMessages()).toEqual({
+			celebration: "Niezły z Ciebie fotograf! 📸",
+			summary: uploadCompleteInstruction,
+		});
 		expect(uploadCompleteInstruction).not.toContain("zamknąć tę stronę");
 		expect(uploadCompleteInstruction).toContain("dodawaj kolejne");
 	});
