@@ -108,14 +108,13 @@ export function useUploadBatch(onComplete: () => void) {
 					updateItem(item.id, {
 						phase: "archive_failed",
 						message:
-							"Zdjęcie zostało przesłane na stronę, ale nie doszło na nasz dysk :(. Kliknij ponownie, aby spróbować jeszcze raz.",
+							"Zdjęcie jest już na stronie, ale nie doszło na nasz dysk :(. Kliknij „Wyślij zdjęcia”, aby spróbować jeszcze raz.",
 					});
 					return false;
 				}
 				updateItem(item.id, {
 					phase: "done",
-					message:
-						"Zdjęcie dotarło i zostanie przetworzone w ciągu kilku minut.",
+					message: "Zdjęcie dotarło. Za kilka minut będzie w galerii.",
 				});
 				return true;
 			} catch (error) {

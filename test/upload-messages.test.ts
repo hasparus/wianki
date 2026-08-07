@@ -17,6 +17,6 @@ describe("upload completion message", () => {
 			summary: uploadCompleteInstruction,
 		});
 		expect(uploadCompleteInstruction).not.toContain("zamknąć tę stronę");
-		expect(uploadCompleteInstruction).toContain("dodawaj kolejne");
+		expect(uploadCompleteInstruction).toContain("możesz dodać kolejne");
 	});
 });
