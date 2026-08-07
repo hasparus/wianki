@@ -428,24 +428,15 @@ export function SlideshowClient({
 			) : null}
 
 			{join ? (
-				<aside className="absolute bottom-4 left-4 z-30 hidden items-center gap-3 rounded-2xl bg-wedding-ivory p-3 pr-4 shadow-lg xl:flex">
+				<aside className="absolute bottom-4 left-4 z-30 hidden rounded-2xl bg-wedding-ivory p-2.5 shadow-lg xl:block">
 					<Image
 						src={join.qrDataUrl}
 						alt="Kod QR dołączenia do pokazu"
-						width={96}
-						height={96}
+						width={112}
+						height={112}
 						unoptimized
-						className="size-24 rounded-lg"
+						className="size-28 rounded-lg"
 					/>
-					<div className="text-wedding-green">
-						<p className="font-serif text-lg font-bold leading-tight">
-							Zeskanuj
-							<br />i dołącz
-						</p>
-						<p className="mt-1 max-w-40 break-all text-xs font-semibold text-wedding-green-soft">
-							{join.label}
-						</p>
-					</div>
 				</aside>
 			) : null}
 

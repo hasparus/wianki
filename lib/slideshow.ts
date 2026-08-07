@@ -24,8 +24,6 @@ export type SlideshowDeck = {
 };
 
 export type SlideshowJoinInfo = {
-	/** Human-readable join address, protocol stripped. */
-	label: string;
 	/** QR code of the full join URL as a data URL, palette-matched. */
 	qrDataUrl: string;
 };
@@ -45,7 +43,7 @@ export async function getSlideshowJoinInfo(): Promise<SlideshowJoinInfo | null> 
 		errorCorrectionLevel: "M",
 		color: { dark: "#1d3322", light: "#fbf6ef" },
 	});
-	return { label: joinUrl.replace(/^https?:\/\//, ""), qrDataUrl };
+	return { qrDataUrl };
 }
 
 export type AdminSlide = {
