@@ -36,8 +36,10 @@ test("guest can keep uploading after a batch completes and sees previews of sent
 		name: "Twoje wysłane zdjęcia",
 	});
 	await expect(sentSection.locator("img")).toHaveCount(2);
-	const addMore = page.getByRole("button", { name: "Dodaj kolejne zdjęcia" });
+	const addMore = page.getByRole("button", { name: "Dodaj zdjęcia" });
 	await expect(addMore).toBeEnabled();
+	// Zero gallery stats stay hidden instead of bragging about "0 zdjęć".
+	await expect(page.getByText(/0 gości/)).toHaveCount(0);
 	await page.screenshot({
 		path: testInfo.outputPath("after-first-batch.png"),
 		fullPage: true,

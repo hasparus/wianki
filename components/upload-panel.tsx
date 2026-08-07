@@ -7,10 +7,32 @@ import { UploadedPhotos } from "@/components/upload/uploaded-photos";
 import { useUploadBatch } from "@/components/upload/use-upload-batch";
 
 export function UploadPanel({ onComplete }: { onComplete: () => void }) {
-	const { inputRef, items, busy, summary, chooseFiles, upload } =
-		useUploadBatch(onComplete);
-	const deliveredItems = items.filter((item) => item.phase === "done");
-	const pendingItems = items.filter((item) => item.phase !== "done");
+	const {
+		inputRef,
+		items,
+		activeBatchIds,
+		busy,
+		summary,
+		chooseFiles,
+		upload,
+	} = useUploadBatch(onComplete);
+	// Items keep their place in the list while a batch is in flight and move to
+	// the delivered grid together when it finishes, so the layout changes once
+	// per batch instead of once per photo.
+	const activeIds = new Set(activeBatchIds);
+	const deliveredItems = items.filter(
+		(item) => item.phase === "done" && !activeIds.has(item.id),
+	);
+	const pendingItems = items.filter(
+		(item) => item.phase !== "done" || activeIds.has(item.id),
+	);
+	const finishedInBatch = items.filter(
+		(item) =>
+			activeIds.has(item.id) &&
+			item.phase !== "compressing" &&
+			item.phase !== "uploading" &&
+			item.phase !== "queued",
+	).length;
 
 	return (
 		<section
@@ -27,24 +49,20 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 			<UploadFilePicker
 				inputRef={inputRef}
 				busy={busy}
-				label={
-					deliveredItems.length ? "Dodaj kolejne zdjęcia" : "Wybierz zdjęcia"
-				}
 				onSelect={chooseFiles}
 			/>
 			<UploadItemList items={pendingItems} />
 			<UploadSubmitControls
 				busy={busy}
+				busyLabel={`Wysyłamy zdjęcia… (${finishedInBatch} z ${activeBatchIds.length})`}
 				hasItems={pendingItems.some((item) =>
 					["queued", "failed", "archive_failed"].includes(item.phase),
 				)}
 				onUpload={upload}
 			/>
-			{summary ? (
-				<p role="status" className="mt-4 font-bold">
-					{summary}
-				</p>
-			) : null}
+			<p role="status" className="mt-4 min-h-12 font-bold">
+				{summary}
+			</p>
 			<UploadedPhotos items={deliveredItems} />
 		</section>
 	);

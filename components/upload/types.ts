@@ -15,6 +15,8 @@ export type UploadItem = {
 	message: string;
 	photoId?: string;
 	previewUrl?: string;
+	/** Original-upload progress, 0..1, meaningful in the uploading phase. */
+	progress?: number;
 };
 
 export type InitUpload = {
