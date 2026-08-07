@@ -329,16 +329,16 @@ export function SlideshowClient({
 			</p>
 
 			<header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 p-4">
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-3">
 					<Link
 						href="/"
-						className="flex min-h-11 items-center gap-1.5 rounded-full bg-wedding-green-deep/60 px-4 py-2.5 text-sm font-bold backdrop-blur hover:bg-wedding-green-deep/80"
+						className="slideshow-control flex min-h-11 items-center gap-1 px-1 text-sm font-bold transition hover:text-wedding-rose"
 					>
 						<ChevronLeftIcon />
 						Galeria
 					</Link>
 					{live.show.live ? (
-						<span className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 text-sm font-bold backdrop-blur">
+						<span className="slideshow-control flex min-h-11 items-center gap-2 whitespace-nowrap px-1 text-sm font-bold">
 							<span
 								aria-hidden
 								className="size-2.5 animate-pulse rounded-full bg-wedding-rose"
@@ -347,17 +347,17 @@ export function SlideshowClient({
 						</span>
 					) : null}
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-3">
 					{live.status === "on" ? (
 						<span
-							className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 text-sm font-bold tabular-nums backdrop-blur"
+							className="slideshow-control flex min-h-11 items-center gap-1.5 whitespace-nowrap px-1 text-sm font-bold tabular-nums"
 							title="Liczba oglądających"
 						>
 							<EyeIcon />
 							{live.viewers}
 						</span>
 					) : null}
-					<span className="whitespace-nowrap rounded-full bg-wedding-green-deep/60 px-4 py-2.5 text-sm font-bold tabular-nums backdrop-blur">
+					<span className="slideshow-control flex min-h-11 items-center whitespace-nowrap px-1 text-sm font-bold tabular-nums">
 						{index + 1} / {slides.length}
 					</span>
 					{isAdmin && yielded && live.show.live ? (
@@ -374,7 +374,7 @@ export function SlideshowClient({
 							type="button"
 							onClick={() => setPlaying((value) => !value)}
 							aria-label={playing ? "Zatrzymaj pokaz" : "Wznów pokaz"}
-							className="grid min-h-11 min-w-11 place-items-center rounded-full bg-wedding-green-deep/60 text-base backdrop-blur hover:bg-wedding-green-deep/80"
+							className="slideshow-control grid min-h-11 min-w-11 place-items-center text-base transition hover:text-wedding-rose"
 						>
 							{playing ? <PauseIcon /> : <PlayIcon />}
 						</button>
@@ -412,7 +412,7 @@ export function SlideshowClient({
 						type="button"
 						onClick={() => navigate(index - 1)}
 						aria-label="Poprzedni slajd"
-						className="absolute left-3 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 place-items-center rounded-full bg-wedding-green-deep/50 text-xl backdrop-blur hover:bg-wedding-green-deep/80 sm:grid"
+						className="slideshow-control absolute left-1 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 place-items-center text-xl pointer-coarse:grid"
 					>
 						<ChevronLeftIcon />
 					</button>
@@ -420,7 +420,7 @@ export function SlideshowClient({
 						type="button"
 						onClick={() => navigate(index + 1)}
 						aria-label="Następny slajd"
-						className="absolute right-3 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 place-items-center rounded-full bg-wedding-green-deep/50 text-xl backdrop-blur hover:bg-wedding-green-deep/80 sm:grid"
+						className="slideshow-control absolute right-1 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 place-items-center text-xl pointer-coarse:grid"
 					>
 						<ChevronRightIcon />
 					</button>
