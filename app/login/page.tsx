@@ -10,8 +10,7 @@ export default function LoginPage() {
 				</p>
 				<h1 className="mt-3 font-serif text-4xl font-bold">Witaj w galerii</h1>
 				<p className="mt-4 leading-7">
-					Zeskanuj kod QR z zaproszenia albo wpisz hasło, które od nas
-					otrzymałeś.
+					Zeskanuj kod QR albo wpisz hasło z zaproszenia.
 				</p>
 				<LoginForm />
 				<p className="mt-7 text-sm">
