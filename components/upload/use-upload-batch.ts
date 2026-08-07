@@ -24,7 +24,6 @@ const ORIGINAL_UPLOAD_CONCURRENCY = 2;
 export function useUploadBatch(onComplete: () => void) {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [items, setItems] = useState<UploadItem[]>([]);
-	const [consent, setConsent] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [summary, setSummary] = useState("");
 
@@ -169,7 +168,7 @@ export function useUploadBatch(onComplete: () => void) {
 	);
 
 	const upload = useCallback(async () => {
-		if (!consent || !items.length || busy) return;
+		if (!items.length || busy) return;
 		setBusy(true);
 		setSummary("");
 		try {
@@ -214,16 +213,14 @@ export function useUploadBatch(onComplete: () => void) {
 		} finally {
 			setBusy(false);
 		}
-	}, [busy, consent, items, onComplete, processFreshUpload, retryArchive]);
+	}, [busy, items, onComplete, processFreshUpload, retryArchive]);
 
 	return {
 		inputRef,
 		items,
-		consent,
 		busy,
 		summary,
 		chooseFiles,
-		setConsent,
 		upload,
 	};
 }
