@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 		typeof passphrase !== "string" ||
 		!secretMatches(passphrase, serverEnv().GUEST_ACCESS_PASSPHRASE)
 	) {
-		return jsonError("Nieprawidłowe hasło z zaproszenia.", 401);
+		return jsonError("Nieprawidłowe hasło.", 401);
 	}
 
 	(await cookies()).set(

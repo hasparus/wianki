@@ -28,8 +28,8 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 						Paweł & Magdalena
 					</h1>
 					<p className="mx-auto max-w-2xl text-lg leading-8">
-						Dziękujemy, że świętujecie razem z nami. Dodajcie swoje kadry i
-						zobaczcie ten dzień oczami wszystkich gości.
+						Dziękujemy, że świętujecie razem z nami. Wrzućcie swoje zdjęcia i
+						zobaczcie, co uchwycili inni goście.
 					</p>
 					<p className="font-bold" aria-live="polite">
 						{formatGalleryStats(stats.contributingGuests, stats.approvedPhotos)}

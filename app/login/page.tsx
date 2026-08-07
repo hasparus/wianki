@@ -9,10 +9,7 @@ export default function LoginPage() {
 					Paweł & Magdicia
 				</p>
 				<h1 className="mt-3 font-serif text-4xl font-bold">Witaj w galerii</h1>
-				<p className="mt-4 leading-7">
-					Zeskanuj kod QR z zaproszenia albo wpisz hasło, które od nas
-					otrzymałeś.
-				</p>
+				<p className="mt-4 leading-7">Zeskanuj kod QR albo wpisz hasło</p>
 				<LoginForm />
 				<p className="mt-7 text-sm">
 					Wchodząc do galerii, pamiętaj o naszej{" "}

@@ -29,7 +29,7 @@ export function LoginForm() {
 	return (
 		<form onSubmit={submit} className="mt-8 grid gap-4">
 			<label htmlFor="passphrase" className="font-semibold">
-				Hasło z zaproszenia
+				Hasło
 			</label>
 			<input
 				id="passphrase"
