@@ -13,6 +13,7 @@ const serverSchema = z
 		SUPABASE_SECRET_KEY: z.string().min(1),
 		APP_ORIGIN: z.url(),
 		GUEST_ENTRY_TOKEN: z.string().min(32),
+		GUEST_JOIN_CODE: z.string().min(6).optional(),
 		GUEST_ACCESS_PASSPHRASE: z.string().min(12),
 		GUEST_SESSION_SECRET: z.string().min(32),
 		ADMIN_ENTRY_TOKEN: z.string().min(32),

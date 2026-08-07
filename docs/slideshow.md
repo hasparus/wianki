@@ -20,6 +20,13 @@
   komputerze, strzałki na telefonie).
 - Bez ułożonej listy pokaz gra automatycznie wszystkie zatwierdzone zdjęcia
   galerii chronologicznie (do 150), więc działa od pierwszego dnia.
+- **Dołączanie z sali**: po ustawieniu `GUEST_JOIN_CODE` w lewym dolnym rogu
+  pokazu (na dużych ekranach — projektor, laptop) pojawia się kod QR i krótki
+  adres `/p/<kod>`. Zeskanowanie lub wpisanie adresu nadaje sesję gościa i
+  otwiera pokaz. Kod jest osobnym, krótkim sekretem — zdjęcie ekranu z QR
+  można unieważnić rotując sam `GUEST_JOIN_CODE`, bez wymiany wydrukowanych
+  kodów przy stołach. Bez ustawionej zmiennej ścieżka `/p/*` pozostaje
+  zamknięta, a QR się nie wyświetla.
 
 ## Zasady zgodne z resztą aplikacji
 

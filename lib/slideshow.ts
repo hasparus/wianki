@@ -1,4 +1,6 @@
+import QRCode from "qrcode";
 import { GALLERY_BUCKET } from "@/lib/domain";
+import { serverEnv } from "@/lib/env";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 export const SLIDESHOW_MAX_TITLE = 120;
@@ -20,6 +22,31 @@ export type SlideshowDeck = {
 	slides: SlideshowSlide[];
 	source: "custom" | "auto";
 };
+
+export type SlideshowJoinInfo = {
+	/** Human-readable join address, protocol stripped. */
+	label: string;
+	/** QR code of the full join URL as a data URL, palette-matched. */
+	qrDataUrl: string;
+};
+
+/**
+ * The corner QR shown during the show. Only exists when GUEST_JOIN_CODE is
+ * configured; the QR encodes `/p/<code>`, which the proxy exchanges for a
+ * guest session. Colors mirror scripts/generate-qr.mjs.
+ */
+export async function getSlideshowJoinInfo(): Promise<SlideshowJoinInfo | null> {
+	const env = serverEnv();
+	if (!env.GUEST_JOIN_CODE) return null;
+	const joinUrl = `${env.APP_ORIGIN}/p/${encodeURIComponent(env.GUEST_JOIN_CODE)}`;
+	const qrDataUrl = await QRCode.toDataURL(joinUrl, {
+		width: 240,
+		margin: 1,
+		errorCorrectionLevel: "M",
+		color: { dark: "#1d3322", light: "#fbf6ef" },
+	});
+	return { label: joinUrl.replace(/^https?:\/\//, ""), qrDataUrl };
+}
 
 export type AdminSlide = {
 	id: string;

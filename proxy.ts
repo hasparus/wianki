@@ -30,6 +30,24 @@ export async function proxy(request: NextRequest) {
 		return response;
 	}
 
+	// Short join link shown as a QR code during the slideshow. The code is a
+	// separate, independently rotatable shared secret — leaking a photo of
+	// the projected QR never burns the printed table QR codes.
+	const joinMatch = pathname.match(/^\/p\/([^/]+)$/);
+	if (joinMatch) {
+		const candidate = decodeURIComponent(joinMatch[1]);
+		if (env.GUEST_JOIN_CODE && secretMatches(candidate, env.GUEST_JOIN_CODE)) {
+			const response = NextResponse.redirect(new URL("/pokaz", request.url));
+			response.cookies.set(
+				GUEST_COOKIE,
+				await createGuestSession(),
+				guestCookieOptions,
+			);
+			return response;
+		}
+		return NextResponse.redirect(new URL("/login", request.url));
+	}
+
 	if (pathname === "/admin" && searchParams.has("token")) {
 		const candidate = searchParams.get("token") ?? "";
 		const cleanUrl = request.nextUrl.clone();

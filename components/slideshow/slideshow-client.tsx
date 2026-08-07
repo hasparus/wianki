@@ -19,7 +19,11 @@ import {
 	PlayIcon,
 } from "@/components/slideshow/icons";
 import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
-import type { SlideshowDeck, SlideshowSlide } from "@/lib/slideshow";
+import type {
+	SlideshowDeck,
+	SlideshowJoinInfo,
+	SlideshowSlide,
+} from "@/lib/slideshow";
 import {
 	MAX_COMMENT_LENGTH,
 	REACTION_EMOJI,
@@ -94,7 +98,13 @@ function SlideView({
 	);
 }
 
-export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
+export function SlideshowClient({
+	deck,
+	join = null,
+}: {
+	deck: SlideshowDeck;
+	join?: SlideshowJoinInfo | null;
+}) {
 	const { slides } = deck;
 	const [index, setIndex] = useState(0);
 	const [previousIndex, setPreviousIndex] = useState<number | null>(null);
@@ -415,6 +425,28 @@ export function SlideshowClient({ deck }: { deck: SlideshowDeck }) {
 						<ChevronRightIcon />
 					</button>
 				</>
+			) : null}
+
+			{join ? (
+				<aside className="absolute bottom-4 left-4 z-30 hidden items-center gap-3 rounded-2xl bg-wedding-ivory p-3 pr-4 shadow-lg xl:flex">
+					<Image
+						src={join.qrDataUrl}
+						alt="Kod QR dołączenia do pokazu"
+						width={96}
+						height={96}
+						unoptimized
+						className="size-24 rounded-lg"
+					/>
+					<div className="text-wedding-green">
+						<p className="font-serif text-lg font-bold leading-tight">
+							Zeskanuj
+							<br />i dołącz
+						</p>
+						<p className="mt-1 max-w-40 break-all text-xs font-semibold text-wedding-green-soft">
+							{join.label}
+						</p>
+					</div>
+				</aside>
 			) : null}
 
 			{live.status === "on" ? (

@@ -41,6 +41,31 @@ test("login and privacy pages have no serious accessibility violations", async (
 	}
 });
 
+test("short join code grants a guest session and opens the slideshow", async ({
+	page,
+	browserName,
+}) => {
+	test.skip(
+		browserName === "webkit",
+		"WebKit cannot retain the secure guest session on the local HTTP test origin.",
+	);
+	await page.goto("/p/e2e-join-code");
+	await expect(page).toHaveURL("/pokaz");
+	const cookies = await page.context().cookies();
+	expect(cookies.some((cookie) => cookie.name === "__Host-wedding_guest")).toBe(
+		true,
+	);
+});
+
+test("wrong join code bounces to login without a session", async ({ page }) => {
+	await page.goto("/p/definitely-wrong");
+	await expect(page).toHaveURL("/login");
+	const cookies = await page.context().cookies();
+	expect(cookies.some((cookie) => cookie.name === "__Host-wedding_guest")).toBe(
+		false,
+	);
+});
+
 test("invalid manual passphrase stays on login", async ({ page }) => {
 	await page.goto("/login");
 	await page.getByLabel("Hasło z zaproszenia").fill("wrong password");
