@@ -119,6 +119,22 @@ export type Database = {
 					},
 				];
 			};
+			slideshow_settings: {
+				Row: {
+					id: boolean;
+					slide_seconds: number;
+					updated_at: string;
+				};
+				Insert: {
+					id?: boolean;
+					slide_seconds?: number;
+					updated_at?: string;
+				};
+				Update: Partial<
+					Database["public"]["Tables"]["slideshow_settings"]["Insert"]
+				>;
+				Relationships: [];
+			};
 			moderation_events: {
 				Row: {
 					id: number;

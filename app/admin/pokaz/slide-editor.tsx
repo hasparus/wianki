@@ -18,7 +18,11 @@ import {
 	XIcon,
 } from "@/components/slideshow/icons";
 import type { GalleryItem } from "@/lib/domain";
-import type { AdminSlide } from "@/lib/slideshow";
+import {
+	type AdminSlide,
+	SLIDESHOW_MAX_SECONDS,
+	SLIDESHOW_MIN_SECONDS,
+} from "@/lib/slideshow";
 
 type PickerPage = {
 	items: GalleryItem[];
@@ -36,11 +40,15 @@ async function readError(response: Response, fallback: string) {
 export function SlideEditor({
 	initialSlides,
 	initialError,
+	initialSlideSeconds,
 }: {
 	initialSlides: AdminSlide[];
 	initialError: string;
+	initialSlideSeconds: number;
 }) {
 	const [slides, setSlides] = useState(initialSlides);
+	const [slideSeconds, setSlideSeconds] = useState(initialSlideSeconds);
+	const [secondsSaved, setSecondsSaved] = useState(false);
 	const [message, setMessage] = useState(initialError);
 	const [notice, setNotice] = useState("");
 	const [pending, setPending] = useState(false);
@@ -104,6 +112,31 @@ export function SlideEditor({
 					await readError(response, "Nie udało się zapisać kolejności."),
 				);
 			}
+		});
+	}
+
+	async function saveSeconds(value: number) {
+		const next = Math.min(
+			SLIDESHOW_MAX_SECONDS,
+			Math.max(
+				SLIDESHOW_MIN_SECONDS,
+				Math.round(value) || SLIDESHOW_MIN_SECONDS,
+			),
+		);
+		setSlideSeconds(next);
+		if (next === initialSlideSeconds && secondsSaved) return;
+		await run(async () => {
+			const response = await fetch("/api/admin/slides/settings", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ slideSeconds: next }),
+			});
+			if (!response.ok) {
+				throw new Error(
+					await readError(response, "Nie udało się zapisać tempa pokazu."),
+				);
+			}
+			setSecondsSaved(true);
 		});
 	}
 
@@ -335,6 +368,45 @@ export function SlideEditor({
 					{notice}
 				</p>
 			) : null}
+
+			<section aria-labelledby="timing-title" className="mt-10">
+				<h2 id="timing-title" className="font-serif text-3xl font-bold">
+					Tempo pokazu
+				</h2>
+				<div className="mt-4 flex flex-wrap items-center gap-3 rounded-3xl bg-wedding-cream p-5">
+					<label htmlFor="slide-seconds" className="font-semibold">
+						Każdy slajd trwa
+					</label>
+					<input
+						id="slide-seconds"
+						type="number"
+						inputMode="numeric"
+						min={SLIDESHOW_MIN_SECONDS}
+						max={SLIDESHOW_MAX_SECONDS}
+						value={slideSeconds}
+						disabled={pending}
+						onChange={(event) => {
+							setSecondsSaved(false);
+							setSlideSeconds(Number(event.target.value));
+						}}
+						onBlur={(event) => saveSeconds(Number(event.target.value))}
+						className="min-h-12 w-24 rounded-2xl border-2 border-wedding-green bg-white px-4 text-center text-lg font-bold tabular-nums"
+					/>
+					<span className="font-semibold">sekund</span>
+					{secondsSaved ? (
+						<span
+							aria-live="polite"
+							className="text-sm font-bold text-wedding-success"
+						>
+							Zapisano
+						</span>
+					) : null}
+					<p className="w-full text-sm">
+						Od {SLIDESHOW_MIN_SECONDS} do {SLIDESHOW_MAX_SECONDS} sekund. Otwórz
+						pokaz ponownie, aby zobaczyć nowe tempo.
+					</p>
+				</div>
+			</section>
 
 			<section aria-labelledby="slides-title" className="mt-10">
 				<h2 id="slides-title" className="font-serif text-3xl font-bold">

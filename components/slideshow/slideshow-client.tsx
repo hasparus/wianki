@@ -19,10 +19,12 @@ import {
 	PlayIcon,
 } from "@/components/slideshow/icons";
 import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
-import type {
-	SlideshowDeck,
-	SlideshowJoinInfo,
-	SlideshowSlide,
+import {
+	clampSlideSeconds,
+	SLIDESHOW_DEFAULT_SECONDS,
+	type SlideshowDeck,
+	type SlideshowJoinInfo,
+	type SlideshowSlide,
 } from "@/lib/slideshow";
 import {
 	MAX_COMMENT_LENGTH,
@@ -30,7 +32,6 @@ import {
 	resolveShowIndex,
 } from "@/lib/slideshow-live";
 
-const SLIDE_MS = 8000;
 const CROSSFADE_MS = 900;
 const SWIPE_THRESHOLD_PX = 48;
 const NOTICE_MS = 4000;
@@ -101,10 +102,13 @@ function SlideView({
 export function SlideshowClient({
 	deck,
 	join = null,
+	slideSeconds = SLIDESHOW_DEFAULT_SECONDS,
 }: {
 	deck: SlideshowDeck;
 	join?: SlideshowJoinInfo | null;
+	slideSeconds?: number;
 }) {
+	const slideMs = clampSlideSeconds(slideSeconds) * 1000;
 	const { slides } = deck;
 	const [index, setIndex] = useState(0);
 	const [previousIndex, setPreviousIndex] = useState<number | null>(null);
@@ -165,9 +169,9 @@ export function SlideshowClient({
 
 	useEffect(() => {
 		if (!autoplaying || slides.length < 2) return;
-		const timer = setTimeout(() => goTo(index + 1), SLIDE_MS);
+		const timer = setTimeout(() => goTo(index + 1), slideMs);
 		return () => clearTimeout(timer);
-	}, [autoplaying, index, slides.length, goTo]);
+	}, [autoplaying, index, slides.length, goTo, slideMs]);
 
 	// Claim the show on every (re)connection and whenever the claim returns.
 	useEffect(() => {
@@ -279,7 +283,7 @@ export function SlideshowClient({
 
 	if (slides.length === 0) {
 		return (
-			<main className="slideshow-stage grid min-h-dvh place-items-center px-6 text-center text-wedding-ivory">
+			<main className="slideshow-stage relative grid min-h-dvh place-items-center px-6 text-center text-wedding-ivory">
 				<div>
 					<h1 className="font-serif text-4xl font-bold">Pokaz slajdów</h1>
 					<p className="mt-4 max-w-md text-lg">
@@ -293,6 +297,18 @@ export function SlideshowClient({
 						Wróć do galerii
 					</Link>
 				</div>
+				{join ? (
+					<aside className="absolute bottom-4 left-4 rounded-2xl bg-wedding-ivory p-2.5 shadow-lg">
+						<Image
+							src={join.qrDataUrl}
+							alt="Kod QR dołączenia do pokazu"
+							width={112}
+							height={112}
+							unoptimized
+							className="size-28 rounded-lg"
+						/>
+					</aside>
+				) : null}
 			</main>
 		);
 	}

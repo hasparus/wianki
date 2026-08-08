@@ -3,6 +3,9 @@ import { GALLERY_BUCKET } from "@/lib/domain";
 import { serverEnv } from "@/lib/env";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
+export const SLIDESHOW_MIN_SECONDS = 2;
+export const SLIDESHOW_MAX_SECONDS = 10;
+export const SLIDESHOW_DEFAULT_SECONDS = 8;
 export const SLIDESHOW_MAX_TITLE = 120;
 export const SLIDESHOW_MAX_SUBTITLE = 200;
 export const SLIDESHOW_AUTO_LIMIT = 150;
@@ -22,6 +25,35 @@ export type SlideshowDeck = {
 	slides: SlideshowSlide[];
 	source: "custom" | "auto";
 };
+
+/** How long each slide holds, in seconds. Clamped on both read and write. */
+export function clampSlideSeconds(value: number) {
+	if (!Number.isFinite(value)) return SLIDESHOW_DEFAULT_SECONDS;
+	return Math.min(
+		SLIDESHOW_MAX_SECONDS,
+		Math.max(SLIDESHOW_MIN_SECONDS, Math.round(value)),
+	);
+}
+
+export async function getSlideSeconds(): Promise<number> {
+	const { data, error } = await supabaseAdmin()
+		.from("slideshow_settings")
+		.select("slide_seconds")
+		.limit(1)
+		.maybeSingle();
+	if (error || !data) return SLIDESHOW_DEFAULT_SECONDS;
+	return clampSlideSeconds(data.slide_seconds);
+}
+
+export async function setSlideSeconds(seconds: number): Promise<number> {
+	const slideSeconds = clampSlideSeconds(seconds);
+	const { error } = await supabaseAdmin()
+		.from("slideshow_settings")
+		.update({ slide_seconds: slideSeconds })
+		.eq("id", true);
+	if (error) throw error;
+	return slideSeconds;
+}
 
 export type SlideshowJoinInfo = {
 	/** QR code of the full join URL as a data URL, palette-matched. */

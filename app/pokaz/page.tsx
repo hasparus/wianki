@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import { SlideshowClient } from "@/components/slideshow/slideshow-client";
 import { readAdminSession, readGuestSession } from "@/lib/auth/session";
 import {
+	getSlideSeconds,
 	getSlideshowDeck,
 	getSlideshowJoinInfo,
+	SLIDESHOW_DEFAULT_SECONDS,
 	type SlideshowDeck,
 } from "@/lib/slideshow";
 
@@ -23,9 +25,12 @@ async function loadDeck(): Promise<SlideshowDeck> {
 export default async function SlideshowPage() {
 	const guest = await readGuestSession();
 	if (!guest && !(await readAdminSession())) redirect("/login");
-	const [deck, join] = await Promise.all([
+	const [deck, join, slideSeconds] = await Promise.all([
 		loadDeck(),
 		getSlideshowJoinInfo().catch(() => null),
+		getSlideSeconds().catch(() => SLIDESHOW_DEFAULT_SECONDS),
 	]);
-	return <SlideshowClient deck={deck} join={join} />;
+	return (
+		<SlideshowClient deck={deck} join={join} slideSeconds={slideSeconds} />
+	);
 }
