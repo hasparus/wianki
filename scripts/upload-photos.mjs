@@ -32,6 +32,11 @@ const CONTENT_TYPE = {
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
+// Photos land in the gallery ordered by created_at, and a multi-row insert
+// stamps every row in the batch with the same transaction time — so batching
+// randomises order within each group of ten. One init per photo keeps the
+// order you passed them in. --fast trades that away for throughput.
+const fast = args.includes("--fast");
 const concurrency = Number(
 	args[args.indexOf("--concurrency") + 1] > 0
 		? args[args.indexOf("--concurrency") + 1]
@@ -44,7 +49,7 @@ const inputs = args.filter((a, i) => {
 
 if (inputs.length === 0) {
 	console.error(
-		"usage: node scripts/upload-photos.mjs <file-or-dir>... [--dry-run] [--concurrency N]",
+		"usage: node scripts/upload-photos.mjs <file-or-dir>... [--dry-run] [--fast] [--concurrency N]",
 	);
 	process.exit(2);
 }
@@ -210,7 +215,10 @@ async function main() {
 		usable.push(file);
 	}
 
-	console.log(`${usable.length} photo(s) to upload -> ${origin}`);
+	console.log(
+		`${usable.length} photo(s) to upload -> ${origin}` +
+			(fast ? "  (--fast: order not preserved)" : "  (in filename order)"),
+	);
 	if (dryRun) {
 		for (const f of usable) console.log("  " + f);
 		return;
@@ -228,8 +236,7 @@ async function main() {
 	let failed = 0;
 	let unarchived = 0;
 
-	for (let i = 0; i < usable.length; i += MAX_BATCH_FILES) {
-		const batch = usable.slice(i, i + MAX_BATCH_FILES);
+	async function initBatch(batch) {
 		const meta = await Promise.all(
 			batch.map(async (file) => ({
 				name: path.basename(file),
@@ -248,38 +255,59 @@ async function main() {
 		});
 		const body = await response.json().catch(() => ({}));
 		if (!response.ok || !body.uploads) {
-			console.error(`  batch failed: ${body.error ?? response.status}`);
-			failed += batch.length;
-			continue;
+			throw new Error(body.error ?? `init HTTP ${response.status}`);
 		}
+		return body.uploads;
+	}
 
-		let cursor = 0;
-		await Promise.all(
-			Array.from({ length: Math.min(concurrency, batch.length) }, async () => {
-				while (cursor < batch.length) {
-					const index = cursor++;
-					const file = batch[index];
-					try {
-						const result = await uploadOne(
-							origin,
-							cookie,
-							supabase,
-							file,
-							body.uploads[index],
-						);
-						done++;
-						if (!result.archived) unarchived++;
-						const mark = result.archived ? "ok  " : "warn";
-						console.log(
-							`  ${mark}  ${path.basename(file)}${result.archiveError ? "  (archive: " + result.archiveError + ")" : ""}`,
-						);
-					} catch (error) {
-						failed++;
-						console.error(`  fail  ${path.basename(file)}: ${error.message}`);
-					}
-				}
-			}),
-		);
+	async function send(file, init) {
+		try {
+			const result = await uploadOne(origin, cookie, supabase, file, init);
+			done++;
+			if (!result.archived) unarchived++;
+			console.log(
+				`  ${result.archived ? "ok  " : "warn"}  ${path.basename(file)}${result.archiveError ? "  (archive: " + result.archiveError + ")" : ""}`,
+			);
+		} catch (error) {
+			failed++;
+			console.error(`  fail  ${path.basename(file)}: ${error.message}`);
+		}
+	}
+
+	if (fast) {
+		for (let i = 0; i < usable.length; i += MAX_BATCH_FILES) {
+			const batch = usable.slice(i, i + MAX_BATCH_FILES);
+			let uploads;
+			try {
+				uploads = await initBatch(batch);
+			} catch (error) {
+				console.error(`  batch failed: ${error.message}`);
+				failed += batch.length;
+				continue;
+			}
+			let cursor = 0;
+			await Promise.all(
+				Array.from(
+					{ length: Math.min(concurrency, batch.length) },
+					async () => {
+						while (cursor < batch.length) {
+							const index = cursor++;
+							await send(batch[index], uploads[index]);
+						}
+					},
+				),
+			);
+		}
+	} else {
+		for (const file of usable) {
+			try {
+				const [init] = await initBatch([file]);
+				await send(file, init);
+			} catch (error) {
+				failed++;
+				console.error(`  fail  ${path.basename(file)}: ${error.message}`);
+			}
+		}
 	}
 
 	console.log(

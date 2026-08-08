@@ -28,7 +28,8 @@
 		"check": "npm run lint && npm run typecheck && npm run test && npm run test:worker && npm run build",
 		"qr:generate": "node scripts/generate-qr.mjs",
 		"pre-commit": "lint-staged",
-		"photos:upload": "node scripts/upload-photos.mjs"
+		"photos:upload": "node scripts/upload-photos.mjs",
+		"deck": "node scripts/deck.mjs"
 	},
 	"dependencies": {
 		"@biomejs/biome": "^2.5.5",
