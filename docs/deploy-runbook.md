@@ -21,16 +21,41 @@ photos, and the slideshow runs at the reception.
 | Workers | `wedding-archive`, `wedding-slideshow-live` |
 | Generated secrets | `.secrets.deploy` in the repo root, git-ignored, mode 600 |
 
+## Credentials
+
+Everything lives in `.secrets.deploy` (git-ignored, mode 600). Human-facing:
+
+| What | Value |
+|---|---|
+| Gallery | `https://wianki.vercel.app` |
+| Guest passphrase | `GUEST_ACCESS_PASSPHRASE` |
+| Admin passphrase | `ADMIN_ACCESS_PASSPHRASE` (at `/login`, lands on `/admin`) |
+| Join link on the stage | `wianki.vercel.app/p/GUEST_JOIN_CODE` |
+| Printable QR codes | `private/qr/guest-qr.png`, `private/qr/admin-qr.png` |
+
+## Loading old photos
+
+```bash
+npm run photos:upload -- ~/path/to/photos --dry-run   # check the selection
+npm run photos:upload -- ~/path/to/photos             # send it
+```
+
+Drives the same endpoints a phone does. Derivative goes to Supabase EXIF-free,
+original goes to R2 with metadata intact. Then curate at `/admin/pokaz`.
+
 ## Progress
 
 - [x] Drive → R2 swap, full gate green (54 app + 19 worker tests, clean build)
 - [x] Vercel project created, framework pinned, production alias claimed
 - [x] 13 of 18 production env vars set
 - [x] Both Workers' `ALLOWED_ORIGIN` set to the production origin
-- [ ] Supabase project — **blocked on `supabase login`**
-- [ ] Workers deployed — **blocked on `wrangler login`**
-- [ ] Final 5 env vars (3 Supabase keys, 2 Worker URLs)
-- [ ] Smoke test + QR codes
+- [x] Supabase project `wianki` (Frankfurt), 3 migrations applied
+- [x] Both Workers deployed with secrets; R2 bucket live
+- [x] All 20 production env vars set
+- [x] End-to-end verified: upload → Supabase derivative → R2 original → gallery row
+- [x] Passphrase admin login, tested in production
+- [x] Bulk upload CLI, verified against the real pipeline
+- [x] QR codes generated; test photos purged
 
 ## Order of operations
 
