@@ -23,7 +23,7 @@ export function BubbleLayer({
 						style={{
 							left: `${bubble.leftPercent}%`,
 							animationDuration: `${bubble.durationMs}ms`,
-							fontSize: `${bubble.sizeRem}rem`,
+							fontSize: `clamp(1.5rem, ${bubble.sizeVmin}vmin, 6rem)`,
 						}}
 					>
 						<span>{bubble.emoji}</span>
@@ -32,7 +32,7 @@ export function BubbleLayer({
 					<span
 						key={bubble.id}
 						onAnimationEnd={() => onDone(bubble.id)}
-						className="slideshow-comment rounded-full bg-wedding-ivory/95 px-4 py-2 font-serif text-base font-semibold text-wedding-green shadow-lg sm:text-lg"
+						className="slideshow-comment rounded-full bg-wedding-ivory/95 px-[1.1em] py-[0.45em] font-serif text-[clamp(1rem,3.4vmin,2.5rem)] font-semibold text-wedding-green shadow-lg"
 						style={{
 							top: `${bubble.topPercent}%`,
 							animationDuration: `${bubble.durationMs}ms`,

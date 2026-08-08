@@ -32,7 +32,7 @@ import {
 	resolveShowIndex,
 } from "@/lib/slideshow-live";
 
-const CROSSFADE_MS = 900;
+const SLIDE_EXIT_MS = 380;
 const SWIPE_THRESHOLD_PX = 48;
 const NOTICE_MS = 4000;
 
@@ -168,7 +168,7 @@ export function SlideshowClient({
 
 	useEffect(() => {
 		if (previousIndex === null) return;
-		const timer = setTimeout(() => setPreviousIndex(null), CROSSFADE_MS);
+		const timer = setTimeout(() => setPreviousIndex(null), SLIDE_EXIT_MS);
 		return () => clearTimeout(timer);
 	}, [previousIndex]);
 
@@ -476,11 +476,6 @@ export function SlideshowClient({
 			{live.status === "on" ? (
 				<footer className="absolute inset-x-0 bottom-0 z-30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
 					<div className="mx-auto grid w-full max-w-xl gap-3">
-						{live.throttled ? (
-							<p className="text-center text-sm font-semibold">
-								Chwila oddechu — za dużo wiadomości naraz 🙂
-							</p>
-						) : null}
 						<div className="flex justify-center gap-2">
 							{REACTION_EMOJI.map((emoji) => (
 								<button

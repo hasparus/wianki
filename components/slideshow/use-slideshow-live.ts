@@ -16,7 +16,7 @@ export type SlideshowBubble =
 			emoji: string;
 			leftPercent: number;
 			durationMs: number;
-			sizeRem: number;
+			sizeVmin: number;
 	  }
 	| {
 			id: string;
@@ -42,7 +42,6 @@ type ServerMessage =
 	| { type: "presence"; viewers: number }
 	| { type: "reaction"; id: string; emoji: string }
 	| { type: "comment"; id: string; text: string }
-	| { type: "throttled"; kind: "reaction" | "comment" | "control" }
 	| ({ type: "show" } & ShowStatePayload);
 
 export function useSlideshowLive() {
@@ -54,12 +53,8 @@ export function useSlideshowLive() {
 	const [connectionEpoch, setConnectionEpoch] = useState(0);
 	const [bubbles, setBubbles] = useState<SlideshowBubble[]>([]);
 	const [lastComment, setLastComment] = useState("");
-	const [throttled, setThrottled] = useState(false);
 	const socketRef = useRef<PartySocket | null>(null);
 	const laneRef = useRef(0);
-	const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-		undefined,
-	);
 
 	const pushBubble = useCallback((bubble: SlideshowBubble) => {
 		setBubbles((current) => [...current.slice(1 - MAX_BUBBLES), bubble]);
@@ -100,8 +95,8 @@ export function useSlideshowLive() {
 					kind: "reaction",
 					emoji: message.emoji,
 					leftPercent: 6 + Math.random() * 82,
-					durationMs: 5200 + Math.random() * 3000,
-					sizeRem: 1.6 + Math.random(),
+					durationMs: 3600 + Math.random() * 2000,
+					sizeVmin: 6.5 + Math.random() * 4,
 				});
 				return;
 			}
@@ -112,15 +107,9 @@ export function useSlideshowLive() {
 					kind: "comment",
 					text: message.text,
 					topPercent: COMMENT_LANES[laneRef.current],
-					durationMs: 9000 + message.text.length * 60,
+					durationMs: 6000 + message.text.length * 35,
 				});
 				setLastComment(message.text);
-				return;
-			}
-			if (message.type === "throttled") {
-				setThrottled(true);
-				clearTimeout(throttleTimerRef.current);
-				throttleTimerRef.current = setTimeout(() => setThrottled(false), 2500);
 			}
 		}
 
@@ -162,7 +151,6 @@ export function useSlideshowLive() {
 		connect();
 		return () => {
 			disposed = true;
-			clearTimeout(throttleTimerRef.current);
 			socketRef.current?.close();
 			socketRef.current = null;
 		};
@@ -196,7 +184,6 @@ export function useSlideshowLive() {
 		connectionEpoch,
 		bubbles,
 		lastComment,
-		throttled,
 		dismissBubble,
 		sendReaction,
 		sendComment,

@@ -57,7 +57,6 @@ export type ServerMessage =
 	| { type: "presence"; viewers: number }
 	| { type: "reaction"; id: string; emoji: ReactionEmoji }
 	| { type: "comment"; id: string; text: string }
-	| { type: "throttled"; kind: "reaction" | "comment" | "control" }
 	| {
 			type: "show";
 			live: boolean;

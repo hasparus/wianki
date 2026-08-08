@@ -73,10 +73,7 @@ export class SlideshowParty extends Server<Env> {
 			this.limiters.set(connection.id, limiter);
 		}
 		const kind = message.type === "control" ? "control" : message.type;
-		if (!limiter.allow(kind)) {
-			this.send(connection, { type: "throttled", kind });
-			return;
-		}
+		if (!limiter.allow(kind)) return;
 		if (message.type === "control") {
 			const role = connection.state?.role ?? "guest";
 			const next = applyControl(this.show, message, connection.id, role);
@@ -101,10 +98,6 @@ export class SlideshowParty extends Server<Env> {
 			this.broadcast(JSON.stringify(showMessage(this.show)));
 		}
 		this.broadcastPresence();
-	}
-
-	private send(connection: Connection, message: ServerMessage) {
-		connection.send(JSON.stringify(message));
 	}
 
 	private broadcastPresence() {
