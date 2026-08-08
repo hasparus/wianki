@@ -108,7 +108,6 @@ export function SlideshowClient({
 	join?: SlideshowJoinInfo | null;
 	slideSeconds?: number;
 }) {
-	const slideMs = clampSlideSeconds(slideSeconds) * 1000;
 	const { slides } = deck;
 	const [index, setIndex] = useState(0);
 	const [previousIndex, setPreviousIndex] = useState<number | null>(null);
@@ -123,6 +122,13 @@ export function SlideshowClient({
 		undefined,
 	);
 	const live = useSlideshowLive();
+
+	// The room is the authority while a show is live, so retiming from any
+	// admin device lands on every screen at once. The server-rendered value
+	// only seeds a room that nobody has retimed yet.
+	const slideMs =
+		clampSlideSeconds(live.show.live ? live.show.slideSeconds : slideSeconds) *
+		1000;
 
 	const isAdmin = live.role === "admin" && live.status === "on";
 	// The presenter always steers: an admin device claims the show as soon as
@@ -178,6 +184,12 @@ export function SlideshowClient({
 		if (!claiming || live.connectionEpoch === 0) return;
 		live.sendControl({ action: "steer" });
 	}, [claiming, live.connectionEpoch, live.sendControl]);
+
+	// Seed a room the couple has not retimed yet with the persisted value.
+	useEffect(() => {
+		if (!live.isPresenter) return;
+		live.sendControl({ action: "tempo", slideSeconds });
+	}, [live.isPresenter, live.sendControl, slideSeconds]);
 
 	// Mirror every local position/play change to the room while presenting.
 	useEffect(() => {

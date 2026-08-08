@@ -30,6 +30,7 @@ export type ShowStatePayload = {
 	slideId: string | null;
 	playing: boolean;
 	presenterId: string | null;
+	slideSeconds: number;
 };
 
 export const IDLE_SHOW: ShowStatePayload = {
@@ -38,6 +39,7 @@ export const IDLE_SHOW: ShowStatePayload = {
 	slideId: null,
 	playing: false,
 	presenterId: null,
+	slideSeconds: 8,
 };
 
 /**

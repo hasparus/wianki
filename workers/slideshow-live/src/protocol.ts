@@ -10,12 +10,16 @@ export const MAX_COMMENT_LENGTH = 140;
 const MAX_RAW_MESSAGE_LENGTH = 4096;
 const MAX_SLIDE_INDEX = 9999;
 const MAX_SLIDE_ID_LENGTH = 64;
+export const MIN_SLIDE_SECONDS = 2;
+export const MAX_SLIDE_SECONDS = 10;
+export const DEFAULT_SLIDE_SECONDS = 8;
 
 export type ReactionEmoji = (typeof REACTION_EMOJI)[number];
 export type LiveRole = "guest" | "admin";
 
 export type ControlMessage =
 	| { type: "control"; action: "steer" }
+	| { type: "control"; action: "tempo"; slideSeconds: number }
 	| {
 			type: "control";
 			action: "goto";
@@ -38,6 +42,7 @@ export type ShowState = {
 	index: number;
 	slideId: string | null;
 	playing: boolean;
+	slideSeconds: number;
 };
 
 export const IDLE_SHOW_STATE: ShowState = {
@@ -45,6 +50,7 @@ export const IDLE_SHOW_STATE: ShowState = {
 	index: 0,
 	slideId: null,
 	playing: false,
+	slideSeconds: DEFAULT_SLIDE_SECONDS,
 };
 
 export type ServerMessage =
@@ -59,6 +65,7 @@ export type ServerMessage =
 			slideId: string | null;
 			playing: boolean;
 			presenterId: string | null;
+			slideSeconds: number;
 	  };
 
 export function showMessage(state: ShowState): ServerMessage {
@@ -69,7 +76,16 @@ export function showMessage(state: ShowState): ServerMessage {
 		slideId: state.slideId,
 		playing: state.playing,
 		presenterId: state.presenterId,
+		slideSeconds: state.slideSeconds,
 	};
+}
+
+export function clampSlideSeconds(value: number) {
+	if (!Number.isFinite(value)) return DEFAULT_SLIDE_SECONDS;
+	return Math.min(
+		MAX_SLIDE_SECONDS,
+		Math.max(MIN_SLIDE_SECONDS, Math.round(value)),
+	);
 }
 
 /**
@@ -91,12 +107,19 @@ export function applyControl(
 	if (message.action === "steer") {
 		return { ...state, presenterId: connectionId };
 	}
+	if (message.action === "tempo") {
+		const slideSeconds = clampSlideSeconds(message.slideSeconds);
+		return slideSeconds === state.slideSeconds
+			? null
+			: { ...state, slideSeconds };
+	}
 	if (state.presenterId !== connectionId) return null;
 	return {
 		presenterId: connectionId,
 		index: message.index,
 		slideId: message.slideId,
 		playing: message.playing,
+		slideSeconds: state.slideSeconds,
 	};
 }
 
@@ -139,6 +162,13 @@ function parseControlMessage(
 ): ControlMessage | null {
 	if (message.action === "steer") {
 		return { type: "control", action: "steer" };
+	}
+	if (message.action === "tempo" && typeof message.slideSeconds === "number") {
+		return {
+			type: "control",
+			action: "tempo",
+			slideSeconds: clampSlideSeconds(message.slideSeconds),
+		};
 	}
 	if (
 		message.action === "goto" &&

@@ -17,6 +17,7 @@ import {
 	GripIcon,
 	XIcon,
 } from "@/components/slideshow/icons";
+import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
 import type { GalleryItem } from "@/lib/domain";
 import {
 	type AdminSlide,
@@ -49,6 +50,10 @@ export function SlideEditor({
 	const [slides, setSlides] = useState(initialSlides);
 	const [slideSeconds, setSlideSeconds] = useState(initialSlideSeconds);
 	const [secondsSaved, setSecondsSaved] = useState(false);
+	// The editor joins the room purely to retime it; it never claims the show,
+	// so changing tempo here never yanks the projector out of the presenter's
+	// hands. Steering stays with whoever has /pokaz open.
+	const live = useSlideshowLive();
 	const [message, setMessage] = useState(initialError);
 	const [notice, setNotice] = useState("");
 	const [pending, setPending] = useState(false);
@@ -124,6 +129,7 @@ export function SlideEditor({
 			),
 		);
 		setSlideSeconds(next);
+		live.sendControl({ action: "tempo", slideSeconds: next });
 		if (next === initialSlideSeconds && secondsSaved) return;
 		await run(async () => {
 			const response = await fetch("/api/admin/slides/settings", {
@@ -402,8 +408,10 @@ export function SlideEditor({
 						</span>
 					) : null}
 					<p className="w-full text-sm">
-						Od {SLIDESHOW_MIN_SECONDS} do {SLIDESHOW_MAX_SECONDS} sekund. Otwórz
-						pokaz ponownie, aby zobaczyć nowe tempo.
+						Od {SLIDESHOW_MIN_SECONDS} do {SLIDESHOW_MAX_SECONDS} sekund.
+						{live.show.live
+							? " Zmiana działa od razu na wszystkich ekranach."
+							: " Zapisane tempo włączy się, gdy ktoś otworzy pokaz."}
 					</p>
 				</div>
 			</section>

@@ -30,6 +30,7 @@ export type LiveStatus = "connecting" | "on" | "off";
 
 export type SlideshowControl =
 	| { action: "steer" }
+	| { action: "tempo"; slideSeconds: number }
 	| { action: "goto"; index: number; slideId: string | null; playing: boolean };
 
 const MAX_BUBBLES = 60;
@@ -89,6 +90,7 @@ export function useSlideshowLive() {
 					slideId: message.slideId,
 					playing: message.playing,
 					presenterId: message.presenterId,
+					slideSeconds: message.slideSeconds,
 				});
 				return;
 			}
