@@ -7,7 +7,7 @@
 		"enabled": true
 	},
 	"vars": {
-		"ALLOWED_ORIGIN": "https://wedding.pawel.space"
+		"ALLOWED_ORIGIN": "https://wianki.vercel.app"
 	},
 	"r2_buckets": [
 		{
