@@ -44,7 +44,7 @@ export async function POST(
 			archiveToken: await createArchiveToken({
 				photoId,
 				operation: "upload",
-				filename: `${photoId}__${photo.original_filename}`,
+				filename: photo.original_filename,
 				contentType: photo.original_content_type,
 				size: Number(photo.original_size),
 			}),

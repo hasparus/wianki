@@ -11,6 +11,27 @@ photos, and the slideshow runs at the reception.
 | Moderation | **Off** (`MODERATION_ENABLED=false`) | Photos appear instantly. No Vision credentials. Hide anything unwanted from `/admin` after the fact. |
 | Priority | Slideshow first | Gallery + `/pokaz` + live reactions are the must-have; archive is second. |
 
+## Live values
+
+| Thing | Value |
+|---|---|
+| Production origin | `https://wianki.vercel.app` |
+| Vercel project | `hasparus-projects/wianki` |
+| R2 bucket | `wedding-originals` |
+| Workers | `wedding-archive`, `wedding-slideshow-live` |
+| Generated secrets | `.secrets.deploy` in the repo root, git-ignored, mode 600 |
+
+## Progress
+
+- [x] Drive → R2 swap, full gate green (54 app + 19 worker tests, clean build)
+- [x] Vercel project created, framework pinned, production alias claimed
+- [x] 13 of 18 production env vars set
+- [x] Both Workers' `ALLOWED_ORIGIN` set to the production origin
+- [ ] Supabase project — **blocked on `supabase login`**
+- [ ] Workers deployed — **blocked on `wrangler login`**
+- [ ] Final 5 env vars (3 Supabase keys, 2 Worker URLs)
+- [ ] Smoke test + QR codes
+
 ## Order of operations
 
 Dependencies force this order: Supabase keys are needed by Vercel, the Worker
