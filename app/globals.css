@@ -270,11 +270,11 @@ a {
 }
 
 .slideshow-slide-enter {
-	animation: slideshow-slide-in 520ms cubic-bezier(0.23, 1, 0.32, 1) both;
+	animation: slideshow-slide-in 440ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 .slideshow-slide-exit {
-	animation: slideshow-slide-out 380ms cubic-bezier(0.23, 1, 0.32, 1) both;
+	animation: slideshow-slide-out 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 @keyframes slideshow-float-up {

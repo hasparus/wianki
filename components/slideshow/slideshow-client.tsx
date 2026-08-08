@@ -32,7 +32,7 @@ import {
 	resolveShowIndex,
 } from "@/lib/slideshow-live";
 
-const SLIDE_EXIT_MS = 380;
+const SLIDE_EXIT_MS = 320;
 const SWIPE_THRESHOLD_PX = 48;
 const NOTICE_MS = 4000;
 
