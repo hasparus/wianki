@@ -16,7 +16,10 @@ export function LoginForm() {
 			body: form,
 		});
 		if (response.ok) {
-			window.location.assign("/");
+			const body = (await response.json().catch(() => null)) as {
+				redirect?: string;
+			} | null;
+			window.location.assign(body?.redirect ?? "/");
 			return;
 		}
 		const body = (await response.json().catch(() => null)) as {

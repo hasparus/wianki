@@ -90,7 +90,7 @@ export async function POST(request: Request) {
 					archiveToken: await createArchiveToken({
 						photoId: row.id,
 						operation: "upload",
-						filename: `${row.id}__${row.original_filename}`,
+						filename: row.original_filename,
 						contentType: parsed.data.files[index].type,
 						size: parsed.data.files[index].size,
 					}),

@@ -17,6 +17,7 @@ const serverSchema = z
 		GUEST_ACCESS_PASSPHRASE: z.string().min(12),
 		GUEST_SESSION_SECRET: z.string().min(32),
 		ADMIN_ENTRY_TOKEN: z.string().min(32),
+		ADMIN_ACCESS_PASSPHRASE: z.string().min(16).optional(),
 		ADMIN_SESSION_SECRET: z.string().min(32),
 		ARCHIVE_WORKER_URL: z.url(),
 		ARCHIVE_TOKEN_SECRET: z.string().min(32),
