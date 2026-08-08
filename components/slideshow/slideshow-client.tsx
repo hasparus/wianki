@@ -123,12 +123,11 @@ export function SlideshowClient({
 	);
 	const live = useSlideshowLive();
 
-	// The room is the authority while a show is live, so retiming from any
-	// admin device lands on every screen at once. The server-rendered value
-	// only seeds a room that nobody has retimed yet.
+	// Any screen in the room honours a retime, whether or not it is presenting
+	// and whether it signed in as a guest or an admin. An untouched room has no
+	// opinion, so the stored value keeps applying until someone changes it.
 	const slideMs =
-		clampSlideSeconds(live.show.live ? live.show.slideSeconds : slideSeconds) *
-		1000;
+		clampSlideSeconds(live.show.slideSeconds ?? slideSeconds) * 1000;
 
 	const isAdmin = live.role === "admin" && live.status === "on";
 	// The presenter always steers: an admin device claims the show as soon as
@@ -185,11 +184,17 @@ export function SlideshowClient({
 		live.sendControl({ action: "steer" });
 	}, [claiming, live.connectionEpoch, live.sendControl]);
 
-	// Seed a room the couple has not retimed yet with the persisted value.
+	// Seed only a room nobody has retimed; reconnecting must never clobber a
+	// tempo someone set while this tab was holding a stale page-load value.
 	useEffect(() => {
-		if (!live.isPresenter) return;
+		if (!live.isPresenter || live.show.slideSeconds !== null) return;
 		live.sendControl({ action: "tempo", slideSeconds });
-	}, [live.isPresenter, live.sendControl, slideSeconds]);
+	}, [
+		live.isPresenter,
+		live.show.slideSeconds,
+		live.sendControl,
+		slideSeconds,
+	]);
 
 	// Mirror every local position/play change to the room while presenting.
 	useEffect(() => {
@@ -310,7 +315,7 @@ export function SlideshowClient({
 					</Link>
 				</div>
 				{join ? (
-					<aside className="absolute bottom-4 left-4 rounded-2xl bg-wedding-ivory p-2.5 shadow-lg">
+					<aside className="absolute bottom-4 left-4 hidden rounded-2xl bg-wedding-ivory p-2.5 shadow-lg xl:block">
 						<Image
 							src={join.qrDataUrl}
 							alt="Kod QR dołączenia do pokazu"

@@ -409,9 +409,9 @@ export function SlideEditor({
 					) : null}
 					<p className="w-full text-sm">
 						Od {SLIDESHOW_MIN_SECONDS} do {SLIDESHOW_MAX_SECONDS} sekund.
-						{live.show.live
-							? " Zmiana działa od razu na wszystkich ekranach."
-							: " Zapisane tempo włączy się, gdy ktoś otworzy pokaz."}
+						{live.status === "on"
+							? " Zmiana działa od razu na wszystkich otwartych ekranach."
+							: " Zapisane tempo włączy się przy otwarciu pokazu."}
 					</p>
 				</div>
 			</section>

@@ -42,7 +42,7 @@ export type ShowState = {
 	index: number;
 	slideId: string | null;
 	playing: boolean;
-	slideSeconds: number;
+	slideSeconds: number | null;
 };
 
 export const IDLE_SHOW_STATE: ShowState = {
@@ -50,7 +50,7 @@ export const IDLE_SHOW_STATE: ShowState = {
 	index: 0,
 	slideId: null,
 	playing: false,
-	slideSeconds: DEFAULT_SLIDE_SECONDS,
+	slideSeconds: null,
 };
 
 export type ServerMessage =
@@ -65,7 +65,7 @@ export type ServerMessage =
 			slideId: string | null;
 			playing: boolean;
 			presenterId: string | null;
-			slideSeconds: number;
+			slideSeconds: number | null;
 	  };
 
 export function showMessage(state: ShowState): ServerMessage {
