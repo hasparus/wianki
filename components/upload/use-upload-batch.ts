@@ -157,7 +157,7 @@ export function useUploadBatch(onComplete: () => void) {
 					},
 				);
 				if (!archive.receipt) {
-					throw new Error(archive.error ?? "Drive nie przyjął oryginału.");
+					throw new Error(archive.error ?? "Archiwum nie przyjęło oryginału.");
 				}
 				await completeArchive(item.photoId, archive.receipt);
 				updateItem(item.id, {

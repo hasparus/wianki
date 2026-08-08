@@ -27,7 +27,6 @@
 		"test:e2e": "playwright test",
 		"check": "npm run lint && npm run typecheck && npm run test && npm run test:worker && npm run build",
 		"qr:generate": "node scripts/generate-qr.mjs",
-		"drive:bootstrap": "node scripts/bootstrap-drive-oauth.mjs",
 		"pre-commit": "lint-staged"
 	},
 	"dependencies": {

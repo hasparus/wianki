@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "wedding-drive-archive",
+	"name": "wedding-archive",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-07-23",
 	"observability": {
@@ -8,5 +8,11 @@
 	},
 	"vars": {
 		"ALLOWED_ORIGIN": "https://wedding.pawel.space"
-	}
+	},
+	"r2_buckets": [
+		{
+			"binding": "ARCHIVE_BUCKET",
+			"bucket_name": "wedding-originals"
+		}
+	]
 }

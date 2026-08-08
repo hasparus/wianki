@@ -63,7 +63,7 @@ function mockBackend(image: Blob | null) {
 				storage_path: "batch/photo.jpg",
 				original_size: 8,
 				archive_status: "pending",
-				drive_file_id: null,
+				archive_key: null,
 			},
 			error: null,
 		}),
@@ -100,7 +100,7 @@ describe("upload finalization", () => {
 		mocks.verifyArchiveReceipt.mockResolvedValue({
 			photoId: "photo-1",
 			size: 8,
-			driveFileId: "drive-1",
+			archiveKey: "drive-1",
 		});
 	});
 
@@ -115,7 +115,7 @@ describe("upload finalization", () => {
 		expect(update).toHaveBeenCalledWith({
 			hot_status: "failed",
 			archive_status: "uploaded",
-			drive_file_id: "drive-1",
+			archive_key: "drive-1",
 			last_error: "Nieprawidłowa kopia galeryjna.",
 		});
 		expect(mocks.after).not.toHaveBeenCalled();
@@ -148,7 +148,7 @@ describe("upload finalization", () => {
 			hot_status: "uploaded",
 			archive_status: "uploaded",
 			moderation_status: "pending",
-			drive_file_id: "drive-1",
+			archive_key: "drive-1",
 			derivative_size: 4,
 			derivative_content_type: "image/jpeg",
 			width: 2,

@@ -22,7 +22,7 @@ export type AdminPhotoPage = {
 type AdminRow = {
 	id: string;
 	storage_path: string;
-	drive_file_id: string | null;
+	archive_key: string | null;
 	original_filename: string;
 	hot_status: string;
 	archive_status: string;
@@ -34,11 +34,11 @@ type AdminRow = {
 type AdminCursor = { createdAt: string; id: string };
 
 export function isAdminPhotoActionable(
-	photo: Pick<AdminRow, "hot_status" | "archive_status" | "drive_file_id">,
+	photo: Pick<AdminRow, "hot_status" | "archive_status" | "archive_key">,
 ) {
 	return !(
 		photo.hot_status === "deleted" &&
-		(photo.archive_status === "trashed" || photo.drive_file_id === null)
+		(photo.archive_status === "trashed" || photo.archive_key === null)
 	);
 }
 
@@ -72,10 +72,10 @@ export async function getAdminPhotosPage(
 	let query = supabase
 		.from("photos")
 		.select(
-			"id,storage_path,drive_file_id,original_filename,hot_status,archive_status,moderation_status,last_error,created_at",
+			"id,storage_path,archive_key,original_filename,hot_status,archive_status,moderation_status,last_error,created_at",
 		)
 		.or(
-			"hot_status.neq.deleted,and(archive_status.neq.trashed,drive_file_id.not.is.null)",
+			"hot_status.neq.deleted,and(archive_status.neq.trashed,archive_key.not.is.null)",
 		)
 		.order("created_at", { ascending: false })
 		.order("id", { ascending: false })

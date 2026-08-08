@@ -110,18 +110,17 @@ export function uploadArchive(
 					: null;
 				resolve({
 					receipt: null,
-					error: body?.error ?? "Oryginał nie dotarł do archiwum Drive.",
+					error: body?.error ?? "Oryginał nie dotarł do archiwum.",
 				});
 			} catch (error) {
 				reject(
 					error instanceof Error
 						? error
-						: new Error("Oryginał nie dotarł do archiwum Drive."),
+						: new Error("Oryginał nie dotarł do archiwum."),
 				);
 			}
 		};
-		xhr.onerror = () =>
-			reject(new Error("Oryginał nie dotarł do archiwum Drive."));
+		xhr.onerror = () => reject(new Error("Oryginał nie dotarł do archiwum."));
 		xhr.send(file);
 	});
 }

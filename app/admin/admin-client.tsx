@@ -14,7 +14,7 @@ const labels: Record<AdminAction, string> = {
 	approve: "Zatwierdź i pokaż",
 	hide: "Ukryj z galerii",
 	retry_moderation: "Sprawdź ponownie",
-	reconcile_archive: "Znajdź w Drive",
+	reconcile_archive: "Znajdź w archiwum",
 };
 
 export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
@@ -84,7 +84,7 @@ export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
 	async function remove(photoId: string) {
 		if (
 			!window.confirm(
-				"Usunąć kopię galeryjną i przenieść oryginał do kosza Drive? W bazie pozostanie zapis potrzebny do audytu i ponowienia częściowo nieudanego usuwania.",
+				"Usunąć kopię galeryjną i trwale skasować oryginał z archiwum? Tego nie da się cofnąć. W bazie pozostanie zapis potrzebny do audytu i ponowienia częściowo nieudanego usuwania.",
 			)
 		) {
 			return;
@@ -173,7 +173,7 @@ export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
 								<dl className="mt-2 grid grid-cols-2 gap-1 text-sm">
 									<dt>Galeria</dt>
 									<dd>{photo.hotStatus}</dd>
-									<dt>Drive</dt>
+									<dt>Archiwum</dt>
 									<dd>{photo.archiveStatus}</dd>
 									<dt>Moderacja</dt>
 									<dd>{photo.moderationStatus}</dd>

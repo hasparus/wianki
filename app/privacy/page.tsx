@@ -15,12 +15,11 @@ export default function PrivacyPage() {
 					<p>
 						Zdjęcia są przeznaczone wyłącznie dla naszych gości. Pomniejszone
 						kopie przechowujemy prywatnie w Supabase, a oryginały w prywatnym
-						folderze Google Drive.
+						archiwum Cloudflare R2.
 					</p>
 					<p>
-						Pomniejszona kopia jest sprawdzana przez Google Cloud Vision pod
-						kątem treści dla dorosłych, przemocy i treści obscenicznych.
-						Automatyczna decyzja może zostać przez nas zmieniona.
+						Zdjęcia trafiają do galerii od razu, bez automatycznego sprawdzania
+						treści. Możemy ukryć każde zdjęcie, jeśli zajdzie taka potrzeba.
 					</p>
 					<p>
 						Z kopii galeryjnej usuwamy metadane EXIF. Oryginał zachowuje

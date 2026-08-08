@@ -63,7 +63,7 @@ export async function POST(
 			.from("photos")
 			.update({
 				archive_status: "uploaded",
-				drive_file_id: receipt.driveFileId,
+				archive_key: receipt.archiveKey,
 				last_error: null,
 			})
 			.eq("id", photoId);

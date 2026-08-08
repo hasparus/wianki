@@ -1,0 +1,2 @@
+# Shared with Vercel as ARCHIVE_TOKEN_SECRET. At least 32 random bytes.
+ARCHIVE_TOKEN_SECRET=replace_with_256_bit_random_value

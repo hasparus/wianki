@@ -42,7 +42,7 @@ export type Database = {
 					width: number | null;
 					height: number | null;
 					storage_path: string;
-					drive_file_id: string | null;
+					archive_key: string | null;
 					hot_status: Database["public"]["Enums"]["hot_status"];
 					archive_status: Database["public"]["Enums"]["archive_status"];
 					moderation_status: Database["public"]["Enums"]["moderation_status"];
@@ -64,7 +64,7 @@ export type Database = {
 					width?: number | null;
 					height?: number | null;
 					storage_path: string;
-					drive_file_id?: string | null;
+					archive_key?: string | null;
 					hot_status?: Database["public"]["Enums"]["hot_status"];
 					archive_status?: Database["public"]["Enums"]["archive_status"];
 					moderation_status?: Database["public"]["Enums"]["moderation_status"];

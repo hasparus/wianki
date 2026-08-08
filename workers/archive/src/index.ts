@@ -2,11 +2,8 @@ import { type JWTPayload, jwtVerify, SignJWT } from "jose";
 
 export interface Env {
 	ALLOWED_ORIGIN: string;
-	GOOGLE_OAUTH_CLIENT_ID: string;
-	GOOGLE_OAUTH_CLIENT_SECRET: string;
-	GOOGLE_OAUTH_REFRESH_TOKEN: string;
-	GOOGLE_DRIVE_FOLDER_ID: string;
 	ARCHIVE_TOKEN_SECRET: string;
+	ARCHIVE_BUCKET: R2Bucket;
 }
 
 type Operation = "upload" | "delete" | "reconcile";
@@ -17,14 +14,28 @@ type OperationClaims = JWTPayload & {
 	filename?: string;
 	contentType?: string;
 	size?: number;
-	driveFileId?: string;
+	archiveKey?: string;
 };
 
-const audience = "wedding-drive-archive";
+const audience = "wedding-archive";
 const maxOriginalBytes = 25 * 1024 * 1024;
 const encoder = new TextEncoder();
+const keyPrefix = "originals/";
 
-export function sanitizeDriveFilename(value: string) {
+/**
+ * Object keys stay human-readable so the couple can browse the bucket, while
+ * the `originals/<photoId>__` prefix keeps reconciliation a single deterministic
+ * prefix listing instead of a metadata search.
+ */
+export function archiveKeyPrefix(photoId: string) {
+	return `${keyPrefix}${photoId}__`;
+}
+
+export function buildArchiveKey(photoId: string, filename: string) {
+	return `${archiveKeyPrefix(photoId)}${sanitizeObjectName(filename)}`;
+}
+
+export function sanitizeObjectName(value: string) {
 	let sanitized = "";
 	let previousWasUnsafe = false;
 	for (const character of value) {
@@ -87,30 +98,13 @@ async function verifyOperation(request: Request, env: Env) {
 	return payload as OperationClaims;
 }
 
-async function googleAccessToken(env: Env) {
-	const response = await fetch("https://oauth2.googleapis.com/token", {
-		method: "POST",
-		headers: { "Content-Type": "application/x-www-form-urlencoded" },
-		body: new URLSearchParams({
-			client_id: env.GOOGLE_OAUTH_CLIENT_ID,
-			client_secret: env.GOOGLE_OAUTH_CLIENT_SECRET,
-			refresh_token: env.GOOGLE_OAUTH_REFRESH_TOKEN,
-			grant_type: "refresh_token",
-		}),
-	});
-	if (!response.ok) throw new Error("Google OAuth odrzucił token odświeżania.");
-	const body = (await response.json()) as { access_token?: string };
-	if (!body.access_token) throw new Error("Google OAuth nie zwrócił tokenu.");
-	return body.access_token;
-}
-
 async function receipt(
 	env: Env,
 	photoId: string,
-	driveFileId: string,
+	archiveKey: string,
 	size: number,
 ) {
-	return new SignJWT({ kind: "receipt", photoId, driveFileId, size })
+	return new SignJWT({ kind: "receipt", photoId, archiveKey, size })
 		.setProtectedHeader({ alg: "HS256", typ: "JWT" })
 		.setIssuedAt()
 		.setAudience(audience)
@@ -140,91 +134,50 @@ async function uploadOriginal(
 	if (requestLength !== claims.size)
 		throw new Error("Rozmiar pliku nie zgadza się z tokenem.");
 
-	const accessToken = await googleAccessToken(env);
-	const createResponse = await fetch(
-		"https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,size",
-		{
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${accessToken}`,
-				"Content-Type": "application/json; charset=UTF-8",
-				"X-Upload-Content-Type": claims.contentType,
-				"X-Upload-Content-Length": String(claims.size),
-			},
-			body: JSON.stringify({
-				name: sanitizeDriveFilename(claims.filename),
-				parents: [env.GOOGLE_DRIVE_FOLDER_ID],
-				appProperties: { photoId: claims.photoId },
-			}),
+	const archiveKey = buildArchiveKey(claims.photoId, claims.filename);
+	const object = await env.ARCHIVE_BUCKET.put(archiveKey, request.body, {
+		httpMetadata: {
+			contentType: claims.contentType,
+			// Browsers downloading straight from a signed bucket URL keep the
+			// guest's original filename rather than the prefixed key.
+			contentDisposition: `attachment; filename="${sanitizeObjectName(claims.filename)}"`,
 		},
-	);
-	const sessionUrl = createResponse.headers.get("Location");
-	if (!createResponse.ok || !sessionUrl) {
-		throw new Error("Nie udało się rozpocząć wysyłki do Drive.");
-	}
-
-	const uploadResponse = await fetch(sessionUrl, {
-		method: "PUT",
-		headers: {
-			Authorization: `Bearer ${accessToken}`,
-			"Content-Type": claims.contentType,
-			"Content-Length": String(claims.size),
-		},
-		body: request.body,
+		customMetadata: { photoId: claims.photoId },
 	});
-	if (!uploadResponse.ok) throw new Error("Drive nie przyjął oryginału.");
-	const file = (await uploadResponse.json()) as { id?: string; size?: string };
-	if (!file.id) throw new Error("Drive nie zwrócił identyfikatora pliku.");
+	if (!object) throw new Error("Archiwum nie przyjęło oryginału.");
+	if (object.size !== claims.size) {
+		await env.ARCHIVE_BUCKET.delete(archiveKey);
+		throw new Error("Zapisany rozmiar nie zgadza się z tokenem.");
+	}
 	return {
-		receipt: await receipt(env, claims.photoId, file.id, claims.size),
-		driveFileId: file.id,
+		receipt: await receipt(env, claims.photoId, archiveKey, object.size),
+		archiveKey,
 	};
 }
 
 async function reconcileOriginal(env: Env, claims: OperationClaims) {
 	if (claims.operation !== "reconcile")
 		throw new Error("Nieprawidłowa operacja.");
-	const accessToken = await googleAccessToken(env);
-	const query = `trashed = false and appProperties has { key='photoId' and value='${claims.photoId}' }`;
-	const url = new URL("https://www.googleapis.com/drive/v3/files");
-	url.searchParams.set("q", query);
-	url.searchParams.set("fields", "files(id,size)");
-	url.searchParams.set("pageSize", "1");
-	url.searchParams.set("supportsAllDrives", "true");
-	url.searchParams.set("includeItemsFromAllDrives", "true");
-	const response = await fetch(url, {
-		headers: { Authorization: `Bearer ${accessToken}` },
+	const listed = await env.ARCHIVE_BUCKET.list({
+		prefix: archiveKeyPrefix(claims.photoId),
+		limit: 1,
 	});
-	if (!response.ok) throw new Error("Nie udało się przeszukać Drive.");
-	const body = (await response.json()) as {
-		files?: Array<{ id: string; size?: string }>;
-	};
-	const file = body.files?.[0];
-	if (!file) return null;
-	const size = Number(file.size ?? 0);
+	const object = listed.objects[0];
+	if (!object) return null;
 	return {
-		receipt: await receipt(env, claims.photoId, file.id, size),
-		driveFileId: file.id,
+		receipt: await receipt(env, claims.photoId, object.key, object.size),
+		archiveKey: object.key,
 	};
 }
 
-async function trashOriginal(env: Env, claims: OperationClaims) {
-	if (claims.operation !== "delete" || !claims.driveFileId) {
+async function deleteOriginal(env: Env, claims: OperationClaims) {
+	if (claims.operation !== "delete" || !claims.archiveKey) {
 		throw new Error("Brak pliku do usunięcia.");
 	}
-	const accessToken = await googleAccessToken(env);
-	const response = await fetch(
-		`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(claims.driveFileId)}?supportsAllDrives=true`,
-		{
-			method: "PATCH",
-			headers: {
-				Authorization: `Bearer ${accessToken}`,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({ trashed: true }),
-		},
-	);
-	if (!response.ok) throw new Error("Drive nie przeniósł pliku do kosza.");
+	if (!claims.archiveKey.startsWith(archiveKeyPrefix(claims.photoId))) {
+		throw new Error("Klucz nie należy do tego zdjęcia.");
+	}
+	await env.ARCHIVE_BUCKET.delete(claims.archiveKey);
 	return { ok: true };
 }
 
@@ -274,7 +227,7 @@ export default {
 					: json({ error: "Nie znaleziono oryginału." }, 404, origin, env);
 			}
 			if (request.method === "DELETE") {
-				return json(await trashOriginal(env, claims), 200, origin, env);
+				return json(await deleteOriginal(env, claims), 200, origin, env);
 			}
 			return json({ error: "Niedozwolona metoda." }, 405, origin, env);
 		} catch (error) {
