@@ -7,8 +7,6 @@ import {
 } from "@/lib/slideshow-protocol";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-export const SLIDESHOW_MAX_TITLE = 120;
-export const SLIDESHOW_MAX_SUBTITLE = 200;
 export const SLIDESHOW_AUTO_LIMIT = 150;
 const SIGNED_URL_SECONDS = 60 * 60 * 6;
 
@@ -55,7 +53,7 @@ export type SlideshowJoinInfo = {
 /**
  * The corner QR shown during the show. Only exists when GUEST_JOIN_CODE is
  * configured; the QR encodes `/p/<code>`, which the proxy exchanges for a
- * guest session. Colors mirror scripts/generate-qr.mjs.
+ * guest session. Colors mirror scripts/generate-qr.ts.
  */
 export async function getSlideshowJoinInfo(): Promise<SlideshowJoinInfo | null> {
 	const env = serverEnv();

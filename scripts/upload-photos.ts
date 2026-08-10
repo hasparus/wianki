@@ -4,7 +4,7 @@ import path from "node:path";
 /**
  * Bulk-upload photos from disk through the real guest pipeline.
  *
- *   node scripts/upload-photos.mjs <file-or-dir>... [--dry-run] [--concurrency N]
+ *   node scripts/upload-photos.ts <file-or-dir>... [--dry-run] [--concurrency N]
  *
  * Reads APP_ORIGIN, GUEST_ACCESS_PASSPHRASE and the Supabase public keys from
  * the environment or from .secrets.deploy / .env.local in the repo root.
@@ -14,15 +14,33 @@ import path from "node:path";
  * in Supabase, full original in R2, one row per photo. Nothing writes to the
  * database directly.
  */
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
-import { loadLocalEnv } from "./lib/env.mjs";
+import { errorMessage, loadLocalEnv } from "./lib/cli.ts";
+
+type UploadInit = {
+	photoId: string;
+	path: string;
+	uploadToken: string;
+	archiveToken: string;
+};
+
+/** These endpoints answer with JSON on success and on failure alike. */
+type ApiBody = {
+	error?: string;
+	receipt?: string;
+	uploads?: UploadInit[];
+};
+
+async function readJson(response: Response): Promise<ApiBody> {
+	return (await response.json().catch(() => ({}))) as ApiBody;
+}
 
 const MAX_BATCH_FILES = 10;
 const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024;
 const MAX_DERIVATIVE_BYTES = 500 * 1024;
 const IMAGE_EXT = new Set([".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"]);
-const CONTENT_TYPE = {
+const CONTENT_TYPE: Record<string, string> = {
 	".jpg": "image/jpeg",
 	".jpeg": "image/jpeg",
 	".png": "image/png",
@@ -38,11 +56,10 @@ const dryRun = args.includes("--dry-run");
 // randomises order within each group of ten. One init per photo keeps the
 // order you passed them in. --fast trades that away for throughput.
 const fast = args.includes("--fast");
-const concurrency = Number(
-	args[args.indexOf("--concurrency") + 1] > 0
-		? args[args.indexOf("--concurrency") + 1]
-		: 4,
-);
+const concurrency =
+	Number(args[args.indexOf("--concurrency") + 1]) > 0
+		? Number(args[args.indexOf("--concurrency") + 1])
+		: 4;
 const inputs = args.filter((a, i) => {
 	if (a.startsWith("--")) return false;
 	return args[i - 1] !== "--concurrency";
@@ -50,17 +67,17 @@ const inputs = args.filter((a, i) => {
 
 if (inputs.length === 0) {
 	console.error(
-		"usage: node scripts/upload-photos.mjs <file-or-dir>... [--dry-run] [--fast] [--concurrency N]",
+		"usage: node scripts/upload-photos.ts <file-or-dir>... [--dry-run] [--fast] [--concurrency N]",
 	);
 	process.exit(2);
 }
 
-async function collect(target) {
+async function collect(target: string): Promise<string[]> {
 	const info = await stat(target);
 	if (info.isFile()) {
 		return IMAGE_EXT.has(path.extname(target).toLowerCase()) ? [target] : [];
 	}
-	const found = [];
+	const found: string[] = [];
 	for (const entry of await readdir(target, { withFileTypes: true })) {
 		if (entry.name.startsWith(".")) continue;
 		found.push(...(await collect(path.join(target, entry.name))));
@@ -69,7 +86,7 @@ async function collect(target) {
 }
 
 /** Mirrors the browser: max 1920px, JPEG, EXIF dropped, under 500 KiB. */
-async function makeDerivative(file) {
+async function makeDerivative(file: string) {
 	let quality = 82;
 	for (let attempt = 0; attempt < 6; attempt++) {
 		const buffer = await sharp(file)
@@ -84,16 +101,16 @@ async function makeDerivative(file) {
 			.toBuffer();
 		if (buffer.length <= MAX_DERIVATIVE_BYTES || quality <= 40) {
 			const meta = await sharp(buffer).metadata();
-			return { buffer, width: meta.width, height: meta.height };
+			return { buffer, width: meta.width ?? null, height: meta.height ?? null };
 		}
 		quality -= 8;
 	}
 	throw new Error("could not compress under 500 KiB");
 }
 
-async function login(origin) {
+async function login(origin: string, passphrase: string) {
 	const form = new FormData();
-	form.set("passphrase", process.env.GUEST_ACCESS_PASSPHRASE);
+	form.set("passphrase", passphrase);
 	const response = await fetch(`${origin}/api/auth/guest`, {
 		method: "POST",
 		headers: { Origin: origin },
@@ -109,7 +126,14 @@ async function login(origin) {
 	return cookie;
 }
 
-async function uploadOne(origin, cookie, supabase, file, init) {
+async function uploadOne(
+	origin: string,
+	cookie: string,
+	supabase: SupabaseClient,
+	archiveWorkerUrl: string,
+	file: string,
+	init: UploadInit,
+) {
 	const original = await readFile(file);
 	const derivative = await makeDerivative(file);
 
@@ -121,11 +145,11 @@ async function uploadOne(origin, cookie, supabase, file, init) {
 		});
 	if (storageError) throw new Error(`gallery copy: ${storageError.message}`);
 
-	let archiveReceipt = null;
-	let archiveError = null;
+	let archiveReceipt: string | null = null;
+	let archiveError: string | null = null;
 	try {
 		const response = await fetch(
-			`${process.env.NEXT_PUBLIC_ARCHIVE_WORKER_URL}/v1/archive/${init.photoId}`,
+			`${archiveWorkerUrl}/v1/archive/${init.photoId}`,
 			{
 				method: "PUT",
 				headers: {
@@ -139,11 +163,11 @@ async function uploadOne(origin, cookie, supabase, file, init) {
 				body: original,
 			},
 		);
-		const body = await response.json().catch(() => ({}));
+		const body = await readJson(response);
 		if (response.ok) archiveReceipt = body.receipt ?? null;
 		else archiveError = body.error ?? `archive HTTP ${response.status}`;
 	} catch (error) {
-		archiveError = String(error.message ?? error).slice(0, 200);
+		archiveError = errorMessage(error).slice(0, 200);
 	}
 
 	const finalize = await fetch(
@@ -166,27 +190,28 @@ async function uploadOne(origin, cookie, supabase, file, init) {
 		},
 	);
 	if (!finalize.ok) {
-		const body = await finalize.json().catch(() => ({}));
+		const body = await readJson(finalize);
 		throw new Error(body.error ?? `finalize HTTP ${finalize.status}`);
 	}
 	return { archived: Boolean(archiveReceipt), archiveError };
 }
 
 async function main() {
-	loadLocalEnv([
+	const env = loadLocalEnv([
 		"APP_ORIGIN",
 		"GUEST_ACCESS_PASSPHRASE",
 		"NEXT_PUBLIC_SUPABASE_URL",
 		"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+		"NEXT_PUBLIC_ARCHIVE_WORKER_URL",
 	]);
-	const origin = process.env.APP_ORIGIN.replace(/\/$/, "");
+	const origin = env.APP_ORIGIN.replace(/\/$/, "");
 
-	const files = [];
+	const files: string[] = [];
 	for (const input of inputs)
 		files.push(...(await collect(path.resolve(input))));
 	files.sort();
 
-	const usable = [];
+	const usable: string[] = [];
 	for (const file of files) {
 		const { size } = await stat(file);
 		if (size > MAX_ORIGINAL_BYTES) {
@@ -208,10 +233,10 @@ async function main() {
 	}
 	if (usable.length === 0) return;
 
-	const cookie = await login(origin);
+	const cookie = await login(origin, env.GUEST_ACCESS_PASSPHRASE);
 	const supabase = createClient(
-		process.env.NEXT_PUBLIC_SUPABASE_URL,
-		process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+		env.NEXT_PUBLIC_SUPABASE_URL,
+		env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 		{ auth: { persistSession: false, autoRefreshToken: false } },
 	);
 
@@ -219,7 +244,7 @@ async function main() {
 	let failed = 0;
 	let unarchived = 0;
 
-	async function initBatch(batch) {
+	async function initBatch(batch: string[]): Promise<UploadInit[]> {
 		const meta = await Promise.all(
 			batch.map(async (file) => ({
 				name: path.basename(file),
@@ -236,16 +261,23 @@ async function main() {
 			},
 			body: JSON.stringify({ consent: true, files: meta }),
 		});
-		const body = await response.json().catch(() => ({}));
+		const body = await readJson(response);
 		if (!response.ok || !body.uploads) {
 			throw new Error(body.error ?? `init HTTP ${response.status}`);
 		}
 		return body.uploads;
 	}
 
-	async function send(file, init) {
+	async function send(file: string, init: UploadInit) {
 		try {
-			const result = await uploadOne(origin, cookie, supabase, file, init);
+			const result = await uploadOne(
+				origin,
+				cookie,
+				supabase,
+				env.NEXT_PUBLIC_ARCHIVE_WORKER_URL,
+				file,
+				init,
+			);
 			done++;
 			if (!result.archived) unarchived++;
 			console.log(
@@ -253,18 +285,18 @@ async function main() {
 			);
 		} catch (error) {
 			failed++;
-			console.error(`  fail  ${path.basename(file)}: ${error.message}`);
+			console.error(`  fail  ${path.basename(file)}: ${errorMessage(error)}`);
 		}
 	}
 
 	if (fast) {
 		for (let i = 0; i < usable.length; i += MAX_BATCH_FILES) {
 			const batch = usable.slice(i, i + MAX_BATCH_FILES);
-			let uploads;
+			let uploads: UploadInit[];
 			try {
 				uploads = await initBatch(batch);
 			} catch (error) {
-				console.error(`  batch failed: ${error.message}`);
+				console.error(`  batch failed: ${errorMessage(error)}`);
 				failed += batch.length;
 				continue;
 			}
@@ -288,7 +320,7 @@ async function main() {
 				await send(file, init);
 			} catch (error) {
 				failed++;
-				console.error(`  fail  ${path.basename(file)}: ${error.message}`);
+				console.error(`  fail  ${path.basename(file)}: ${errorMessage(error)}`);
 			}
 		}
 	}

@@ -2,6 +2,7 @@
 	"name": "wedding-photos-app",
 	"version": "0.1.0",
 	"private": true,
+	"type": "module",
 	"engines": {
 		"node": "24.x"
 	},
@@ -26,10 +27,10 @@
 		"test:worker": "npm run check --workspaces",
 		"test:e2e": "playwright test",
 		"check": "npm run lint && npm run typecheck && npm run test && npm run test:worker && npm run build",
-		"qr:generate": "node scripts/generate-qr.mjs",
+		"qr:generate": "node scripts/generate-qr.ts",
 		"pre-commit": "lint-staged",
-		"photos:upload": "node scripts/upload-photos.mjs",
-		"deck": "node scripts/deck.mjs"
+		"photos:upload": "node scripts/upload-photos.ts",
+		"deck": "node scripts/deck.ts"
 	},
 	"dependencies": {
 		"@biomejs/biome": "^2.5.5",

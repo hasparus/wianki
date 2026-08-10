@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { denyAdminRequest } from "@/lib/auth/session";
 import { jsonError, noStoreJson } from "@/lib/http";
-import { SLIDESHOW_MAX_SUBTITLE, SLIDESHOW_MAX_TITLE } from "@/lib/slideshow";
+import {
+	SLIDESHOW_MAX_SUBTITLE,
+	SLIDESHOW_MAX_TITLE,
+} from "@/lib/slideshow-protocol";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 const updateSchema = z.object({

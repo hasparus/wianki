@@ -1,12 +1,11 @@
 import { z } from "zod";
 import { denyAdminRequest, readAdminSession } from "@/lib/auth/session";
 import { jsonError, noStoreJson } from "@/lib/http";
+import { getAdminSlides, isValidSlideOrder } from "@/lib/slideshow";
 import {
-	getAdminSlides,
-	isValidSlideOrder,
 	SLIDESHOW_MAX_SUBTITLE,
 	SLIDESHOW_MAX_TITLE,
-} from "@/lib/slideshow";
+} from "@/lib/slideshow-protocol";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 const createSchema = z.union([

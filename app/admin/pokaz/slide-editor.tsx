@@ -4,14 +4,12 @@ import Link from "next/link";
 import { type FormEvent, useCallback, useMemo, useState } from "react";
 import { ChevronLeftIcon } from "@/components/slideshow/icons";
 import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
-import {
-	type AdminSlide,
-	SLIDESHOW_MAX_SUBTITLE,
-	SLIDESHOW_MAX_TITLE,
-} from "@/lib/slideshow";
+import type { AdminSlide } from "@/lib/slideshow";
 import {
 	clampSlideSeconds,
 	SLIDESHOW_MAX_SECONDS,
+	SLIDESHOW_MAX_SUBTITLE,
+	SLIDESHOW_MAX_TITLE,
 	SLIDESHOW_MIN_SECONDS,
 } from "@/lib/slideshow-protocol";
 import { PhotoPicker } from "./photo-picker";

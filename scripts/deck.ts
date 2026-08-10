@@ -4,9 +4,9 @@ import path from "node:path";
 /**
  * Drive the slideshow deck from the command line.
  *
- *   node scripts/deck.mjs list
- *   node scripts/deck.mjs set deck.json
- *   node scripts/deck.mjs clear
+ *   node scripts/deck.ts list
+ *   node scripts/deck.ts set deck.json
+ *   node scripts/deck.ts clear
  *
  * deck.json is a plain ordered array; the deck ends up matching it exactly:
  *
@@ -20,23 +20,49 @@ import path from "node:path";
  * `npm run photos:upload` first; `list` prints every name available.
  */
 import { createClient } from "@supabase/supabase-js";
-import { loadLocalEnv } from "./lib/env.mjs";
-
-const MAX_TITLE = 120;
-const MAX_SUBTITLE = 200;
+import {
+	SLIDESHOW_MAX_SUBTITLE,
+	SLIDESHOW_MAX_TITLE,
+} from "../lib/slideshow-protocol.ts";
+import { errorMessage, loadLocalEnv } from "./lib/cli.ts";
 
 const [command, target] = process.argv.slice(2);
 
 function connect() {
-	loadLocalEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SECRET_KEY"]);
-	return createClient(
-		process.env.NEXT_PUBLIC_SUPABASE_URL,
-		process.env.SUPABASE_SECRET_KEY,
-		{ auth: { persistSession: false, autoRefreshToken: false } },
-	);
+	const env = loadLocalEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SECRET_KEY"]);
+	return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SECRET_KEY, {
+		auth: { persistSession: false, autoRefreshToken: false },
+	});
 }
 
-async function readDeck(db) {
+type Db = ReturnType<typeof connect>;
+
+type DeckEntry = {
+	photo?: string;
+	text?: string;
+	caption?: string;
+	subtitle?: string;
+};
+
+type SlideInsert = {
+	position: number;
+	kind: "photo" | "text";
+	photo_id?: string;
+	title: string | null;
+	subtitle: string | null;
+};
+
+type DeckRow = {
+	id: string;
+	position: number;
+	kind: "photo" | "text";
+	title: string | null;
+	subtitle: string | null;
+	photo_id: string | null;
+	photos: { original_filename: string } | null;
+};
+
+async function readDeck(db: Db): Promise<DeckRow[]> {
 	const { data, error } = await db
 		.from("slideshow_slides")
 		.select(
@@ -44,10 +70,10 @@ async function readDeck(db) {
 		)
 		.order("position", { ascending: true });
 	if (error) throw error;
-	return data ?? [];
+	return (data ?? []) as unknown as DeckRow[];
 }
 
-async function listGalleryPhotos(db) {
+async function listGalleryPhotos(db: Db) {
 	const { data, error } = await db
 		.from("photos")
 		.select("id,original_filename,hot_status,moderation_status")
@@ -59,7 +85,7 @@ async function listGalleryPhotos(db) {
 	return data ?? [];
 }
 
-async function list(db) {
+async function list(db: Db) {
 	const [deck, photos] = await Promise.all([
 		readDeck(db),
 		listGalleryPhotos(db),
@@ -76,7 +102,7 @@ async function list(db) {
 	for (const photo of photos) console.log(`  ${photo.original_filename}`);
 }
 
-async function clear(db) {
+async function clear(db: Db) {
 	const { error } = await db
 		.from("slideshow_slides")
 		.delete()
@@ -85,8 +111,8 @@ async function clear(db) {
 	console.log("deck cleared — the show falls back to the whole gallery");
 }
 
-async function set(db, file) {
-	const wanted = JSON.parse(await readFile(file, "utf8"));
+async function set(db: Db, file: string) {
+	const wanted: DeckEntry[] = JSON.parse(await readFile(file, "utf8"));
 	if (!Array.isArray(wanted) || wanted.length === 0) {
 		throw new Error("deck file must be a non-empty array");
 	}
@@ -94,8 +120,8 @@ async function set(db, file) {
 	const photos = await listGalleryPhotos(db);
 	const byName = new Map(photos.map((p) => [p.original_filename, p.id]));
 
-	const rows = [];
-	const missing = [];
+	const rows: SlideInsert[] = [];
+	const missing: string[] = [];
 	wanted.forEach((entry, index) => {
 		const position = index + 1;
 		if (entry.photo) {
@@ -108,8 +134,9 @@ async function set(db, file) {
 				position,
 				kind: "photo",
 				photo_id: id,
-				title: entry.caption?.trim().slice(0, MAX_TITLE) || null,
-				subtitle: entry.subtitle?.trim().slice(0, MAX_SUBTITLE) || null,
+				title: entry.caption?.trim().slice(0, SLIDESHOW_MAX_TITLE) || null,
+				subtitle:
+					entry.subtitle?.trim().slice(0, SLIDESHOW_MAX_SUBTITLE) || null,
 			});
 			return;
 		}
@@ -117,8 +144,9 @@ async function set(db, file) {
 			rows.push({
 				position,
 				kind: "text",
-				title: entry.text.trim().slice(0, MAX_TITLE),
-				subtitle: entry.subtitle?.trim().slice(0, MAX_SUBTITLE) || null,
+				title: entry.text.trim().slice(0, SLIDESHOW_MAX_TITLE),
+				subtitle:
+					entry.subtitle?.trim().slice(0, SLIDESHOW_MAX_SUBTITLE) || null,
 			});
 			return;
 		}
@@ -164,12 +192,10 @@ try {
 	else if (command === "clear") await clear(db);
 	else if (command === "set" && target) await set(db, path.resolve(target));
 	else {
-		console.error(
-			"usage: node scripts/deck.mjs <list | set deck.json | clear>",
-		);
+		console.error("usage: node scripts/deck.ts <list | set deck.json | clear>");
 		process.exit(2);
 	}
 } catch (error) {
-	console.error(error.message ?? error);
+	console.error(errorMessage(error));
 	process.exit(1);
 }

@@ -6,11 +6,11 @@ import {
 	GripIcon,
 	XIcon,
 } from "@/components/slideshow/icons";
+import type { AdminSlide } from "@/lib/slideshow";
 import {
-	type AdminSlide,
 	SLIDESHOW_MAX_SUBTITLE,
 	SLIDESHOW_MAX_TITLE,
-} from "@/lib/slideshow";
+} from "@/lib/slideshow-protocol";
 
 function SlideText({ slide }: { slide: AdminSlide }) {
 	if (slide.kind === "photo") {
