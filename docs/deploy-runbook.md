@@ -23,14 +23,15 @@ photos, and the slideshow runs at the reception.
 
 ## Credentials
 
-Everything lives in `.secrets.deploy` (git-ignored, mode 600). Human-facing:
+Never in this file. Every value lives in `.secrets.deploy` (git-ignored, mode
+600) and in the Vercel and Cloudflare dashboards.
 
-| What | Value |
+| What | Where |
 |---|---|
 | Gallery | `https://wianki.vercel.app` |
 | Guest passphrase | `GUEST_ACCESS_PASSPHRASE` |
-| Admin passphrase | `ADMIN_ACCESS_PASSPHRASE` (at `/login`, lands on `/admin`) |
-| Join link on the stage | `wianki.vercel.app/p/GUEST_JOIN_CODE` |
+| Admin passphrase | `ADMIN_ACCESS_PASSPHRASE`, entered at `/login`, lands on `/admin` |
+| Join link on the stage | `/p/<GUEST_JOIN_CODE>` |
 | Printable QR codes | `private/qr/guest-qr.png`, `private/qr/admin-qr.png` |
 
 ## Loading old photos
