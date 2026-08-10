@@ -104,7 +104,6 @@ Read [integration setup](docs/integrations.md) and the
   comments (`docs/slideshow.md`)
 - `lib/slideshow-protocol.ts` — the live wire contract, shared by app and worker
 - `supabase/migrations` — tables, enums, indexes, RLS, private bucket
-- `docs/tasks` — dependency-ordered briefs for planning agents
 
 ## Recovery
 

@@ -37,7 +37,7 @@ Vercel (hosting). Follow `README.md`, `docs/integrations.md`,
 
 Start here, then read only the source and the one doc your task needs.
 `docs/architecture.md` = request flow. `docs/data-contracts.md` = persisted
-states. `docs/tasks/` = workstream briefs.
+states.
 
 ## Next.js 16 rule
 
@@ -81,9 +81,9 @@ and a visible focus ring.
 | `lib/slideshow-protocol.ts` | live wire contract, imported by the worker too |
 | `workers/archive` | archive credentials, archive API calls |
 | `supabase/migrations` | only source of truth for production schema |
-| `docs/tasks` | planner briefs |
 
-Plans may refine internals. Never silently change a locked contract.
+Plans may refine internals. Never silently change a locked contract — the
+locked ones are in `docs/data-contracts.md` and the immutable decisions above.
 
 ## Required quality gate
 
