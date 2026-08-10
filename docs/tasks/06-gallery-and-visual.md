@@ -1,4 +1,4 @@
-# Planner Brief: Gallery and Visual Experience
+# Planner brief: gallery and visual experience
 
 ## Objective
 

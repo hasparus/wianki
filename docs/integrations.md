@@ -1,40 +1,38 @@
-# Integration Setup
+# Integration setup
 
 ## Supabase
 
-Create the project in a nearby EU region. Link the repository, run migrations,
-confirm RLS is enabled on all three tables, and confirm the `gallery` bucket is
-private with a 500 KiB limit. The secret key belongs only in Vercel. Upgrade to
-Pro for the event period to avoid inactivity and egress risk.
+Project in a nearby EU region. Link repo, run migrations. Check RLS on for all
+three tables, `gallery` bucket private, 500 KiB limit. Secret key in Vercel
+only. Pro for the event month, so inactivity and egress don't bite.
 
 ## Google Cloud
 
-Enable billing and the Vision API. Create a service account used only by Vision
-and grant the minimum Vision invocation permission. Skip this section entirely
-when `MODERATION_ENABLED=false` and `ARCHIVE_BACKEND=r2`.
+Billing on, Vision API on. Service account for Vision only, minimum invocation
+permission. Skip this whole section when `MODERATION_ENABLED=false` and
+`ARCHIVE_BACKEND=r2`.
 
-Only `ARCHIVE_BACKEND=drive` needs the Drive API and a separate desktop OAuth
-client. Publish the consent app before relying on its refresh token — a Testing
-one expires after seven days. `npm run drive:bootstrap` opens a loopback
-callback on port 53682, requests only `drive.file`, creates
-`Wesele – oryginały`, and writes ignored OAuth output.
+Drive backend only: Drive API plus a separate desktop OAuth client. Publish the
+consent app before relying on the refresh token — a Testing one dies after 7
+days. `npm run drive:bootstrap` opens a loopback callback on port 53682, asks
+for `drive.file` only, creates `Wesele – oryginały`, writes git-ignored output.
 
 ## Cloudflare
 
-Copy `.dev.vars.example` to `.dev.vars` for local testing. Production credentials
-must be installed with `wrangler secret put`; do not place them in
-`wrangler.jsonc`. Set `ALLOWED_ORIGIN` to the exact production origin. Deploy
-from `workers/archive`.
+`.dev.vars.example` -> `.dev.vars` for local runs. Production credentials go in
+with `wrangler secret put`, never into `wrangler.jsonc`. `ALLOWED_ORIGIN` = the
+exact origin the app is served from. Deploy `workers/archive` and
+`workers/slideshow-live`.
 
-`ARCHIVE_BACKEND` selects where originals land and is a plain var, not a secret,
-so the deployed choice is visible in `wrangler.jsonc` review. `r2` needs the
-`ARCHIVE_BUCKET` binding and refuses to start without it; `drive` needs the four
-`GOOGLE_*` secrets and no bucket. Set the same value in Vercel so the admin
-deletion warning matches what removal actually does.
+`ARCHIVE_BACKEND` picks the archive. Plain var, not a secret, so the deployed
+choice shows up in config review. `r2` needs the `ARCHIVE_BUCKET` binding and
+refuses to start without it. `drive` needs the four `GOOGLE_*` secrets, no
+bucket. Same value in Vercel, or the admin deletion warning describes the wrong
+thing.
 
 ## Vercel and DNS
 
-Import the private GitHub repository, configure every `.env.example` value in
-the correct environment, and attach `wedding.pawel.space`. Use Vercel's requested
-DNS record; this does not alter the root portfolio site. Preview deployments
-should use separate entry tokens and must not point at the production Worker.
+Import the private repo, set every `.env.example` value in the right
+environment, attach `wedding.pawel.space` with the DNS record Vercel asks for.
+Does not touch the root portfolio site. Previews use separate entry tokens and
+never point at the production Worker.

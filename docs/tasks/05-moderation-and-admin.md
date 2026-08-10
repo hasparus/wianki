@@ -1,4 +1,4 @@
-# Planner Brief: Moderation and Admin
+# Planner brief: moderation and admin
 
 ## Objective
 
@@ -8,7 +8,7 @@ Keep unsafe/uncertain photos hidden while giving the couple recovery controls.
 
 Vision uses private derivative bytes. Adult/racy/violence at LIKELY or
 VERY_LIKELY flags. Errors become `review_required`. Admin may approve, hide,
-retry moderation, reconcile Drive, or confirmed-delete both copies.
+retry moderation, reconcile the archive, or confirmed-delete both copies.
 
 ## Owned surfaces
 

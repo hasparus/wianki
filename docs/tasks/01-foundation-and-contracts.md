@@ -1,4 +1,4 @@
-# Planner Brief: Foundation and Contracts
+# Planner brief: foundation and contracts
 
 ## Objective
 

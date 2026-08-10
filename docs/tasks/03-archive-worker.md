@@ -1,4 +1,4 @@
-# Planner Brief: Drive Archive Worker
+# Planner brief: archive worker
 
 ## Objective
 

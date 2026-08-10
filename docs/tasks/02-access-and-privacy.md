@@ -1,4 +1,4 @@
-# Planner Brief: Guest/Admin Access and Privacy
+# Planner brief: guest and admin access, privacy
 
 ## Objective
 

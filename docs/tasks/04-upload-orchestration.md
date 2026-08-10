@@ -1,4 +1,4 @@
-# Planner Brief: Upload Orchestration
+# Planner brief: upload orchestration
 
 ## Objective
 

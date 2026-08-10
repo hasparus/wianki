@@ -2,71 +2,67 @@
 
 ## Co to jest
 
-- `/pokaz` — pełnoekranowy pokaz slajdów dla gości (i pary młodej), wygodny na
-  telefonie: autoodtwarzanie, przesuwanie gestem, klawisze strzałek. Reakcje
-  emoji ulatują do góry, a komentarze płyną przez ekran w bąbelkach — u
-  wszystkich oglądających jednocześnie.
-- **Prowadzący zawsze steruje**: urządzenie administratora przejmuje pokaz
-  automatycznie po wejściu na `/pokaz` — wszystkie pozostałe śledzą jego slajd
-  (dopasowanie po id slajdu, z awaryjnym indeksem, gdy talie się różnią).
-  Ostatnie podłączone urządzenie administratora wygrywa; wcześniejsze staje
-  się widzem i dostaje przycisk „Przejmij pokaz”. Goście mogą w każdej chwili
-  przeglądać samodzielnie — wraca się przyciskiem „Wróć do pokazu na żywo”.
-  Zerwanie połączenia prowadzącego kończy tryb na żywo, a pozostałe urządzenia
-  administratora same przejmują pokaz; klient prowadzącego odzyskuje pokaz po
-  ponownym połączeniu, więc restart workera nie przerywa wieczoru.
-- `/admin/pokaz` — edytor pokazu dla pary młodej: dodawanie zdjęć z
-  zatwierdzonej galerii, slajdy tekstowe, zmiana kolejności (przeciąganie na
-  komputerze, strzałki na telefonie).
-- Bez ułożonej listy pokaz gra automatycznie wszystkie zatwierdzone zdjęcia
-  galerii chronologicznie (do 150), więc działa od pierwszego dnia.
-- **Dołączanie z sali**: po ustawieniu `GUEST_JOIN_CODE` w lewym dolnym rogu
-  pokazu (na dużych ekranach — projektor, laptop) pojawia się kod QR i krótki
-  adres `/p/<kod>`. Zeskanowanie lub wpisanie adresu nadaje sesję gościa i
-  otwiera pokaz. Kod jest osobnym, krótkim sekretem — zdjęcie ekranu z QR
-  można unieważnić rotując sam `GUEST_JOIN_CODE`, bez wymiany wydrukowanych
-  kodów przy stołach. Bez ustawionej zmiennej ścieżka `/p/*` pozostaje
-  zamknięta, a QR się nie wyświetla.
+- `/pokaz` — pełnoekranowy pokaz dla gości i pary młodej, wygodny na telefonie:
+  autoodtwarzanie, przesuwanie gestem, strzałki. Reakcje emoji ulatują do góry,
+  komentarze płyną przez ekran — u wszystkich oglądających naraz.
+- **Prowadzący zawsze steruje.** Urządzenie administratora przejmuje pokaz od
+  razu po wejściu na `/pokaz`, reszta śledzi jego slajd (po id slajdu, z
+  awaryjnym indeksem, gdy talie się różnią). Wygrywa ostatnie podłączone;
+  wcześniejsze zostaje widzem i dostaje przycisk „Przejmij pokaz”. Goście mogą
+  w każdej chwili przeglądać sami i wracają przyciskiem „Wróć do pokazu na
+  żywo”. Zerwane połączenie prowadzącego kończy tryb na żywo — ale nie zmienia
+  zapisanego tempa — a pozostałe urządzenia administratora przejmują pokaz
+  same. Restart workera nie przerywa wieczoru.
+- `/admin/pokaz` — edytor dla pary młodej: zdjęcia z zatwierdzonej galerii,
+  slajdy tekstowe, kolejność (przeciąganie na komputerze, strzałki na
+  telefonie), tempo slajdu.
+- Bez ułożonej listy pokaz gra wszystkie zatwierdzone zdjęcia galerii
+  chronologicznie, do 150. Działa od pierwszego dnia.
+- **Dołączanie z sali.** Po ustawieniu `GUEST_JOIN_CODE` w lewym dolnym rogu
+  pokazu (tylko na dużych ekranach) pojawia się kod QR i krótki adres
+  `/p/<kod>`. Zeskanowanie nadaje sesję gościa i otwiera pokaz. To osobny,
+  krótki sekret: zdjęcie ekranu z QR unieważnia się rotując sam
+  `GUEST_JOIN_CODE`, bez wymiany wydrukowanych kodów przy stołach. Bez tej
+  zmiennej `/p/*` jest zamknięte, a QR się nie wyświetla.
 
 ## Zasady zgodne z resztą aplikacji
 
 - Pokaz wyświetla wyłącznie zdjęcia spełniające regułę galerii
-  (`hot_status=uploaded` i `moderation_status=approved`). Ukrycie zdjęcia w
+  (`hot_status=uploaded`, `moderation_status=approved`). Ukrycie zdjęcia w
   panelu usuwa je też z pokazu.
-- Reakcje i komentarze są **anonimowe i ulotne** — nie są nigdzie zapisywane,
-  istnieją tylko w pamięci pokoju Durable Object podczas trwania pokazu.
-  Nie zbieramy nazwisk, e-maili ani adresów IP.
-- Komentarze są przycinane do 140 znaków i filtrowane ze znaków sterujących;
-  worker ogranicza tempo wysyłania na połączenie.
+- Reakcje i komentarze są **anonimowe i ulotne**. Nie zapisujemy ich nigdzie —
+  istnieją tylko w pamięci pokoju Durable Object w czasie pokazu. Żadnych
+  nazwisk, e-maili ani adresów IP.
+- Komentarze: 140 znaków, znaki sterujące wycięte, tempo wysyłania ograniczone
+  na połączenie.
 
 ## Architektura
 
 - Slajdy: tabela `slideshow_slides` (migracja `202608050001_slideshow.sql`),
-  edytowana wyłącznie przez API administratora.
-- Realtime: `workers/slideshow-live` — Cloudflare Worker na
+  edytowana wyłącznie przez API administratora. Tempo: `slideshow_settings`.
+- Realtime: `workers/slideshow-live` na
   [PartyServer](https://github.com/cloudflare/partykit) (Durable Objects),
   jeden pokój na wesele. Przeglądarka łączy się przez `partysocket`.
-- Kontrakt po drucie (typy wiadomości, walidacja, limity, weryfikacja tokenu)
+- Kontrakt po drucie — typy wiadomości, walidacja, limity, weryfikacja tokenu —
   mieszka wyłącznie w `lib/slideshow-protocol.ts`. Worker importuje ten sam
   plik, więc obie strony nie mogą się rozjechać.
 - Autoryzacja: `/api/slideshow/live` (ciasteczko gościa lub administratora)
   wydaje 12-godzinny token HS256 (`SLIDESHOW_LIVE_SECRET`), który worker
-  weryfikuje przy nawiązaniu WebSocketu; dodatkowo sprawdzany jest nagłówek
-  `Origin`.
-- Gdy `SLIDESHOW_LIVE_URL`/`SLIDESHOW_LIVE_SECRET` nie są ustawione, pokaz
-  działa bez warstwy live (bez paska reakcji) — nic się nie psuje.
+  sprawdza przy nawiązaniu WebSocketu. Dodatkowo sprawdzany jest `Origin`.
+- Bez `SLIDESHOW_LIVE_URL` i `SLIDESHOW_LIVE_SECRET` pokaz działa bez warstwy
+  live, bez paska reakcji. Nic się nie psuje.
 
 ## Wdrożenie workera
 
 ```bash
 cd workers/slideshow-live
 npx wrangler deploy
-npx wrangler secret put LIVE_TOKEN_SECRET   # ta sama wartość co SLIDESHOW_LIVE_SECRET w Vercel
+npx wrangler secret put LIVE_TOKEN_SECRET   # to samo co SLIDESHOW_LIVE_SECRET w Vercel
 ```
 
-`ALLOWED_ORIGIN` jest ustawione w `wrangler.jsonc` na
-`https://wedding.pawel.space`; do developmentu lokalnego skopiuj
-`.dev.vars.example` do `.dev.vars`.
+`ALLOWED_ORIGIN` w `wrangler.jsonc` musi być dokładnym adresem, z którego
+serwowana jest aplikacja. Do developmentu skopiuj `.dev.vars.example` do
+`.dev.vars`.
 
-W Vercel ustaw `SLIDESHOW_LIVE_URL` na adres wdrożonego workera oraz
-`SLIDESHOW_LIVE_SECRET` na sekret z kroku powyżej.
+W Vercel ustaw `SLIDESHOW_LIVE_URL` na adres workera i `SLIDESHOW_LIVE_SECRET`
+na sekret z kroku wyżej.

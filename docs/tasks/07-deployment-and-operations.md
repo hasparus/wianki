@@ -1,4 +1,4 @@
-# Planner Brief: Deployment and Event Operations
+# Planner brief: deployment and event operations
 
 ## Objective
 

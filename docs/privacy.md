@@ -1,16 +1,17 @@
-# Privacy Decisions
+# Privacy decisions
 
-- The couple controls the uploaded photos.
-- Supabase stores private derivatives; personal Google Drive stores originals.
-- Google Vision receives derivative bytes for SafeSearch.
-- Gallery derivatives strip EXIF; originals retain camera metadata.
-- The application creates a random browser UUID but collects no guest name,
-  email, or IP address.
-- Consent is required for every batch and stores the published notice version.
-- Retention lasts until manual deletion.
+- The couple controls the photos.
+- Supabase holds private derivatives. R2 or the couple's Drive holds originals.
+- Vision sees derivative bytes, and only when moderation is on.
+- Derivatives are EXIF-stripped. Originals keep camera metadata.
+- Random browser UUID only. No guest name, email, or IP.
+- Every batch needs consent. The record stores the notice version.
+- Photos stay until someone deletes them.
 - The configured contact email handles deletion requests.
-- Admin deletion removes the derivative and trashes the original, allowing
-  Drive recovery until its trash is emptied.
+- Admin deletion removes derivative and original. Drive -> trash, recoverable
+  until emptied. R2 -> immediate.
+- Slideshow reactions and comments are never stored. They exist only in the
+  room's memory while the show runs.
 
-The production copy must be reviewed by the couple. This document records the
-implemented behavior and is not legal advice.
+The couple reviews the production copy. This file records what the code does.
+Not legal advice.
