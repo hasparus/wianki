@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	denyAdminRequest: vi.fn(),
 	readAdminSession: vi.fn(),
 	readGuestSession: vi.fn(),
 	supabaseAdmin: vi.fn(),
@@ -11,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/env", () => ({ serverEnv: mocks.serverEnv }));
 vi.mock("@/lib/auth/session", () => ({
+	denyAdminRequest: mocks.denyAdminRequest,
 	readAdminSession: mocks.readAdminSession,
 	readGuestSession: mocks.readGuestSession,
 }));
@@ -21,10 +23,6 @@ vi.mock("@/lib/gallery", () => ({ getGalleryPage: mocks.getGalleryPage }));
 vi.mock("@/lib/slideshow", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@/lib/slideshow")>()),
 	getAdminSlides: mocks.getAdminSlides,
-}));
-vi.mock("@/lib/http", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@/lib/http")>()),
-	assertSameOrigin: vi.fn(),
 }));
 
 import {
@@ -57,6 +55,9 @@ beforeEach(() => {
 describe("admin slide routes require an admin session", () => {
 	it("rejects every handler with 401 when the admin cookie is absent", async () => {
 		mocks.readAdminSession.mockResolvedValue(null);
+		mocks.denyAdminRequest.mockResolvedValue(
+			Response.json({ error: "Brak dostępu." }, { status: 401 }),
+		);
 		const responses = await Promise.all([
 			listSlides(),
 			createSlides(request("POST", { title: "Hej" })),
@@ -75,6 +76,7 @@ describe("admin slide routes require an admin session", () => {
 describe("slide reorder", () => {
 	it("rejects an order that is not a permutation of current slides", async () => {
 		mocks.readAdminSession.mockResolvedValue({ role: "admin" });
+		mocks.denyAdminRequest.mockResolvedValue(null);
 		mocks.supabaseAdmin.mockReturnValue({
 			from: () => ({
 				select: async () => ({

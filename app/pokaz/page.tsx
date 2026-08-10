@@ -6,9 +6,9 @@ import {
 	getSlideSeconds,
 	getSlideshowDeck,
 	getSlideshowJoinInfo,
-	SLIDESHOW_DEFAULT_SECONDS,
 	type SlideshowDeck,
 } from "@/lib/slideshow";
+import { SLIDESHOW_DEFAULT_SECONDS } from "@/lib/slideshow-protocol";
 
 export const metadata: Metadata = {
 	title: "Paweł & Magdalena — pokaz slajdów",

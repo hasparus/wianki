@@ -8,15 +8,13 @@ import {
 import {
 	applyControl,
 	IDLE_SHOW_STATE,
-	isBrowserOriginAllowed,
-	type LiveRole,
 	parseClientMessage,
 	RateLimiter,
 	type ServerMessage,
 	type ShowState,
-	showMessage,
+	type SlideshowLiveRole,
 	verifyLiveToken,
-} from "./protocol";
+} from "../../../lib/slideshow-protocol";
 
 export interface Env {
 	SlideshowParty: DurableObjectNamespace<SlideshowParty>;
@@ -24,7 +22,11 @@ export interface Env {
 	LIVE_TOKEN_SECRET: string;
 }
 
-type ConnectionState = { role: LiveRole };
+type ConnectionState = { role: SlideshowLiveRole };
+
+function showMessage(state: ShowState): ServerMessage {
+	return { type: "show", ...state };
+}
 
 /**
  * One room per wedding. Reactions and comments are ephemeral by design:
@@ -110,9 +112,7 @@ export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const response = await routePartykitRequest(request, env, {
 			onBeforeConnect: async (req) => {
-				if (
-					!isBrowserOriginAllowed(req.headers.get("Origin"), env.ALLOWED_ORIGIN)
-				) {
+				if (req.headers.get("Origin") !== env.ALLOWED_ORIGIN) {
 					return new Response("Niedozwolone źródło.", { status: 403 });
 				}
 				const token = new URL(req.url).searchParams.get("token");

@@ -2,12 +2,13 @@
 
 import PartySocket from "partysocket";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { SlideshowLiveAccess } from "@/lib/slideshow-live";
 import {
-	IDLE_SHOW,
-	type ShowStatePayload,
-	type SlideshowLiveAccess,
+	IDLE_SHOW_STATE,
+	type ServerMessage,
+	type ShowState,
 	type SlideshowLiveRole,
-} from "@/lib/slideshow-live";
+} from "@/lib/slideshow-protocol";
 
 export type SlideshowBubble =
 	| {
@@ -38,17 +39,11 @@ const MAX_BUBBLES = 60;
 // with the chrome on small screens.
 const COMMENT_LANES = [13, 20, 27, 34, 41];
 
-type ServerMessage =
-	| { type: "presence"; viewers: number }
-	| { type: "reaction"; id: string; emoji: string }
-	| { type: "comment"; id: string; text: string }
-	| ({ type: "show" } & ShowStatePayload);
-
 export function useSlideshowLive() {
 	const [status, setStatus] = useState<LiveStatus>("connecting");
 	const [role, setRole] = useState<SlideshowLiveRole | null>(null);
 	const [viewers, setViewers] = useState(0);
-	const [show, setShow] = useState<ShowStatePayload>(IDLE_SHOW);
+	const [show, setShow] = useState<ShowState>(IDLE_SHOW_STATE);
 	const [socketId, setSocketId] = useState<string | null>(null);
 	const [connectionEpoch, setConnectionEpoch] = useState(0);
 	const [bubbles, setBubbles] = useState<SlideshowBubble[]>([]);
@@ -57,7 +52,7 @@ export function useSlideshowLive() {
 	const laneRef = useRef(0);
 
 	const pushBubble = useCallback((bubble: SlideshowBubble) => {
-		setBubbles((current) => [...current.slice(1 - MAX_BUBBLES), bubble]);
+		setBubbles((current) => [...current.slice(-(MAX_BUBBLES - 1)), bubble]);
 	}, []);
 
 	const dismissBubble = useCallback((id: string) => {
@@ -79,14 +74,8 @@ export function useSlideshowLive() {
 				return;
 			}
 			if (message.type === "show") {
-				setShow({
-					live: message.live,
-					index: message.index,
-					slideId: message.slideId,
-					playing: message.playing,
-					presenterId: message.presenterId,
-					slideSeconds: message.slideSeconds,
-				});
+				const { type: _, ...state } = message;
+				setShow(state);
 				return;
 			}
 			if (message.type === "reaction") {
@@ -170,17 +159,13 @@ export function useSlideshowLive() {
 		socketRef.current?.send(JSON.stringify({ type: "control", ...control }));
 	}, []);
 
-	const isPresenter =
-		socketId !== null &&
-		show.presenterId !== null &&
-		show.presenterId === socketId;
-
 	return {
 		status,
 		role,
 		viewers,
 		show,
-		isPresenter,
+		isLive: show.presenterId !== null,
+		isPresenter: socketId !== null && show.presenterId === socketId,
 		connectionEpoch,
 		bubbles,
 		lastComment,
@@ -190,3 +175,5 @@ export function useSlideshowLive() {
 		sendControl,
 	};
 }
+
+export type SlideshowLive = ReturnType<typeof useSlideshowLive>;

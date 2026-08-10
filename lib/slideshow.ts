@@ -1,11 +1,12 @@
 import QRCode from "qrcode";
 import { GALLERY_BUCKET } from "@/lib/domain";
 import { serverEnv } from "@/lib/env";
+import {
+	clampSlideSeconds,
+	SLIDESHOW_DEFAULT_SECONDS,
+} from "@/lib/slideshow-protocol";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-export const SLIDESHOW_MIN_SECONDS = 2;
-export const SLIDESHOW_MAX_SECONDS = 10;
-export const SLIDESHOW_DEFAULT_SECONDS = 8;
 export const SLIDESHOW_MAX_TITLE = 120;
 export const SLIDESHOW_MAX_SUBTITLE = 200;
 export const SLIDESHOW_AUTO_LIMIT = 150;
@@ -25,15 +26,6 @@ export type SlideshowDeck = {
 	slides: SlideshowSlide[];
 	source: "custom" | "auto";
 };
-
-/** How long each slide holds, in seconds. Clamped on both read and write. */
-export function clampSlideSeconds(value: number) {
-	if (!Number.isFinite(value)) return SLIDESHOW_DEFAULT_SECONDS;
-	return Math.min(
-		SLIDESHOW_MAX_SECONDS,
-		Math.max(SLIDESHOW_MIN_SECONDS, Math.round(value)),
-	);
-}
 
 export async function getSlideSeconds(): Promise<number> {
 	const { data, error } = await supabaseAdmin()
@@ -134,12 +126,21 @@ async function fetchSlideRows() {
 	return (data ?? []) as unknown as SlideRow[];
 }
 
-async function signPath(path: string) {
+/**
+ * Signs every derivative in one request rather than one per slide — an
+ * auto-generated deck can be 150 photos long.
+ */
+async function signPaths(paths: string[]): Promise<Map<string, string>> {
+	if (paths.length === 0) return new Map();
 	const { data, error } = await supabaseAdmin()
 		.storage.from(GALLERY_BUCKET)
-		.createSignedUrl(path, SIGNED_URL_SECONDS);
+		.createSignedUrls(paths, SIGNED_URL_SECONDS);
 	if (error) throw error;
-	return data.signedUrl;
+	return new Map(
+		(data ?? []).flatMap((entry) =>
+			entry.path && entry.signedUrl ? [[entry.path, entry.signedUrl]] : [],
+		),
+	);
 }
 
 /**
@@ -148,27 +149,29 @@ async function signPath(path: string) {
  * the same eligibility rule as the gallery.
  */
 export async function getSlideshowDeck(): Promise<SlideshowDeck> {
-	const rows = await fetchSlideRows();
-	if (rows.length > 0) {
-		const slides = await Promise.all(
-			rows
-				.filter((row) => row.kind === "text" || isPhotoVisible(row.photos))
-				.map(async (row): Promise<SlideshowSlide> => {
-					const photo = row.kind === "photo" ? row.photos : null;
-					return {
-						id: row.id,
-						kind: row.kind,
-						imageUrl: photo ? await signPath(photo.storage_path) : null,
-						width: photo?.width ?? null,
-						height: photo?.height ?? null,
-						title: row.title,
-						subtitle: row.subtitle,
-					};
-				}),
-		);
-		return { slides, source: "custom" };
-	}
-	return { slides: await getAutoSlides(), source: "auto" };
+	const rows = (await fetchSlideRows()).filter(
+		(row) => row.kind === "text" || isPhotoVisible(row.photos),
+	);
+	if (rows.length === 0)
+		return { slides: await getAutoSlides(), source: "auto" };
+	const signed = await signPaths(
+		rows.flatMap((row) =>
+			row.kind === "photo" && row.photos ? [row.photos.storage_path] : [],
+		),
+	);
+	const slides = rows.map((row): SlideshowSlide => {
+		const photo = row.kind === "photo" ? row.photos : null;
+		return {
+			id: row.id,
+			kind: row.kind,
+			imageUrl: photo ? (signed.get(photo.storage_path) ?? null) : null,
+			width: photo?.width ?? null,
+			height: photo?.height ?? null,
+			title: row.title,
+			subtitle: row.subtitle,
+		};
+	});
+	return { slides, source: "custom" };
 }
 
 /** Without a curated deck the show plays the gallery chronologically. */
@@ -182,37 +185,40 @@ async function getAutoSlides(): Promise<SlideshowSlide[]> {
 		.order("id", { ascending: true })
 		.limit(SLIDESHOW_AUTO_LIMIT);
 	if (error) throw error;
-	return Promise.all(
-		(data ?? []).map(async (row) => ({
-			id: row.id,
-			kind: "photo" as const,
-			imageUrl: await signPath(row.storage_path),
-			width: row.width,
-			height: row.height,
-			title: null,
-			subtitle: null,
-		})),
-	);
+	const rows = data ?? [];
+	const signed = await signPaths(rows.map((row) => row.storage_path));
+	return rows.map((row) => ({
+		id: row.id,
+		kind: "photo" as const,
+		imageUrl: signed.get(row.storage_path) ?? null,
+		width: row.width,
+		height: row.height,
+		title: null,
+		subtitle: null,
+	}));
 }
 
 export async function getAdminSlides(): Promise<AdminSlide[]> {
 	const rows = await fetchSlideRows();
-	return Promise.all(
-		rows.map(async (row): Promise<AdminSlide> => {
-			const visible = isPhotoVisible(row.photos);
-			return {
-				id: row.id,
-				kind: row.kind,
-				position: row.position,
-				title: row.title,
-				subtitle: row.subtitle,
-				photoId: row.photo_id,
-				photoVisible: row.kind === "photo" ? visible : true,
-				imageUrl:
-					row.photos && visible
-						? await signPath(row.photos.storage_path)
-						: null,
-			};
-		}),
+	const signed = await signPaths(
+		rows.flatMap((row) =>
+			isPhotoVisible(row.photos) && row.photos ? [row.photos.storage_path] : [],
+		),
 	);
+	return rows.map((row): AdminSlide => {
+		const visible = isPhotoVisible(row.photos);
+		return {
+			id: row.id,
+			kind: row.kind,
+			position: row.position,
+			title: row.title,
+			subtitle: row.subtitle,
+			photoId: row.photo_id,
+			photoVisible: row.kind === "photo" ? visible : true,
+			imageUrl:
+				row.photos && visible
+					? (signed.get(row.photos.storage_path) ?? null)
+					: null,
+		};
+	});
 }

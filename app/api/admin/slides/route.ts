@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { readAdminSession } from "@/lib/auth/session";
-import { assertSameOrigin, jsonError, noStoreJson } from "@/lib/http";
+import { denyAdminRequest, readAdminSession } from "@/lib/auth/session";
+import { jsonError, noStoreJson } from "@/lib/http";
 import {
 	getAdminSlides,
 	isValidSlideOrder,
@@ -46,12 +46,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-	if (!(await readAdminSession())) return jsonError("Brak dostępu.", 401);
-	try {
-		assertSameOrigin(request);
-	} catch (response) {
-		return response as Response;
-	}
+	const denied = await denyAdminRequest(request);
+	if (denied) return denied;
 	const parsed = createSchema.safeParse(await request.json().catch(() => null));
 	if (!parsed.success) return jsonError("Nieprawidłowe dane slajdu.", 400);
 	const supabase = supabaseAdmin();
@@ -109,12 +105,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-	if (!(await readAdminSession())) return jsonError("Brak dostępu.", 401);
-	try {
-		assertSameOrigin(request);
-	} catch (response) {
-		return response as Response;
-	}
+	const denied = await denyAdminRequest(request);
+	if (denied) return denied;
 	const parsed = reorderSchema.safeParse(
 		await request.json().catch(() => null),
 	);
@@ -123,25 +115,31 @@ export async function PATCH(request: Request) {
 	try {
 		const { data, error } = await supabase
 			.from("slideshow_slides")
-			.select("id");
+			.select("id,kind,photo_id,title,subtitle");
 		if (error) throw error;
-		const currentIds = (data ?? []).map((row) => row.id);
-		if (!isValidSlideOrder(currentIds, parsed.data.order)) {
+		const rows = data ?? [];
+		if (
+			!isValidSlideOrder(
+				rows.map((row) => row.id),
+				parsed.data.order,
+			)
+		) {
 			return jsonError(
 				"Kolejność nie zgadza się z aktualną listą slajdów. Odśwież edytor.",
 				409,
 			);
 		}
-		const results = await Promise.all(
-			parsed.data.order.map((id, index) =>
-				supabase
-					.from("slideshow_slides")
-					.update({ position: index + 1 })
-					.eq("id", id),
-			),
-		);
-		const failed = results.find((result) => result.error);
-		if (failed?.error) throw failed.error;
+		// One upsert rather than one update per slide: a renumbering that fails
+		// halfway would leave the deck in an order nobody asked for.
+		const { error: reorderError } = await supabase
+			.from("slideshow_slides")
+			.upsert(
+				rows.map((row) => ({
+					...row,
+					position: parsed.data.order.indexOf(row.id) + 1,
+				})),
+			);
+		if (reorderError) throw reorderError;
 		return noStoreJson({ ok: true });
 	} catch {
 		return jsonError("Nie udało się zapisać kolejności.", 500);

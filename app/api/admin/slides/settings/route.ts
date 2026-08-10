@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { readAdminSession } from "@/lib/auth/session";
-import { assertSameOrigin, jsonError, noStoreJson } from "@/lib/http";
+import { denyAdminRequest } from "@/lib/auth/session";
+import { jsonError, noStoreJson } from "@/lib/http";
+import { setSlideSeconds } from "@/lib/slideshow";
 import {
 	SLIDESHOW_MAX_SECONDS,
 	SLIDESHOW_MIN_SECONDS,
-	setSlideSeconds,
-} from "@/lib/slideshow";
+} from "@/lib/slideshow-protocol";
 
 const bodySchema = z.object({
 	slideSeconds: z
@@ -16,12 +16,8 @@ const bodySchema = z.object({
 });
 
 export async function PATCH(request: Request) {
-	if (!(await readAdminSession())) return jsonError("Brak dostępu.", 401);
-	try {
-		assertSameOrigin(request);
-	} catch (response) {
-		return response as Response;
-	}
+	const denied = await denyAdminRequest(request);
+	if (denied) return denied;
 	const parsed = bodySchema.safeParse(await request.json().catch(() => null));
 	if (!parsed.success) {
 		return jsonError(

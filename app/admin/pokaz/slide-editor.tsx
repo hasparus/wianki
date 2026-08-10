@@ -1,35 +1,22 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import {
-	type FormEvent,
-	type PointerEvent as ReactPointerEvent,
-	useCallback,
-	useEffect,
-	useRef,
-	useState,
-} from "react";
-import {
-	ArrowDownIcon,
-	ArrowUpIcon,
-	ChevronLeftIcon,
-	GripIcon,
-	XIcon,
-} from "@/components/slideshow/icons";
+import { type FormEvent, useCallback, useMemo, useState } from "react";
+import { ChevronLeftIcon } from "@/components/slideshow/icons";
 import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
-import type { GalleryItem } from "@/lib/domain";
 import {
 	type AdminSlide,
+	SLIDESHOW_MAX_SUBTITLE,
+	SLIDESHOW_MAX_TITLE,
+} from "@/lib/slideshow";
+import {
+	clampSlideSeconds,
 	SLIDESHOW_MAX_SECONDS,
 	SLIDESHOW_MIN_SECONDS,
-} from "@/lib/slideshow";
-
-type PickerPage = {
-	items: GalleryItem[];
-	nextCursor: string | null;
-	usedPhotoIds: string[];
-};
+} from "@/lib/slideshow-protocol";
+import { PhotoPicker } from "./photo-picker";
+import { SlideRow } from "./slide-row";
+import { useSlideReorder } from "./use-slide-reorder";
 
 async function readError(response: Response, fallback: string) {
 	const body = (await response.json().catch(() => null)) as {
@@ -57,27 +44,19 @@ export function SlideEditor({
 	const [message, setMessage] = useState(initialError);
 	const [notice, setNotice] = useState("");
 	const [pending, setPending] = useState(false);
-
-	const [pickerOpen, setPickerOpen] = useState(false);
-	const [pickerPhotos, setPickerPhotos] = useState<GalleryItem[]>([]);
-	const [pickerCursor, setPickerCursor] = useState<string | null>(null);
-	const [pickerLoaded, setPickerLoaded] = useState(false);
-	const [usedPhotoIds, setUsedPhotoIds] = useState<Set<string>>(new Set());
-	const [selection, setSelection] = useState<Set<string>>(new Set());
+	const [dragId, setDragId] = useState<string | null>(null);
 
 	const [textTitle, setTextTitle] = useState("");
 	const [textSubtitle, setTextSubtitle] = useState("");
 	const [editingId, setEditingId] = useState<string | null>(null);
-	const [editTitle, setEditTitle] = useState("");
-	const [editSubtitle, setEditSubtitle] = useState("");
 
-	const [dragId, setDragId] = useState<string | null>(null);
-	const rowRefs = useRef(new Map<string, HTMLLIElement>());
-	const endDragRef = useRef<((commit: boolean) => void) | null>(null);
-	// Mirrors `slides` so the drop handler can persist the just-dragged order
-	// without waiting for a re-render.
-	const slidesRef = useRef(initialSlides);
-	slidesRef.current = slides;
+	const usedPhotoIds = useMemo(
+		() =>
+			new Set(
+				slides.flatMap((slide) => (slide.photoId ? [slide.photoId] : [])),
+			),
+		[slides],
+	);
 
 	const refresh = useCallback(async () => {
 		const response = await fetch("/api/admin/slides", { cache: "no-store" });
@@ -121,13 +100,7 @@ export function SlideEditor({
 	}
 
 	async function saveSeconds(value: number) {
-		const next = Math.min(
-			SLIDESHOW_MAX_SECONDS,
-			Math.max(
-				SLIDESHOW_MIN_SECONDS,
-				Math.round(value) || SLIDESHOW_MIN_SECONDS,
-			),
-		);
+		const next = clampSlideSeconds(value);
 		setSlideSeconds(next);
 		live.sendControl({ action: "tempo", slideSeconds: next });
 		if (next === initialSlideSeconds && secondsSaved) return;
@@ -155,117 +128,20 @@ export function SlideEditor({
 		void persistOrder(next);
 	}
 
-	// Handle-based drag that works with mouse and touch alike. Move/up
-	// listeners live on `window`, not on the handle: reordering re-parents the
-	// row's DOM node, which would break pointer capture mid-drag.
-	function onDragStart(event: ReactPointerEvent, slideId: string) {
-		event.preventDefault();
-		endDragRef.current?.(false);
-		setDragId(slideId);
+	const { onDragStart, registerRow } = useSlideReorder({
+		slides,
+		setSlides,
+		setDragId,
+		onDrop: (order) => void persistOrder(order),
+	});
 
-		const onMove = (moveEvent: PointerEvent) => {
-			const y = moveEvent.clientY;
-			setSlides((current) => {
-				const from = current.findIndex((slide) => slide.id === slideId);
-				if (from === -1) return current;
-				let to = from;
-				current.forEach((slide, i) => {
-					if (i === from) return;
-					const row = rowRefs.current.get(slide.id);
-					if (!row) return;
-					const rect = row.getBoundingClientRect();
-					const middle = rect.top + rect.height / 2;
-					if (i < from && y < middle) to = Math.min(to, i);
-					if (i > from && y > middle) to = Math.max(to, i);
-				});
-				if (to === from) return current;
-				const next = [...current];
-				const [slide] = next.splice(from, 1);
-				next.splice(to, 0, slide);
-				// Keep the mirror current even if the drop lands before React
-				// re-renders this last swap.
-				slidesRef.current = next;
-				return next;
-			});
-		};
-		const endDrag = (commit: boolean) => {
-			window.removeEventListener("pointermove", onMove);
-			window.removeEventListener("pointerup", onUp);
-			window.removeEventListener("pointercancel", onCancel);
-			endDragRef.current = null;
-			setDragId(null);
-			if (commit) void persistOrder(slidesRef.current);
-		};
-		const onUp = () => endDrag(true);
-		const onCancel = () => endDrag(false);
-		endDragRef.current = endDrag;
-		window.addEventListener("pointermove", onMove);
-		window.addEventListener("pointerup", onUp);
-		window.addEventListener("pointercancel", onCancel);
-	}
-
-	// Tear down window listeners if the editor unmounts mid-drag.
-	useEffect(() => () => endDragRef.current?.(false), []);
-
-	async function loadPickerPage(cursor?: string | null) {
-		const url = cursor
-			? `/api/admin/slides/photos?cursor=${encodeURIComponent(cursor)}`
-			: "/api/admin/slides/photos";
-		const response = await fetch(url, { cache: "no-store" });
-		if (!response.ok) {
-			throw new Error(await readError(response, "Nie udało się pobrać zdjęć."));
-		}
-		const body = (await response.json()) as PickerPage;
-		setPickerPhotos((current) =>
-			cursor ? [...current, ...body.items] : body.items,
+	async function announceAdded(added: number, skipped: number) {
+		setNotice(
+			skipped > 0
+				? `Dodano ${added}, pominięto ${skipped} (już w pokazie lub niewidoczne).`
+				: `Dodano ${added}.`,
 		);
-		setPickerCursor(body.nextCursor);
-		setUsedPhotoIds(new Set(body.usedPhotoIds));
-		setPickerLoaded(true);
-	}
-
-	function togglePicker() {
-		const opening = !pickerOpen;
-		setPickerOpen(opening);
-		if (opening && !pickerLoaded) {
-			void run(() => loadPickerPage());
-		}
-	}
-
-	function toggleSelection(photoId: string) {
-		setSelection((current) => {
-			const next = new Set(current);
-			if (next.has(photoId)) next.delete(photoId);
-			else next.add(photoId);
-			return next;
-		});
-	}
-
-	async function addSelectedPhotos() {
-		const photoIds = [...selection];
-		await run(async () => {
-			const response = await fetch("/api/admin/slides", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ photoIds }),
-			});
-			if (!response.ok) {
-				throw new Error(
-					await readError(response, "Nie udało się dodać zdjęć."),
-				);
-			}
-			const body = (await response.json()) as {
-				added: number;
-				skipped: number;
-			};
-			setSelection(new Set());
-			setNotice(
-				body.skipped > 0
-					? `Dodano ${body.added}, pominięto ${body.skipped} (już w pokazie lub niewidoczne).`
-					: `Dodano ${body.added}.`,
-			);
-			await Promise.all([refresh(), loadPickerPage()]);
-		});
+		await refresh();
 	}
 
 	async function addTextSlide(event: FormEvent<HTMLFormElement>) {
@@ -290,23 +166,12 @@ export function SlideEditor({
 		});
 	}
 
-	function startEditing(slide: AdminSlide) {
-		setEditingId(slide.id);
-		setEditTitle(slide.title ?? "");
-		setEditSubtitle(slide.subtitle ?? "");
-	}
-
-	async function saveEditing(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault();
-		if (!editingId) return;
+	async function saveEditing(slideId: string, title: string, subtitle: string) {
 		await run(async () => {
-			const response = await fetch(`/api/admin/slides/${editingId}`, {
+			const response = await fetch(`/api/admin/slides/${slideId}`, {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					title: editTitle,
-					subtitle: editSubtitle || undefined,
-				}),
+				body: JSON.stringify({ title, subtitle: subtitle || undefined }),
 			});
 			if (!response.ok) {
 				throw new Error(
@@ -328,7 +193,7 @@ export function SlideEditor({
 					await readError(response, "Nie udało się usunąć slajdu."),
 				);
 			}
-			await Promise.all([refresh(), pickerLoaded ? loadPickerPage() : null]);
+			await refresh();
 		});
 	}
 
@@ -428,250 +293,33 @@ export function SlideEditor({
 				) : (
 					<ol className="mt-5 grid gap-3">
 						{slides.map((slide, index) => (
-							<li
+							<SlideRow
 								key={slide.id}
-								ref={(element) => {
-									if (element) rowRefs.current.set(slide.id, element);
-									else rowRefs.current.delete(slide.id);
-								}}
-								className={`flex items-center gap-3 rounded-3xl border bg-wedding-cream p-3 shadow-sm ${
-									dragId === slide.id
-										? "relative z-10 scale-[1.01] border-wedding-green shadow-lg"
-										: "border-wedding-rose"
-								}`}
-							>
-								<span
-									aria-hidden
-									onPointerDown={(event) => onDragStart(event, slide.id)}
-									className="shrink-0 cursor-grab touch-none select-none px-1.5 py-3 text-xl leading-none text-wedding-green/60 active:cursor-grabbing"
-								>
-									<GripIcon />
-								</span>
-								<span className="w-6 shrink-0 text-center font-serif text-xl font-bold">
-									{index + 1}
-								</span>
-								{slide.kind === "photo" ? (
-									slide.imageUrl ? (
-										<Image
-											src={slide.imageUrl}
-											alt=""
-											width={160}
-											height={120}
-											unoptimized
-											draggable={false}
-											className="h-16 w-20 shrink-0 rounded-2xl object-cover sm:h-20 sm:w-28"
-										/>
-									) : (
-										<div className="grid h-16 w-20 shrink-0 place-items-center rounded-2xl bg-wedding-rose/30 px-2 text-center text-xs font-bold sm:h-20 sm:w-28">
-											Zdjęcie ukryte
-										</div>
-									)
-								) : (
-									<div className="grid h-16 w-20 shrink-0 place-items-center rounded-2xl bg-wedding-green px-2 text-center sm:h-20 sm:w-28">
-										<span className="font-serif text-xs font-bold text-wedding-ivory">
-											Aa
-										</span>
-									</div>
-								)}
-								<div className="min-w-0 flex-1">
-									{editingId === slide.id ? (
-										<form onSubmit={saveEditing} className="grid gap-2">
-											<input
-												value={editTitle}
-												onChange={(event) => setEditTitle(event.target.value)}
-												required
-												maxLength={120}
-												aria-label="Tytuł slajdu"
-												className="min-h-10 w-full rounded-xl border border-wedding-green bg-white px-3"
-											/>
-											<input
-												value={editSubtitle}
-												onChange={(event) =>
-													setEditSubtitle(event.target.value)
-												}
-												maxLength={200}
-												aria-label="Podtytuł slajdu"
-												placeholder="Podtytuł (opcjonalnie)"
-												className="min-h-10 w-full rounded-xl border border-wedding-green/50 bg-white px-3"
-											/>
-											<div className="flex gap-2">
-												<button
-													type="submit"
-													disabled={pending}
-													className="min-h-10 rounded-full bg-wedding-green px-4 text-sm font-bold text-wedding-rose disabled:opacity-50"
-												>
-													Zapisz
-												</button>
-												<button
-													type="button"
-													onClick={() => setEditingId(null)}
-													className="min-h-10 rounded-full border border-wedding-green px-4 text-sm font-bold"
-												>
-													Anuluj
-												</button>
-											</div>
-										</form>
-									) : (
-										<>
-											{slide.kind === "photo" ? (
-												slide.photoVisible ? (
-													<p className="truncate text-sm text-wedding-green-soft">
-														Zdjęcie z galerii
-													</p>
-												) : (
-													<p className="text-sm font-bold text-wedding-warning">
-														Zdjęcie niewidoczne — pominięte w pokazie
-													</p>
-												)
-											) : (
-												<p className="truncate font-bold">{slide.title}</p>
-											)}
-											{slide.kind === "text" && slide.subtitle ? (
-												<p className="truncate text-sm">{slide.subtitle}</p>
-											) : null}
-											{slide.kind === "text" ? (
-												<button
-													type="button"
-													onClick={() => startEditing(slide)}
-													className="mt-1 text-sm font-bold underline underline-offset-4 hover:text-wedding-green-soft"
-												>
-													Edytuj treść
-												</button>
-											) : null}
-										</>
-									)}
-								</div>
-								<div className="flex shrink-0 flex-col items-center gap-1.5 sm:flex-row">
-									<button
-										type="button"
-										onClick={() => move(index, index - 1)}
-										disabled={pending || index === 0}
-										aria-label="Przesuń wyżej"
-										className="grid min-h-10 min-w-10 place-items-center rounded-full border border-wedding-green hover:bg-wedding-rose/40 disabled:opacity-40"
-									>
-										<ArrowUpIcon />
-									</button>
-									<button
-										type="button"
-										onClick={() => move(index, index + 1)}
-										disabled={pending || index === slides.length - 1}
-										aria-label="Przesuń niżej"
-										className="grid min-h-10 min-w-10 place-items-center rounded-full border border-wedding-green hover:bg-wedding-rose/40 disabled:opacity-40"
-									>
-										<ArrowDownIcon />
-									</button>
-									<button
-										type="button"
-										onClick={() => removeSlide(slide.id)}
-										disabled={pending}
-										aria-label="Usuń slajd"
-										className="grid min-h-10 min-w-10 place-items-center rounded-full bg-wedding-error text-white disabled:opacity-40"
-									>
-										<XIcon />
-									</button>
-								</div>
-							</li>
+								slide={slide}
+								index={index}
+								total={slides.length}
+								dragging={dragId === slide.id}
+								editing={editingId === slide.id}
+								pending={pending}
+								registerRow={registerRow}
+								onDragStart={onDragStart}
+								onMove={move}
+								onRemove={removeSlide}
+								onStartEdit={setEditingId}
+								onSaveEdit={saveEditing}
+								onCancelEdit={() => setEditingId(null)}
+							/>
 						))}
 					</ol>
 				)}
 			</section>
 
-			<section aria-labelledby="add-photos-title" className="mt-12">
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					<h2 id="add-photos-title" className="font-serif text-3xl font-bold">
-						Dodaj zdjęcia
-					</h2>
-					<button
-						type="button"
-						onClick={togglePicker}
-						className="min-h-11 rounded-full border-2 border-wedding-green px-5 font-bold hover:bg-wedding-rose/40"
-					>
-						{pickerOpen ? "Zwiń wybór zdjęć" : "Wybierz z galerii"}
-					</button>
-				</div>
-				{pickerOpen ? (
-					<div className="mt-5">
-						{!pickerLoaded ? (
-							<p
-								aria-live="polite"
-								className="rounded-3xl bg-wedding-cream p-6 text-center"
-							>
-								Wczytujemy zdjęcia z galerii…
-							</p>
-						) : pickerPhotos.length === 0 ? (
-							<p className="rounded-3xl bg-wedding-cream p-6 text-center">
-								W galerii nie ma jeszcze zatwierdzonych zdjęć.
-							</p>
-						) : (
-							<ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-								{pickerPhotos.map((photo) => {
-									const used = usedPhotoIds.has(photo.id);
-									const selected = selection.has(photo.id);
-									return (
-										<li key={photo.id}>
-											<button
-												type="button"
-												disabled={used || pending}
-												onClick={() => toggleSelection(photo.id)}
-												aria-pressed={selected}
-												aria-label={
-													used
-														? "Zdjęcie jest już w pokazie"
-														: "Zaznacz zdjęcie do pokazu"
-												}
-												className={`relative block w-full overflow-hidden rounded-2xl border-4 ${
-													selected
-														? "border-wedding-green"
-														: "border-transparent"
-												} ${used ? "opacity-40" : ""}`}
-											>
-												<Image
-													src={photo.imageUrl}
-													alt=""
-													width={300}
-													height={300}
-													unoptimized
-													className="aspect-square w-full object-cover"
-												/>
-												{used ? (
-													<span className="absolute inset-x-0 bottom-0 bg-wedding-green/90 py-1 text-center text-xs font-bold text-wedding-ivory">
-														W pokazie
-													</span>
-												) : null}
-												{selected ? (
-													<span className="absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full bg-wedding-green text-sm font-bold text-wedding-ivory">
-														✓
-													</span>
-												) : null}
-											</button>
-										</li>
-									);
-								})}
-							</ul>
-						)}
-						<div className="mt-4 flex flex-wrap items-center gap-3">
-							<button
-								type="button"
-								onClick={addSelectedPhotos}
-								disabled={pending || selection.size === 0}
-								className="min-h-11 rounded-full bg-wedding-green px-6 font-bold text-wedding-rose hover:bg-wedding-green-soft disabled:opacity-50"
-							>
-								Dodaj wybrane ({selection.size})
-							</button>
-							{pickerCursor ? (
-								<button
-									type="button"
-									onClick={() => run(() => loadPickerPage(pickerCursor))}
-									disabled={pending}
-									className="min-h-11 rounded-full border border-wedding-green px-5 font-bold hover:bg-wedding-rose/40 disabled:opacity-50"
-								>
-									Pokaż więcej zdjęć
-								</button>
-							) : null}
-						</div>
-					</div>
-				) : null}
-			</section>
+			<PhotoPicker
+				usedPhotoIds={usedPhotoIds}
+				pending={pending}
+				run={run}
+				onAdded={announceAdded}
+			/>
 
 			<section aria-labelledby="add-text-title" className="mt-12">
 				<h2 id="add-text-title" className="font-serif text-3xl font-bold">
@@ -689,7 +337,7 @@ export function SlideEditor({
 						value={textTitle}
 						onChange={(event) => setTextTitle(event.target.value)}
 						required
-						maxLength={120}
+						maxLength={SLIDESHOW_MAX_TITLE}
 						placeholder="Dziękujemy, że jesteście z nami!"
 						className="min-h-12 rounded-2xl border-2 border-wedding-green bg-white px-4"
 					/>
@@ -700,7 +348,7 @@ export function SlideEditor({
 						id="text-slide-subtitle"
 						value={textSubtitle}
 						onChange={(event) => setTextSubtitle(event.target.value)}
-						maxLength={200}
+						maxLength={SLIDESHOW_MAX_SUBTITLE}
 						placeholder="Paweł i Magdalena"
 						className="min-h-12 rounded-2xl border-2 border-wedding-green/50 bg-white px-4"
 					/>

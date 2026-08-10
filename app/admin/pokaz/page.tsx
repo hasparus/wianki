@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/session";
-import {
-	getAdminSlides,
-	getSlideSeconds,
-	SLIDESHOW_DEFAULT_SECONDS,
-} from "@/lib/slideshow";
+import { getAdminSlides, getSlideSeconds } from "@/lib/slideshow";
+import { SLIDESHOW_DEFAULT_SECONDS } from "@/lib/slideshow-protocol";
 import { SlideEditor } from "./slide-editor";
 
 export const metadata: Metadata = {

@@ -20,29 +20,15 @@ import path from "node:path";
  * `npm run photos:upload` first; `list` prints every name available.
  */
 import { createClient } from "@supabase/supabase-js";
+import { loadLocalEnv } from "./lib/env.mjs";
 
 const MAX_TITLE = 120;
 const MAX_SUBTITLE = 200;
 
 const [command, target] = process.argv.slice(2);
 
-async function loadEnv() {
-	const root = path.resolve(import.meta.dirname, "..");
-	for (const name of [".secrets.deploy", ".env.local"]) {
-		try {
-			const text = await readFile(path.join(root, name), "utf8");
-			for (const line of text.split("\n")) {
-				const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
-				if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
-			}
-		} catch {}
-	}
-	for (const key of ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SECRET_KEY"]) {
-		if (!process.env[key]) {
-			console.error(`missing env: ${key}`);
-			process.exit(2);
-		}
-	}
+function connect() {
+	loadLocalEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SECRET_KEY"]);
 	return createClient(
 		process.env.NEXT_PUBLIC_SUPABASE_URL,
 		process.env.SUPABASE_SECRET_KEY,
@@ -172,7 +158,7 @@ async function set(db, file) {
 	console.log("reopen /pokaz to see it");
 }
 
-const db = await loadEnv();
+const db = connect();
 try {
 	if (command === "list") await list(db);
 	else if (command === "clear") await clear(db);

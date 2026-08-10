@@ -1,21 +1,24 @@
 import { jwtVerify } from "jose";
 
 /**
- * Wire vocabulary of the live slideshow. The Next.js app keeps its own copy
- * in `lib/slideshow-live.ts` — keep both in sync.
+ * The wire contract of the live slideshow, shared verbatim by the Next.js app
+ * and `workers/slideshow-live` (which imports this file directly, so the two
+ * ends cannot drift). Nothing here may touch server env or Cloudflare globals.
  */
 export const SLIDESHOW_LIVE_AUDIENCE = "wedding-slideshow-live";
+export const SLIDESHOW_ROOM = "wesele";
+export const SLIDESHOW_PARTY = "slideshow-party";
 export const REACTION_EMOJI = ["❤️", "🥂", "😂", "👏", "🥹"] as const;
 export const MAX_COMMENT_LENGTH = 140;
+export const SLIDESHOW_MIN_SECONDS = 2;
+export const SLIDESHOW_MAX_SECONDS = 10;
+export const SLIDESHOW_DEFAULT_SECONDS = 8;
 const MAX_RAW_MESSAGE_LENGTH = 4096;
 const MAX_SLIDE_INDEX = 9999;
 const MAX_SLIDE_ID_LENGTH = 64;
-export const MIN_SLIDE_SECONDS = 2;
-export const MAX_SLIDE_SECONDS = 10;
-export const DEFAULT_SLIDE_SECONDS = 8;
 
 export type ReactionEmoji = (typeof REACTION_EMOJI)[number];
-export type LiveRole = "guest" | "admin";
+export type SlideshowLiveRole = "guest" | "admin";
 
 export type ControlMessage =
 	| { type: "control"; action: "steer" }
@@ -34,8 +37,9 @@ export type ClientMessage =
 	| ControlMessage;
 
 /**
- * Authoritative presenter state of the room. `presenterId` is the connection
- * id of the steering admin — an opaque random id, carrying no personal data.
+ * Authoritative presenter state of the room, broadcast as `{type:"show", ...}`.
+ * `presenterId` is the connection id of the steering admin — an opaque random
+ * id, carrying no personal data. A null presenter means no live show.
  */
 export type ShowState = {
 	presenterId: string | null;
@@ -57,40 +61,38 @@ export type ServerMessage =
 	| { type: "presence"; viewers: number }
 	| { type: "reaction"; id: string; emoji: ReactionEmoji }
 	| { type: "comment"; id: string; text: string }
-	| {
-			type: "show";
-			live: boolean;
-			index: number;
-			slideId: string | null;
-			playing: boolean;
-			presenterId: string | null;
-			slideSeconds: number | null;
-	  };
+	| ({ type: "show" } & ShowState);
 
-export function showMessage(state: ShowState): ServerMessage {
-	return {
-		type: "show",
-		live: state.presenterId !== null,
-		index: state.index,
-		slideId: state.slideId,
-		playing: state.playing,
-		presenterId: state.presenterId,
-		slideSeconds: state.slideSeconds,
-	};
-}
-
+/** How long each slide holds, in seconds. Clamped on both read and write. */
 export function clampSlideSeconds(value: number) {
-	if (!Number.isFinite(value)) return DEFAULT_SLIDE_SECONDS;
+	if (!Number.isFinite(value)) return SLIDESHOW_DEFAULT_SECONDS;
 	return Math.min(
-		MAX_SLIDE_SECONDS,
-		Math.max(MIN_SLIDE_SECONDS, Math.round(value)),
+		SLIDESHOW_MAX_SECONDS,
+		Math.max(SLIDESHOW_MIN_SECONDS, Math.round(value)),
 	);
 }
 
 /**
+ * Maps the presenter's show state onto a locally loaded deck. Decks can drift
+ * between viewers (a photo hidden after one of them loaded the page), so
+ * slides are matched by id first and the raw index is only a clamped fallback.
+ */
+export function resolveShowIndex(
+	show: ShowState,
+	slideIds: string[],
+): number | null {
+	if (slideIds.length === 0) return null;
+	if (show.slideId) {
+		const byId = slideIds.indexOf(show.slideId);
+		if (byId !== -1) return byId;
+	}
+	return Math.min(Math.max(show.index, 0), slideIds.length - 1);
+}
+
+/**
  * Applies a control message to the show state. Returns the next state, or
- * null when the sender is not allowed to make that change (guests never
- * steer; `goto` is honored only from the current presenter).
+ * null when nothing should change (guests never steer; `goto` is honored only
+ * from the current presenter; a no-op retime needs no broadcast).
  *
  * The presenter always steers: admin devices claim the show automatically,
  * and any admin's `steer` takes over (last wins — the couple shares the
@@ -100,7 +102,7 @@ export function applyControl(
 	state: ShowState,
 	message: ControlMessage,
 	connectionId: string,
-	role: LiveRole,
+	role: SlideshowLiveRole,
 ): ShowState | null {
 	if (role !== "admin") return null;
 	if (message.action === "steer") {
@@ -122,14 +124,10 @@ export function applyControl(
 	};
 }
 
-export function isBrowserOriginAllowed(origin: string | null, allowed: string) {
-	return origin === allowed;
-}
-
 export async function verifyLiveToken(
 	token: string | null,
 	secret: string,
-): Promise<LiveRole | null> {
+): Promise<SlideshowLiveRole | null> {
 	if (!token) return null;
 	try {
 		const { payload } = await jwtVerify(

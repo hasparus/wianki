@@ -36,29 +36,16 @@ export function buildArchiveKey(photoId: string, filename: string) {
 }
 
 export function sanitizeObjectName(value: string) {
-	let sanitized = "";
-	let previousWasUnsafe = false;
-	for (const character of value) {
-		const isUnsafe =
-			character.charCodeAt(0) <= 0x1f ||
-			character === "/" ||
-			character === "\\";
-		if (isUnsafe) {
-			if (!previousWasUnsafe) sanitized += "-";
-		} else {
-			sanitized += character;
-		}
-		previousWasUnsafe = isUnsafe;
-	}
-	return sanitized.slice(0, 180) || "zdjecie";
-}
-
-export function isBrowserOriginAllowed(origin: string | null, allowed: string) {
-	return origin === allowed;
+	return (
+		value
+			// biome-ignore lint/suspicious/noControlCharactersInRegex: path separators and control characters are exactly what gets replaced here.
+			.replace(/[\u0000-\u001f/\\]+/g, "-")
+			.slice(0, 180) || "zdjecie"
+	);
 }
 
 function corsHeaders(origin: string | null, env: Env): Record<string, string> {
-	return isBrowserOriginAllowed(origin, env.ALLOWED_ORIGIN)
+	return origin === env.ALLOWED_ORIGIN
 		? {
 				"Access-Control-Allow-Origin": env.ALLOWED_ORIGIN,
 				"Access-Control-Allow-Headers": "Authorization, Content-Type",
@@ -185,7 +172,7 @@ export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const origin = request.headers.get("Origin");
 		if (request.method === "OPTIONS") {
-			if (!isBrowserOriginAllowed(origin, env.ALLOWED_ORIGIN)) {
+			if (origin !== env.ALLOWED_ORIGIN) {
 				return json({ error: "Niedozwolone źródło." }, 403, origin, env);
 			}
 			return new Response(null, {
@@ -198,7 +185,7 @@ export default {
 			/^\/v1\/archive\/([0-9a-f-]{36})$/,
 		);
 		if (!match) return json({ error: "Nie znaleziono." }, 404, origin, env);
-		if (origin && !isBrowserOriginAllowed(origin, env.ALLOWED_ORIGIN)) {
+		if (origin && origin !== env.ALLOWED_ORIGIN) {
 			return json({ error: "Niedozwolone źródło." }, 403, origin, env);
 		}
 

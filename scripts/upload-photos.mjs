@@ -16,6 +16,7 @@ import path from "node:path";
  */
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
+import { loadLocalEnv } from "./lib/env.mjs";
 
 const MAX_BATCH_FILES = 10;
 const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024;
@@ -52,29 +53,6 @@ if (inputs.length === 0) {
 		"usage: node scripts/upload-photos.mjs <file-or-dir>... [--dry-run] [--fast] [--concurrency N]",
 	);
 	process.exit(2);
-}
-
-async function loadEnv() {
-	const root = path.resolve(import.meta.dirname, "..");
-	for (const name of [".secrets.deploy", ".env.local"]) {
-		try {
-			const text = await readFile(path.join(root, name), "utf8");
-			for (const line of text.split("\n")) {
-				const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
-				if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
-			}
-		} catch {}
-	}
-	const missing = [
-		"APP_ORIGIN",
-		"GUEST_ACCESS_PASSPHRASE",
-		"NEXT_PUBLIC_SUPABASE_URL",
-		"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-	].filter((k) => !process.env[k]);
-	if (missing.length) {
-		console.error("missing env: " + missing.join(", "));
-		process.exit(2);
-	}
 }
 
 async function collect(target) {
@@ -195,7 +173,12 @@ async function uploadOne(origin, cookie, supabase, file, init) {
 }
 
 async function main() {
-	await loadEnv();
+	loadLocalEnv([
+		"APP_ORIGIN",
+		"GUEST_ACCESS_PASSPHRASE",
+		"NEXT_PUBLIC_SUPABASE_URL",
+		"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+	]);
 	const origin = process.env.APP_ORIGIN.replace(/\/$/, "");
 
 	const files = [];
@@ -220,7 +203,7 @@ async function main() {
 			(fast ? "  (--fast: order not preserved)" : "  (in filename order)"),
 	);
 	if (dryRun) {
-		for (const f of usable) console.log("  " + f);
+		for (const f of usable) console.log(`  ${f}`);
 		return;
 	}
 	if (usable.length === 0) return;
@@ -266,7 +249,7 @@ async function main() {
 			done++;
 			if (!result.archived) unarchived++;
 			console.log(
-				`  ${result.archived ? "ok  " : "warn"}  ${path.basename(file)}${result.archiveError ? "  (archive: " + result.archiveError + ")" : ""}`,
+				`  ${result.archived ? "ok  " : "warn"}  ${path.basename(file)}${result.archiveError ? `  (archive: ${result.archiveError})` : ""}`,
 			);
 		} catch (error) {
 			failed++;

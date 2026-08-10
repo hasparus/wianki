@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { createArchiveToken, verifyArchiveReceipt } from "@/lib/archive-token";
-import { readAdminSession } from "@/lib/auth/session";
+import { denyAdminRequest } from "@/lib/auth/session";
 import { type ArchiveStatus, GALLERY_BUCKET } from "@/lib/domain";
 import { serverEnv } from "@/lib/env";
-import { assertSameOrigin, jsonError, noStoreJson } from "@/lib/http";
+import { jsonError, noStoreJson } from "@/lib/http";
 import { moderateImage } from "@/lib/moderation";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -30,12 +30,8 @@ export async function PATCH(
 	request: Request,
 	{ params }: { params: Promise<{ photoId: string }> },
 ) {
-	if (!(await readAdminSession())) return jsonError("Brak dostępu.", 401);
-	try {
-		assertSameOrigin(request);
-	} catch (response) {
-		return response as Response;
-	}
+	const denied = await denyAdminRequest(request);
+	if (denied) return denied;
 	const parsed = actionSchema.safeParse(await request.json().catch(() => null));
 	if (!parsed.success) return jsonError("Nieznana akcja.", 400);
 	const { photoId } = await params;
@@ -122,12 +118,8 @@ export async function DELETE(
 	request: Request,
 	{ params }: { params: Promise<{ photoId: string }> },
 ) {
-	if (!(await readAdminSession())) return jsonError("Brak dostępu.", 401);
-	try {
-		assertSameOrigin(request);
-	} catch (response) {
-		return response as Response;
-	}
+	const denied = await denyAdminRequest(request);
+	if (denied) return denied;
 	const { photoId } = await params;
 	const photo = await photoById(photoId);
 	if (!photo) return jsonError("Nie znaleziono zdjęcia.", 404);

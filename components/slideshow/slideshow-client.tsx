@@ -18,23 +18,21 @@ import {
 	PauseIcon,
 	PlayIcon,
 } from "@/components/slideshow/icons";
+import { usePresenterSync } from "@/components/slideshow/use-presenter-sync";
 import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
-import {
-	clampSlideSeconds,
-	SLIDESHOW_DEFAULT_SECONDS,
-	type SlideshowDeck,
-	type SlideshowJoinInfo,
-	type SlideshowSlide,
+import type {
+	SlideshowDeck,
+	SlideshowJoinInfo,
+	SlideshowSlide,
 } from "@/lib/slideshow";
 import {
 	MAX_COMMENT_LENGTH,
 	REACTION_EMOJI,
-	resolveShowIndex,
-} from "@/lib/slideshow-live";
+	SLIDESHOW_DEFAULT_SECONDS,
+} from "@/lib/slideshow-protocol";
 
 const SLIDE_EXIT_MS = 260;
 const SWIPE_THRESHOLD_PX = 48;
-const NOTICE_MS = 4000;
 
 const reactionLabels: Record<string, string> = {
 	"❤️": "serce",
@@ -112,31 +110,9 @@ export function SlideshowClient({
 	const [index, setIndex] = useState(0);
 	const [previousIndex, setPreviousIndex] = useState<number | null>(null);
 	const [playing, setPlaying] = useState(true);
-	const [yielded, setYielded] = useState(false);
-	const [detached, setDetached] = useState(false);
-	const [notice, setNotice] = useState("");
 	const [comment, setComment] = useState("");
 	const pointerStart = useRef<{ x: number; y: number } | null>(null);
-	const wasPresenterRef = useRef(false);
-	const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-		undefined,
-	);
 	const live = useSlideshowLive();
-
-	// Any screen in the room honours a retime, whether or not it is presenting
-	// and whether it signed in as a guest or an admin. An untouched room has no
-	// opinion, so the stored value keeps applying until someone changes it.
-	const slideMs =
-		clampSlideSeconds(live.show.slideSeconds ?? slideSeconds) * 1000;
-
-	const isAdmin = live.role === "admin" && live.status === "on";
-	// The presenter always steers: an admin device claims the show as soon as
-	// it connects, unless another admin has taken over since (last wins).
-	const claiming = isAdmin && !yielded;
-	// A live show exists and this device neither drives it nor opted out.
-	const following = live.show.live && !live.isPresenter && !detached;
-	// Local autoplay runs whenever this device owns its own timeline.
-	const autoplaying = playing && !following;
 
 	const goTo = useCallback(
 		(target: number) => {
@@ -150,21 +126,24 @@ export function SlideshowClient({
 		[slides.length],
 	);
 
+	const sync = usePresenterSync({
+		live,
+		slides,
+		index,
+		playing,
+		goTo,
+		fallbackSeconds: slideSeconds,
+	});
+	// Local autoplay runs whenever this device owns its own timeline.
+	const autoplaying = playing && !sync.following;
+
 	const navigate = useCallback(
 		(target: number) => {
-			if (following) setDetached(true);
+			if (sync.following) sync.detach();
 			goTo(target);
 		},
-		[following, goTo],
+		[sync.following, sync.detach, goTo],
 	);
-
-	const showNotice = useCallback((text: string) => {
-		setNotice(text);
-		clearTimeout(noticeTimerRef.current);
-		noticeTimerRef.current = setTimeout(() => setNotice(""), NOTICE_MS);
-	}, []);
-
-	useEffect(() => () => clearTimeout(noticeTimerRef.current), []);
 
 	useEffect(() => {
 		if (previousIndex === null) return;
@@ -174,70 +153,9 @@ export function SlideshowClient({
 
 	useEffect(() => {
 		if (!autoplaying || slides.length < 2) return;
-		const timer = setTimeout(() => goTo(index + 1), slideMs);
+		const timer = setTimeout(() => goTo(index + 1), sync.slideMs);
 		return () => clearTimeout(timer);
-	}, [autoplaying, index, slides.length, goTo, slideMs]);
-
-	// Claim the show on every (re)connection and whenever the claim returns.
-	useEffect(() => {
-		if (!claiming || live.connectionEpoch === 0) return;
-		live.sendControl({ action: "steer" });
-	}, [claiming, live.connectionEpoch, live.sendControl]);
-
-	// Seed only a room nobody has retimed; reconnecting must never clobber a
-	// tempo someone set while this tab was holding a stale page-load value.
-	useEffect(() => {
-		if (!live.isPresenter || live.show.slideSeconds !== null) return;
-		live.sendControl({ action: "tempo", slideSeconds });
-	}, [
-		live.isPresenter,
-		live.show.slideSeconds,
-		live.sendControl,
-		slideSeconds,
-	]);
-
-	// Mirror every local position/play change to the room while presenting.
-	useEffect(() => {
-		if (!live.isPresenter) return;
-		live.sendControl({
-			action: "goto",
-			index,
-			slideId: slides[index]?.id ?? null,
-			playing,
-		});
-	}, [live.isPresenter, live.sendControl, index, playing, slides]);
-
-	// Another admin took over: become a viewer until taken back.
-	useEffect(() => {
-		if (live.isPresenter) {
-			wasPresenterRef.current = true;
-			return;
-		}
-		if (wasPresenterRef.current && live.show.presenterId !== null) {
-			wasPresenterRef.current = false;
-			setYielded(true);
-			showNotice("Pokaz prowadzi teraz inne urządzenie.");
-		}
-	}, [live.isPresenter, live.show.presenterId, showNotice]);
-
-	// Follow the presenter.
-	useEffect(() => {
-		if (!following) return;
-		const target = resolveShowIndex(
-			live.show,
-			slides.map((slide) => slide.id),
-		);
-		if (target !== null && target !== index) goTo(target);
-	}, [following, live.show, slides, index, goTo]);
-
-	// When the show ends (presenter left), viewers resume their own pace and
-	// remaining admin devices are free to claim it again.
-	useEffect(() => {
-		if (!live.show.live) {
-			setDetached(false);
-			setYielded(false);
-		}
-	}, [live.show.live]);
+	}, [autoplaying, index, slides.length, goTo, sync.slideMs]);
 
 	useEffect(() => {
 		const next = slides[(index + 1) % slides.length];
@@ -259,7 +177,7 @@ export function SlideshowClient({
 
 	// The show often runs propped up on a phone — keep the screen awake.
 	useEffect(() => {
-		if ((!playing && !following) || !("wakeLock" in navigator)) return;
+		if ((!playing && !sync.following) || !("wakeLock" in navigator)) return;
 		let lock: WakeLockSentinel | null = null;
 		navigator.wakeLock
 			.request("screen")
@@ -270,12 +188,7 @@ export function SlideshowClient({
 		return () => {
 			lock?.release().catch(() => {});
 		};
-	}, [playing, following]);
-
-	function takeBack() {
-		setDetached(false);
-		setYielded(false);
-	}
+	}, [playing, sync.following]);
 
 	function onPointerDown(event: ReactPointerEvent) {
 		pointerStart.current = { x: event.clientX, y: event.clientY };
@@ -370,7 +283,7 @@ export function SlideshowClient({
 						<ChevronLeftIcon />
 						Galeria
 					</Link>
-					{live.show.live ? (
+					{live.isLive ? (
 						<span className="slideshow-control flex min-h-11 items-center gap-2 whitespace-nowrap px-1 text-sm font-bold">
 							<span
 								aria-hidden
@@ -393,16 +306,16 @@ export function SlideshowClient({
 					<span className="slideshow-control flex min-h-11 items-center whitespace-nowrap px-1 text-sm font-bold tabular-nums">
 						{index + 1} / {slides.length}
 					</span>
-					{isAdmin && yielded && live.show.live ? (
+					{sync.canTakeOver ? (
 						<button
 							type="button"
-							onClick={takeBack}
+							onClick={sync.takeBack}
 							className="min-h-11 whitespace-nowrap rounded-full bg-wedding-rose px-4 text-sm font-bold text-wedding-green"
 						>
 							Przejmij pokaz
 						</button>
 					) : null}
-					{!following ? (
+					{!sync.following ? (
 						<button
 							type="button"
 							onClick={() => setPlaying((value) => !value)}
@@ -416,18 +329,18 @@ export function SlideshowClient({
 			</header>
 
 			<div className="absolute inset-x-0 top-20 z-30 flex flex-col items-center gap-2 px-4">
-				{notice ? (
+				{sync.notice ? (
 					<p
 						aria-live="polite"
 						className="rounded-full bg-wedding-ivory/95 px-5 py-2 text-center text-sm font-bold text-wedding-green shadow-lg"
 					>
-						{notice}
+						{sync.notice}
 					</p>
 				) : null}
-				{detached && live.show.live ? (
+				{sync.detached && live.isLive ? (
 					<button
 						type="button"
-						onClick={() => setDetached(false)}
+						onClick={sync.reattach}
 						className="flex min-h-11 items-center gap-2 rounded-full bg-wedding-ivory/95 px-5 text-sm font-bold text-wedding-green shadow-lg hover:bg-wedding-cream"
 					>
 						<span

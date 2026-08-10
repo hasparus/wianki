@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
 	archiveKeyPrefix,
 	buildArchiveKey,
-	isBrowserOriginAllowed,
 	sanitizeObjectName,
 } from "../src/index";
 
@@ -13,21 +12,6 @@ describe("Archive boundary", () => {
 		expect(sanitizeObjectName("abc/..\\photo\u0000.jpg")).toBe(
 			"abc-..-photo-.jpg",
 		);
-	});
-
-	it("allows only the exact configured browser origin", () => {
-		expect(
-			isBrowserOriginAllowed(
-				"https://wedding.pawel.space",
-				"https://wedding.pawel.space",
-			),
-		).toBe(true);
-		expect(
-			isBrowserOriginAllowed(
-				"https://evil.example",
-				"https://wedding.pawel.space",
-			),
-		).toBe(false);
 	});
 
 	it("keeps every object under a per-photo prefix so reconcile is a lookup", () => {

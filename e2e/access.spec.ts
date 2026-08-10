@@ -68,11 +68,9 @@ test("wrong join code bounces to login without a session", async ({ page }) => {
 
 test("invalid manual passphrase stays on login", async ({ page }) => {
 	await page.goto("/login");
-	await page.getByLabel("Hasło z zaproszenia").fill("wrong password");
+	await page.getByLabel("Hasło").fill("wrong password");
 	await page.getByRole("button", { name: "Wejdź do galerii" }).click();
-	await expect(
-		page.getByText("Nieprawidłowe hasło z zaproszenia."),
-	).toBeVisible();
+	await expect(page.getByText("Nieprawidłowe hasło.")).toBeVisible();
 });
 
 test("upload selection rejects more than ten photos before a network upload", async ({
