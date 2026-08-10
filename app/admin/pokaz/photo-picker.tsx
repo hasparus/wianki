@@ -1,13 +1,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { GalleryItem } from "@/lib/domain";
-
-async function readError(response: Response, fallback: string) {
-	const body = (await response.json().catch(() => null)) as {
-		error?: string;
-	} | null;
-	return body?.error ?? fallback;
-}
+import { readError } from "@/lib/http-client";
 
 /**
  * Picks approved gallery photos to append to the deck. Which photos are

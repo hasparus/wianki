@@ -4,6 +4,7 @@ import {
 	sanitizeObjectName,
 	type UploadClaims,
 } from "./backend";
+import { badRequest, upstreamFailed } from "./claims";
 
 const keyPrefix = "originals/";
 
@@ -34,10 +35,10 @@ export function r2Backend(bucket: R2Bucket): ArchiveBackend {
 				},
 				customMetadata: { photoId: claims.photoId },
 			});
-			if (!object) throw new Error("Archiwum nie przyjęło oryginału.");
+			if (!object) throw upstreamFailed("Archiwum nie przyjęło oryginału.");
 			if (object.size !== claims.size) {
 				await bucket.delete(key);
-				throw new Error("Zapisany rozmiar nie zgadza się z tokenem.");
+				throw badRequest("Zapisany rozmiar nie zgadza się z tokenem.");
 			}
 			return { key, size: object.size };
 		},
@@ -53,7 +54,7 @@ export function r2Backend(bucket: R2Bucket): ArchiveBackend {
 
 		async remove(photoId: string, key: string) {
 			if (!key.startsWith(archiveKeyPrefix(photoId))) {
-				throw new Error("Klucz nie należy do tego zdjęcia.");
+				throw badRequest("Klucz nie należy do tego zdjęcia.");
 			}
 			await bucket.delete(key);
 		},

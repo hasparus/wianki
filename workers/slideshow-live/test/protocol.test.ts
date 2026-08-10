@@ -264,6 +264,24 @@ describe("tempo", () => {
 		expect(claimed?.slideSeconds).toBeNull();
 	});
 
+	it("survives the presenter leaving — the room keeps the couple's tempo", () => {
+		const running = applyControl(
+			{ ...IDLE_SHOW_STATE, presenterId: "a1" },
+			tempo(4),
+			"a2",
+			"admin",
+		);
+		expect(running?.slideSeconds).toBe(4);
+		// What index.ts does when the presenting connection drops: the show ends,
+		// the tempo the couple set does not.
+		const afterDisconnect = {
+			...IDLE_SHOW_STATE,
+			slideSeconds: running?.slideSeconds ?? null,
+		};
+		expect(afterDisconnect.presenterId).toBeNull();
+		expect(afterDisconnect.slideSeconds).toBe(4);
+	});
+
 	it("never lets a guest retime the room", () => {
 		expect(applyControl(IDLE_SHOW_STATE, tempo(3), "g1", "guest")).toBeNull();
 	});

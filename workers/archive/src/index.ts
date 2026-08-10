@@ -1,5 +1,12 @@
-import { type JWTPayload, jwtVerify, SignJWT } from "jose";
+import { SignJWT } from "jose";
 import type { ArchiveBackend } from "./backend";
+import {
+	ArchiveError,
+	AUDIENCE,
+	type Claims,
+	misconfigured,
+	verifyOperation,
+} from "./claims";
 import { type DriveEnv, driveBackend } from "./drive";
 import { r2Backend } from "./r2";
 
@@ -11,21 +18,6 @@ export interface Env extends DriveEnv {
 	ARCHIVE_BUCKET?: R2Bucket;
 }
 
-type Operation = "upload" | "delete" | "reconcile";
-
-type OperationClaims = JWTPayload & {
-	photoId: string;
-	operation: Operation;
-	filename?: string;
-	contentType?: string;
-	size?: number;
-	archiveKey?: string;
-};
-
-const audience = "wedding-archive";
-const maxOriginalBytes = 25 * 1024 * 1024;
-const encoder = new TextEncoder();
-
 /**
  * One deployment archives to one place. Picking the backend explicitly rather
  * than inferring it from whichever credentials happen to be present means a
@@ -36,10 +28,12 @@ export function selectBackend(env: Env): ArchiveBackend {
 	const choice = env.ARCHIVE_BACKEND ?? "r2";
 	if (choice === "drive") return driveBackend(env);
 	if (choice !== "r2") {
-		throw new Error(`Nieznane archiwum: ${choice}. Ustaw "r2" albo "drive".`);
+		throw misconfigured(
+			`Nieznane archiwum: ${choice}. Ustaw "r2" albo "drive".`,
+		);
 	}
 	if (!env.ARCHIVE_BUCKET) {
-		throw new Error("Brak powiązania ARCHIVE_BUCKET dla archiwum R2.");
+		throw misconfigured("Brak powiązania ARCHIVE_BUCKET dla archiwum R2.");
 	}
 	return r2Backend(env.ARCHIVE_BUCKET);
 }
@@ -66,93 +60,58 @@ function json(value: unknown, status: number, origin: string | null, env: Env) {
 	});
 }
 
-async function verifyOperation(request: Request, env: Env) {
-	const authorization = request.headers.get("Authorization");
-	if (!authorization?.startsWith("Bearer ")) {
-		throw new Error("Brak tokenu operacji.");
-	}
-	const { payload } = await jwtVerify(
-		authorization.slice("Bearer ".length),
-		encoder.encode(env.ARCHIVE_TOKEN_SECRET),
-		{ algorithms: ["HS256"], audience },
-	);
-	if (
-		typeof payload.photoId !== "string" ||
-		!["upload", "delete", "reconcile"].includes(String(payload.operation))
-	) {
-		throw new Error("Nieprawidłowy token operacji.");
-	}
-	return payload as OperationClaims;
-}
-
 function receipt(env: Env, photoId: string, archiveKey: string, size: number) {
 	return new SignJWT({ kind: "receipt", photoId, archiveKey, size })
 		.setProtectedHeader({ alg: "HS256", typ: "JWT" })
 		.setIssuedAt()
-		.setAudience(audience)
+		.setAudience(AUDIENCE)
 		.setExpirationTime("24h")
-		.sign(encoder.encode(env.ARCHIVE_TOKEN_SECRET));
+		.sign(new TextEncoder().encode(env.ARCHIVE_TOKEN_SECRET));
 }
 
-async function uploadOriginal(
+async function handle(
 	request: Request,
 	env: Env,
 	backend: ArchiveBackend,
-	claims: OperationClaims,
+	claims: Claims,
+	origin: string | null,
 ) {
-	if (
-		claims.operation !== "upload" ||
-		typeof claims.filename !== "string" ||
-		typeof claims.contentType !== "string" ||
-		typeof claims.size !== "number" ||
-		claims.size <= 0 ||
-		claims.size > maxOriginalBytes ||
-		!request.body
-	) {
-		throw new Error("Nieprawidłowe parametry oryginału.");
+	if (claims.operation === "upload") {
+		if (!request.body) throw new ArchiveError("Brak treści oryginału.", 400);
+		const declared = request.headers.get("Content-Length");
+		if (declared !== null && Number(declared) !== claims.size) {
+			throw new ArchiveError("Rozmiar pliku nie zgadza się z tokenem.", 400);
+		}
+		const stored = await backend.upload(request.body, claims);
+		return json(
+			{
+				receipt: await receipt(env, claims.photoId, stored.key, stored.size),
+				archiveKey: stored.key,
+			},
+			201,
+			origin,
+			env,
+		);
 	}
-	const requestLength = Number(
-		request.headers.get("Content-Length") ?? claims.size,
-	);
-	if (requestLength !== claims.size)
-		throw new Error("Rozmiar pliku nie zgadza się z tokenem.");
 
-	const stored = await backend.upload(request.body, {
-		photoId: claims.photoId,
-		filename: claims.filename,
-		contentType: claims.contentType,
-		size: claims.size,
-	});
-	return {
-		receipt: await receipt(env, claims.photoId, stored.key, stored.size),
-		archiveKey: stored.key,
-	};
-}
-
-async function reconcileOriginal(
-	env: Env,
-	backend: ArchiveBackend,
-	claims: OperationClaims,
-) {
-	if (claims.operation !== "reconcile")
-		throw new Error("Nieprawidłowa operacja.");
-	const found = await backend.find(claims.photoId);
-	if (!found) return null;
-	return {
-		receipt: await receipt(env, claims.photoId, found.key, found.size),
-		archiveKey: found.key,
-	};
-}
-
-async function removeOriginal(
-	backend: ArchiveBackend,
-	claims: OperationClaims,
-) {
-	if (claims.operation !== "delete" || !claims.archiveKey) {
-		throw new Error("Brak pliku do usunięcia.");
+	if (claims.operation === "reconcile") {
+		const found = await backend.find(claims.photoId);
+		if (!found) {
+			return json({ error: "Nie znaleziono oryginału." }, 404, origin, env);
+		}
+		return json(
+			{
+				receipt: await receipt(env, claims.photoId, found.key, found.size),
+				archiveKey: found.key,
+			},
+			200,
+			origin,
+			env,
+		);
 	}
+
 	await backend.remove(claims.photoId, claims.archiveKey);
-	return { ok: true };
+	return json({ ok: true }, 200, origin, env);
 }
 
 export default {
@@ -177,37 +136,21 @@ export default {
 		}
 
 		try {
-			const backend = selectBackend(env);
-			const claims = await verifyOperation(request, env);
-			if (claims.photoId !== match[1]) {
-				return json(
-					{ error: "Token dotyczy innego zdjęcia." },
-					403,
-					origin,
-					env,
-				);
-			}
-			if (request.method === "PUT") {
-				return json(
-					await uploadOriginal(request, env, backend, claims),
-					201,
-					origin,
-					env,
-				);
-			}
-			if (request.method === "GET") {
-				const result = await reconcileOriginal(env, backend, claims);
-				return result
-					? json(result, 200, origin, env)
-					: json({ error: "Nie znaleziono oryginału." }, 404, origin, env);
-			}
-			if (request.method === "DELETE") {
-				return json(await removeOriginal(backend, claims), 200, origin, env);
-			}
-			return json({ error: "Niedozwolona metoda." }, 405, origin, env);
+			const claims = await verifyOperation(
+				request,
+				env.ARCHIVE_TOKEN_SECRET,
+				match[1],
+			);
+			return await handle(request, env, selectBackend(env), claims, origin);
 		} catch (error) {
-			const message = error instanceof Error ? error.message : "Błąd archiwum.";
-			return json({ error: message }, 400, origin, env);
+			if (error instanceof ArchiveError) {
+				if (error.status >= 500) console.error(error.message);
+				const message =
+					error.status >= 500 ? "Archiwum jest niedostępne." : error.message;
+				return json({ error: message }, error.status, origin, env);
+			}
+			console.error(error);
+			return json({ error: "Archiwum jest niedostępne." }, 502, origin, env);
 		}
 	},
 } satisfies ExportedHandler<Env>;

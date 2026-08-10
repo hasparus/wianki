@@ -4,6 +4,7 @@ import {
 	sanitizeObjectName,
 	type UploadClaims,
 } from "./backend";
+import { badRequest, upstreamFailed } from "./claims";
 
 export type DriveEnv = {
 	GOOGLE_OAUTH_CLIENT_ID: string;
@@ -23,10 +24,28 @@ async function accessToken(env: DriveEnv) {
 			grant_type: "refresh_token",
 		}),
 	});
-	if (!response.ok) throw new Error("Google OAuth odrzucił token odświeżania.");
+	if (!response.ok)
+		throw upstreamFailed("Google OAuth odrzucił token odświeżania.");
 	const body = (await response.json()) as { access_token?: string };
-	if (!body.access_token) throw new Error("Google OAuth nie zwrócił tokenu.");
+	if (!body.access_token)
+		throw upstreamFailed("Google OAuth nie zwrócił tokenu.");
 	return body.access_token;
+}
+
+async function trash(env: DriveEnv, fileId: string) {
+	const token = await accessToken(env);
+	const response = await fetch(
+		`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`,
+		{
+			method: "PATCH",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ trashed: true }),
+		},
+	);
+	if (!response.ok) throw upstreamFailed("Drive nie przeniósł pliku do kosza.");
 }
 
 /**
@@ -61,7 +80,7 @@ export function driveBackend(env: DriveEnv): ArchiveBackend {
 			);
 			const sessionUrl = session.headers.get("Location");
 			if (!session.ok || !sessionUrl) {
-				throw new Error("Nie udało się rozpocząć wysyłki do Drive.");
+				throw upstreamFailed("Nie udało się rozpocząć wysyłki do Drive.");
 			}
 
 			const uploaded = await fetch(sessionUrl, {
@@ -73,10 +92,18 @@ export function driveBackend(env: DriveEnv): ArchiveBackend {
 				},
 				body,
 			});
-			if (!uploaded.ok) throw new Error("Drive nie przyjął oryginału.");
-			const file = (await uploaded.json()) as { id?: string };
-			if (!file.id) throw new Error("Drive nie zwrócił identyfikatora pliku.");
-			return { key: file.id, size: claims.size };
+			if (!uploaded.ok) throw upstreamFailed("Drive nie przyjął oryginału.");
+			const file = (await uploaded.json()) as { id?: string; size?: string };
+			if (!file.id)
+				throw upstreamFailed("Drive nie zwrócił identyfikatora pliku.");
+			// Measure what Drive stored rather than echoing the token back, so a
+			// truncated upload cannot produce a receipt that finalization trusts.
+			const stored = Number(file.size);
+			if (!Number.isFinite(stored) || stored !== claims.size) {
+				await trash(env, file.id).catch(() => {});
+				throw badRequest("Zapisany rozmiar nie zgadza się z tokenem.");
+			}
+			return { key: file.id, size: stored };
 		},
 
 		async find(photoId: string) {
@@ -93,7 +120,7 @@ export function driveBackend(env: DriveEnv): ArchiveBackend {
 			const response = await fetch(url, {
 				headers: { Authorization: `Bearer ${token}` },
 			});
-			if (!response.ok) throw new Error("Nie udało się przeszukać Drive.");
+			if (!response.ok) throw upstreamFailed("Nie udało się przeszukać Drive.");
 			const body = (await response.json()) as {
 				files?: Array<{ id: string; size?: string }>;
 			};
@@ -102,19 +129,7 @@ export function driveBackend(env: DriveEnv): ArchiveBackend {
 		},
 
 		async remove(_photoId: string, key: string) {
-			const token = await accessToken(env);
-			const response = await fetch(
-				`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(key)}?supportsAllDrives=true`,
-				{
-					method: "PATCH",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ trashed: true }),
-				},
-			);
-			if (!response.ok) throw new Error("Drive nie przeniósł pliku do kosza.");
+			await trash(env, key);
 		},
 	};
 }

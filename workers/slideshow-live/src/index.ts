@@ -96,7 +96,10 @@ export class SlideshowParty extends Server<Env> {
 	private dropConnection(connection: Connection) {
 		this.limiters.delete(connection.id);
 		if (this.show.presenterId === connection.id) {
-			this.show = { ...IDLE_SHOW_STATE };
+			// Tempo is room configuration, not presenter state: any admin may set
+			// it without steering, and it is what the couple saved. Losing the
+			// presenter ends the live show, it does not retime the evening.
+			this.show = { ...IDLE_SHOW_STATE, slideSeconds: this.show.slideSeconds };
 			this.broadcast(JSON.stringify(showMessage(this.show)));
 		}
 		this.broadcastPresence();

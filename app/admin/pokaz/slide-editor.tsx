@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type FormEvent, useCallback, useMemo, useState } from "react";
 import { ChevronLeftIcon } from "@/components/slideshow/icons";
 import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
+import { readError } from "@/lib/http-client";
 import type { AdminSlide } from "@/lib/slideshow";
 import {
 	clampSlideSeconds,
@@ -15,13 +16,6 @@ import {
 import { PhotoPicker } from "./photo-picker";
 import { SlideRow } from "./slide-row";
 import { useSlideReorder } from "./use-slide-reorder";
-
-async function readError(response: Response, fallback: string) {
-	const body = (await response.json().catch(() => null)) as {
-		error?: string;
-	} | null;
-	return body?.error ?? fallback;
-}
 
 export function SlideEditor({
 	initialSlides,

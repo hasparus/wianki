@@ -1,11 +1,9 @@
+import type { Claims } from "./claims";
+
+/** `size` must be the size the archive actually stored, never the size asked for. */
 export type ArchivedObject = { key: string; size: number };
 
-export type UploadClaims = {
-	photoId: string;
-	filename: string;
-	contentType: string;
-	size: number;
-};
+export type UploadClaims = Extract<Claims, { operation: "upload" }>;
 
 /**
  * Where originals live. The HTTP boundary, capability tokens, receipts and

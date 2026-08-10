@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { parseArgs } from "node:util";
 /**
  * Bulk-upload photos from disk through the real guest pipeline.
  *
@@ -16,6 +17,11 @@ import path from "node:path";
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
+import {
+	MAX_BATCH_FILES,
+	MAX_DERIVATIVE_BYTES,
+	MAX_ORIGINAL_BYTES,
+} from "../lib/domain.ts";
 import { errorMessage, loadLocalEnv } from "./lib/cli.ts";
 
 type UploadInit = {
@@ -36,10 +42,6 @@ async function readJson(response: Response): Promise<ApiBody> {
 	return (await response.json().catch(() => ({}))) as ApiBody;
 }
 
-const MAX_BATCH_FILES = 10;
-const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024;
-const MAX_DERIVATIVE_BYTES = 500 * 1024;
-const IMAGE_EXT = new Set([".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"]);
 const CONTENT_TYPE: Record<string, string> = {
 	".jpg": "image/jpeg",
 	".jpeg": "image/jpeg",
@@ -48,22 +50,23 @@ const CONTENT_TYPE: Record<string, string> = {
 	".heic": "image/heic",
 	".heif": "image/heif",
 };
+const IMAGE_EXT = new Set(Object.keys(CONTENT_TYPE));
 
-const args = process.argv.slice(2);
-const dryRun = args.includes("--dry-run");
+const { values, positionals: inputs } = parseArgs({
+	allowPositionals: true,
+	options: {
+		"dry-run": { type: "boolean", default: false },
+		fast: { type: "boolean", default: false },
+		concurrency: { type: "string", default: "4" },
+	},
+});
+const dryRun = values["dry-run"];
 // Photos land in the gallery ordered by created_at, and a multi-row insert
 // stamps every row in the batch with the same transaction time — so batching
 // randomises order within each group of ten. One init per photo keeps the
 // order you passed them in. --fast trades that away for throughput.
-const fast = args.includes("--fast");
-const concurrency =
-	Number(args[args.indexOf("--concurrency") + 1]) > 0
-		? Number(args[args.indexOf("--concurrency") + 1])
-		: 4;
-const inputs = args.filter((a, i) => {
-	if (a.startsWith("--")) return false;
-	return args[i - 1] !== "--concurrency";
-});
+const fast = values.fast;
+const concurrency = Math.max(1, Number(values.concurrency) || 4);
 
 if (inputs.length === 0) {
 	console.error(
@@ -289,40 +292,29 @@ async function main() {
 		}
 	}
 
-	if (fast) {
-		for (let i = 0; i < usable.length; i += MAX_BATCH_FILES) {
-			const batch = usable.slice(i, i + MAX_BATCH_FILES);
-			let uploads: UploadInit[];
-			try {
-				uploads = await initBatch(batch);
-			} catch (error) {
-				console.error(`  batch failed: ${errorMessage(error)}`);
-				failed += batch.length;
-				continue;
-			}
-			let cursor = 0;
-			await Promise.all(
-				Array.from(
-					{ length: Math.min(concurrency, batch.length) },
-					async () => {
-						while (cursor < batch.length) {
-							const index = cursor++;
-							await send(batch[index], uploads[index]);
-						}
-					},
-				),
-			);
+	// --fast batches ten photos per init call, which is faster but lets the
+	// database stamp a whole batch with one created_at, randomising gallery
+	// order inside each group. One per init keeps the order you passed.
+	const groupSize = fast ? MAX_BATCH_FILES : 1;
+	for (let i = 0; i < usable.length; i += groupSize) {
+		const batch = usable.slice(i, i + groupSize);
+		let uploads: UploadInit[];
+		try {
+			uploads = await initBatch(batch);
+		} catch (error) {
+			console.error(`  batch failed: ${errorMessage(error)}`);
+			failed += batch.length;
+			continue;
 		}
-	} else {
-		for (const file of usable) {
-			try {
-				const [init] = await initBatch([file]);
-				await send(file, init);
-			} catch (error) {
-				failed++;
-				console.error(`  fail  ${path.basename(file)}: ${errorMessage(error)}`);
-			}
-		}
+		let cursor = 0;
+		await Promise.all(
+			Array.from({ length: Math.min(concurrency, batch.length) }, async () => {
+				while (cursor < batch.length) {
+					const index = cursor++;
+					await send(batch[index], uploads[index]);
+				}
+			}),
+		);
 	}
 
 	console.log(
