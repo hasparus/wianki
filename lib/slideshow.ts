@@ -149,11 +149,12 @@ async function signPaths(paths: string[]): Promise<Map<string, string>> {
  * the same eligibility rule as the gallery.
  */
 export async function getSlideshowDeck(): Promise<SlideshowDeck> {
-	const rows = (await fetchSlideRows()).filter(
+	const all = await fetchSlideRows();
+	if (all.length === 0)
+		return { slides: await getAutoSlides(), source: "auto" };
+	const rows = all.filter(
 		(row) => row.kind === "text" || isPhotoVisible(row.photos),
 	);
-	if (rows.length === 0)
-		return { slides: await getAutoSlides(), source: "auto" };
 	const signed = await signPaths(
 		rows.flatMap((row) =>
 			row.kind === "photo" && row.photos ? [row.photos.storage_path] : [],

@@ -46,6 +46,9 @@
 - Realtime: `workers/slideshow-live` — Cloudflare Worker na
   [PartyServer](https://github.com/cloudflare/partykit) (Durable Objects),
   jeden pokój na wesele. Przeglądarka łączy się przez `partysocket`.
+- Kontrakt po drucie (typy wiadomości, walidacja, limity, weryfikacja tokenu)
+  mieszka wyłącznie w `lib/slideshow-protocol.ts`. Worker importuje ten sam
+  plik, więc obie strony nie mogą się rozjechać.
 - Autoryzacja: `/api/slideshow/live` (ciasteczko gościa lub administratora)
   wydaje 12-godzinny token HS256 (`SLIDESHOW_LIVE_SECRET`), który worker
   weryfikuje przy nawiązaniu WebSocketu; dodatkowo sprawdzany jest nagłówek
