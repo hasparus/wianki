@@ -7,7 +7,7 @@ photos, and the slideshow runs at the reception.
 
 | Decision | Choice | Consequence |
 |---|---|---|
-| Originals archive | **Cloudflare R2**, not Google Drive | Same account as the Workers. No OAuth consent screen, no 7-day refresh-token expiry, no GCP project. |
+| Originals archive | **Cloudflare R2** (`ARCHIVE_BACKEND=r2`) | Same account as the Workers. No OAuth consent screen, no 7-day refresh-token expiry, no GCP project. Drive stays available as the other backend for anyone who wants a browsable folder. |
 | Moderation | **Off** (`MODERATION_ENABLED=false`) | Photos appear instantly. No Vision credentials. Hide anything unwanted from `/admin` after the fact. |
 | Priority | Slideshow first | Gallery + `/pokaz` + live reactions are the must-have; archive is second. |
 
@@ -64,14 +64,14 @@ URLs are needed by Vercel, and `ALLOWED_ORIGIN` on both Workers needs the final
 production origin. So the origin is decided first, Workers deploy before the
 app, and the app deploys last.
 
-### 1. Code: Drive → R2
+### 1. Code: add R2 alongside Drive, select R2
 
-- Rewrite `workers/archive` against an R2 bucket binding (`put` / `list` / `delete`
-  replacing the Drive resumable-upload, search, and trash calls).
-- Rename `drive_file_id` → `archive_key` end to end. Nothing is deployed yet, so
-  the initial migration is edited in place rather than layering a rename migration
-  on a schema that has never existed.
-- Delete the Drive OAuth bootstrap script and its npm script.
+- Put both archives behind one `ArchiveBackend` contract in `workers/archive`
+  (`src/r2.ts`, `src/drive.ts`); `ARCHIVE_BACKEND` picks one per deployment and
+  refuses to start half-configured.
+- Rename `drive_file_id` → `archive_key` end to end — a Drive file id is an
+  archive key too. Nothing is deployed yet, so the initial migration is edited in
+  place rather than layering a rename migration on a schema that has never existed.
 - `npm run check` must pass before anything is deployed.
 
 ### 2. Supabase

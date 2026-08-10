@@ -7,7 +7,7 @@ inputs for all other workstreams.
 
 ## Fixed decisions
 
-Root Next.js app plus `workers/drive-archive` workspace; Node 24; private
+Root Next.js app plus `workers/archive` workspace; Node 24; private
 Supabase bucket; migrations only; three independent statuses; exact palette in
 `docs/visual-system.md`; no remote fonts or dark mode.
 

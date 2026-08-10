@@ -12,7 +12,7 @@ CORS; ten-minute operation JWT; 24-hour signed receipt; raw streaming body;
 
 ## Owned surfaces
 
-`workers/drive-archive`, local OAuth bootstrap script, Worker tests and secrets
+`workers/archive`, local OAuth bootstrap script, Worker tests and secrets
 documentation.
 
 ## Dependencies and outputs

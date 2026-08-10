@@ -17,7 +17,23 @@ const labels: Record<AdminAction, string> = {
 	reconcile_archive: "Znajdź w archiwum",
 };
 
-export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
+/**
+ * R2 removal is immediate and final; Drive keeps a trashed file recoverable
+ * for 30 days. The warning has to say which one the couple is about to do.
+ */
+const deleteWarning: Record<"r2" | "drive", string> = {
+	r2: "Usunąć kopię galeryjną i trwale skasować oryginał z archiwum? Tego nie da się cofnąć. W bazie pozostanie zapis potrzebny do audytu i ponowienia częściowo nieudanego usuwania.",
+	drive:
+		"Usunąć kopię galeryjną i przenieść oryginał do kosza Drive? Kosz Drive przechowa go jeszcze przez 30 dni. W bazie pozostanie zapis potrzebny do audytu i ponowienia częściowo nieudanego usuwania.",
+};
+
+export function AdminClient({
+	initial,
+	archiveBackend,
+}: {
+	initial: AdminPhotoPage;
+	archiveBackend: "r2" | "drive";
+}) {
 	const [photos, setPhotos] = useState(initial.photos);
 	const [nextCursor, setNextCursor] = useState(initial.nextCursor);
 	const [pendingId, setPendingId] = useState<string | null>(null);
@@ -82,11 +98,7 @@ export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
 	}
 
 	async function remove(photoId: string) {
-		if (
-			!window.confirm(
-				"Usunąć kopię galeryjną i trwale skasować oryginał z archiwum? Tego nie da się cofnąć. W bazie pozostanie zapis potrzebny do audytu i ponowienia częściowo nieudanego usuwania.",
-			)
-		) {
+		if (!window.confirm(deleteWarning[archiveBackend])) {
 			return;
 		}
 		setPendingId(photoId);

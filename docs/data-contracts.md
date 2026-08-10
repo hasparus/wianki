@@ -38,7 +38,7 @@ JPEG derivatives; WebP and PNG remain accepted for compatibility.
 
 ### `POST /api/uploads/:photoId/archive`
 
-`action=token` issues a fresh archive-only capability for a failed Drive upload.
+`action=token` issues a fresh archive-only capability for a failed archive upload.
 `action=complete` verifies the new Worker receipt and updates only archive state.
 This lets the same open browser retry its original without duplicating the hot
 photo row.
@@ -53,10 +53,12 @@ approved-photo/approximate-guest statistics.
 
 `PUT /v1/archive/:photoId` accepts a raw original body and upload JWT.
 
-`GET /v1/archive/:photoId` accepts a reconcile JWT and searches Drive by the
-photo UUID stored in `appProperties`.
+`GET /v1/archive/:photoId` accepts a reconcile JWT and searches the archive for
+the photo UUID: an `originals/<photoId>__` prefix listing on R2, an
+`appProperties.photoId` query on Drive.
 
-`DELETE /v1/archive/:photoId` accepts a delete JWT and trashes the Drive file.
+`DELETE /v1/archive/:photoId` accepts a delete JWT and removes the archived
+original: permanently on R2, into the 30-day trash on Drive.
 
 Browser CORS permits only the configured exact application origin.
 

@@ -1,9 +1,14 @@
 import { type JWTPayload, jwtVerify, SignJWT } from "jose";
+import type { ArchiveBackend } from "./backend";
+import { type DriveEnv, driveBackend } from "./drive";
+import { r2Backend } from "./r2";
 
-export interface Env {
+export interface Env extends DriveEnv {
 	ALLOWED_ORIGIN: string;
 	ARCHIVE_TOKEN_SECRET: string;
-	ARCHIVE_BUCKET: R2Bucket;
+	/** "r2" (default) or "drive" — see docs/integrations.md. */
+	ARCHIVE_BACKEND?: string;
+	ARCHIVE_BUCKET?: R2Bucket;
 }
 
 type Operation = "upload" | "delete" | "reconcile";
@@ -20,28 +25,23 @@ type OperationClaims = JWTPayload & {
 const audience = "wedding-archive";
 const maxOriginalBytes = 25 * 1024 * 1024;
 const encoder = new TextEncoder();
-const keyPrefix = "originals/";
 
 /**
- * Object keys stay human-readable so the couple can browse the bucket, while
- * the `originals/<photoId>__` prefix keeps reconciliation a single deterministic
- * prefix listing instead of a metadata search.
+ * One deployment archives to one place. Picking the backend explicitly rather
+ * than inferring it from whichever credentials happen to be present means a
+ * half-configured deploy fails loudly instead of quietly filing the wedding
+ * somewhere nobody is looking.
  */
-export function archiveKeyPrefix(photoId: string) {
-	return `${keyPrefix}${photoId}__`;
-}
-
-export function buildArchiveKey(photoId: string, filename: string) {
-	return `${archiveKeyPrefix(photoId)}${sanitizeObjectName(filename)}`;
-}
-
-export function sanitizeObjectName(value: string) {
-	return (
-		value
-			// biome-ignore lint/suspicious/noControlCharactersInRegex: path separators and control characters are exactly what gets replaced here.
-			.replace(/[\u0000-\u001f/\\]+/g, "-")
-			.slice(0, 180) || "zdjecie"
-	);
+export function selectBackend(env: Env): ArchiveBackend {
+	const choice = env.ARCHIVE_BACKEND ?? "r2";
+	if (choice === "drive") return driveBackend(env);
+	if (choice !== "r2") {
+		throw new Error(`Nieznane archiwum: ${choice}. Ustaw "r2" albo "drive".`);
+	}
+	if (!env.ARCHIVE_BUCKET) {
+		throw new Error("Brak powiązania ARCHIVE_BUCKET dla archiwum R2.");
+	}
+	return r2Backend(env.ARCHIVE_BUCKET);
 }
 
 function corsHeaders(origin: string | null, env: Env): Record<string, string> {
@@ -85,12 +85,7 @@ async function verifyOperation(request: Request, env: Env) {
 	return payload as OperationClaims;
 }
 
-async function receipt(
-	env: Env,
-	photoId: string,
-	archiveKey: string,
-	size: number,
-) {
+function receipt(env: Env, photoId: string, archiveKey: string, size: number) {
 	return new SignJWT({ kind: "receipt", photoId, archiveKey, size })
 		.setProtectedHeader({ alg: "HS256", typ: "JWT" })
 		.setIssuedAt()
@@ -102,6 +97,7 @@ async function receipt(
 async function uploadOriginal(
 	request: Request,
 	env: Env,
+	backend: ArchiveBackend,
 	claims: OperationClaims,
 ) {
 	if (
@@ -121,50 +117,41 @@ async function uploadOriginal(
 	if (requestLength !== claims.size)
 		throw new Error("Rozmiar pliku nie zgadza się z tokenem.");
 
-	const archiveKey = buildArchiveKey(claims.photoId, claims.filename);
-	const object = await env.ARCHIVE_BUCKET.put(archiveKey, request.body, {
-		httpMetadata: {
-			contentType: claims.contentType,
-			// Browsers downloading straight from a signed bucket URL keep the
-			// guest's original filename rather than the prefixed key.
-			contentDisposition: `attachment; filename="${sanitizeObjectName(claims.filename)}"`,
-		},
-		customMetadata: { photoId: claims.photoId },
+	const stored = await backend.upload(request.body, {
+		photoId: claims.photoId,
+		filename: claims.filename,
+		contentType: claims.contentType,
+		size: claims.size,
 	});
-	if (!object) throw new Error("Archiwum nie przyjęło oryginału.");
-	if (object.size !== claims.size) {
-		await env.ARCHIVE_BUCKET.delete(archiveKey);
-		throw new Error("Zapisany rozmiar nie zgadza się z tokenem.");
-	}
 	return {
-		receipt: await receipt(env, claims.photoId, archiveKey, object.size),
-		archiveKey,
+		receipt: await receipt(env, claims.photoId, stored.key, stored.size),
+		archiveKey: stored.key,
 	};
 }
 
-async function reconcileOriginal(env: Env, claims: OperationClaims) {
+async function reconcileOriginal(
+	env: Env,
+	backend: ArchiveBackend,
+	claims: OperationClaims,
+) {
 	if (claims.operation !== "reconcile")
 		throw new Error("Nieprawidłowa operacja.");
-	const listed = await env.ARCHIVE_BUCKET.list({
-		prefix: archiveKeyPrefix(claims.photoId),
-		limit: 1,
-	});
-	const object = listed.objects[0];
-	if (!object) return null;
+	const found = await backend.find(claims.photoId);
+	if (!found) return null;
 	return {
-		receipt: await receipt(env, claims.photoId, object.key, object.size),
-		archiveKey: object.key,
+		receipt: await receipt(env, claims.photoId, found.key, found.size),
+		archiveKey: found.key,
 	};
 }
 
-async function deleteOriginal(env: Env, claims: OperationClaims) {
+async function removeOriginal(
+	backend: ArchiveBackend,
+	claims: OperationClaims,
+) {
 	if (claims.operation !== "delete" || !claims.archiveKey) {
 		throw new Error("Brak pliku do usunięcia.");
 	}
-	if (!claims.archiveKey.startsWith(archiveKeyPrefix(claims.photoId))) {
-		throw new Error("Klucz nie należy do tego zdjęcia.");
-	}
-	await env.ARCHIVE_BUCKET.delete(claims.archiveKey);
+	await backend.remove(claims.photoId, claims.archiveKey);
 	return { ok: true };
 }
 
@@ -190,6 +177,7 @@ export default {
 		}
 
 		try {
+			const backend = selectBackend(env);
 			const claims = await verifyOperation(request, env);
 			if (claims.photoId !== match[1]) {
 				return json(
@@ -201,20 +189,20 @@ export default {
 			}
 			if (request.method === "PUT") {
 				return json(
-					await uploadOriginal(request, env, claims),
+					await uploadOriginal(request, env, backend, claims),
 					201,
 					origin,
 					env,
 				);
 			}
 			if (request.method === "GET") {
-				const result = await reconcileOriginal(env, claims);
+				const result = await reconcileOriginal(env, backend, claims);
 				return result
 					? json(result, 200, origin, env)
 					: json({ error: "Nie znaleziono oryginału." }, 404, origin, env);
 			}
 			if (request.method === "DELETE") {
-				return json(await deleteOriginal(env, claims), 200, origin, env);
+				return json(await removeOriginal(backend, claims), 200, origin, env);
 			}
 			return json({ error: "Niedozwolona metoda." }, 405, origin, env);
 		} catch (error) {

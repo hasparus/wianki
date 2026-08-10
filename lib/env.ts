@@ -21,6 +21,7 @@ const serverSchema = z
 		ADMIN_SESSION_SECRET: z.string().min(32),
 		ARCHIVE_WORKER_URL: z.url(),
 		ARCHIVE_TOKEN_SECRET: z.string().min(32),
+		ARCHIVE_BACKEND: z.enum(["r2", "drive"]).default("r2"),
 		MODERATION_ENABLED: z.stringbool().default(true),
 		SLIDESHOW_LIVE_URL: z.url().optional(),
 		SLIDESHOW_LIVE_SECRET: z.string().min(32).optional(),
