@@ -11,6 +11,14 @@ import {
 } from "@/lib/auth/session";
 import { serverEnv } from "@/lib/env";
 
+function decodeJoinCode(segment: string) {
+	try {
+		return decodeURIComponent(segment);
+	} catch {
+		return null;
+	}
+}
+
 export async function proxy(request: NextRequest) {
 	const { pathname, searchParams } = request.nextUrl;
 	const env = serverEnv();
@@ -28,6 +36,28 @@ export async function proxy(request: NextRequest) {
 			);
 		}
 		return response;
+	}
+
+	// Short join link shown as a QR code during the slideshow. The code is a
+	// separate, independently rotatable shared secret — leaking a photo of
+	// the projected QR never burns the printed table QR codes.
+	const joinMatch = pathname.match(/^\/p\/([^/]+)$/);
+	if (joinMatch) {
+		const candidate = decodeJoinCode(joinMatch[1]);
+		if (
+			candidate &&
+			env.GUEST_JOIN_CODE &&
+			secretMatches(candidate, env.GUEST_JOIN_CODE)
+		) {
+			const response = NextResponse.redirect(new URL("/pokaz", request.url));
+			response.cookies.set(
+				GUEST_COOKIE,
+				await createGuestSession(),
+				guestCookieOptions,
+			);
+			return response;
+		}
+		return NextResponse.redirect(new URL("/login", request.url));
 	}
 
 	if (pathname === "/admin" && searchParams.has("token")) {
@@ -58,7 +88,13 @@ export async function proxy(request: NextRequest) {
 		return NextResponse.next();
 	}
 
-	if (!request.cookies.has(GUEST_COOKIE)) {
+	// Any signed-in device passes this optimistic gate; the couple's admin
+	// session counts as one, so they reach /pokaz without scanning a guest QR.
+	// Every page and handler still authorizes its own request.
+	if (
+		!request.cookies.has(GUEST_COOKIE) &&
+		!request.cookies.has(ADMIN_COOKIE)
+	) {
 		return NextResponse.redirect(new URL("/login", request.url));
 	}
 	return NextResponse.next();

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { retainDeliveredItems } from "@/components/upload/items";
-import { completedUploadMessage } from "@/components/upload/messages";
+import { completedUploadMessages } from "@/components/upload/messages";
 import { validateUploadSelection } from "@/components/upload/selection";
 import type {
 	FinalizeResult,
@@ -24,9 +24,10 @@ const ORIGINAL_UPLOAD_CONCURRENCY = 2;
 export function useUploadBatch(onComplete: () => void) {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [items, setItems] = useState<UploadItem[]>([]);
-	const [consent, setConsent] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [summary, setSummary] = useState("");
+	const [activeBatchIds, setActiveBatchIds] = useState<readonly string[]>([]);
+	const [celebrationMessage, setCelebrationMessage] = useState("");
 
 	const itemsRef = useRef<UploadItem[]>([]);
 	itemsRef.current = items;
@@ -47,6 +48,7 @@ export function useUploadBatch(onComplete: () => void) {
 
 	const chooseFiles = useCallback((files: FileList | null) => {
 		setSummary("");
+		setCelebrationMessage("");
 		const selection = validateUploadSelection(Array.from(files ?? []));
 		if (inputRef.current) inputRef.current.value = "";
 		if (!selection.valid) {
@@ -80,10 +82,13 @@ export function useUploadBatch(onComplete: () => void) {
 				const { derivative, width, height } = await prepareDerivative(
 					item.file,
 				);
-				updateItem(item.id, { phase: "uploading" });
+				updateItem(item.id, { phase: "uploading", progress: 0 });
 				const [hot, archive] = await Promise.all([
 					uploadDerivative(init, derivative),
-					uploadArchive(init.photoId, item.file, init.archiveToken),
+					uploadArchive(init.photoId, item.file, init.archiveToken, {
+						onProgress: (fraction) =>
+							updateItem(item.id, { progress: fraction }),
+					}),
 				]);
 				let result: FinalizeResult;
 				try {
@@ -103,14 +108,13 @@ export function useUploadBatch(onComplete: () => void) {
 					updateItem(item.id, {
 						phase: "archive_failed",
 						message:
-							"Zdjęcie zostało przesłane na stronę, ale nie doszło na nasz dysk :(. Kliknij ponownie, aby spróbować jeszcze raz.",
+							"Zdjęcie jest już na stronie, ale nie doszło na nasz dysk :(. Kliknij „Wyślij zdjęcia”, aby spróbować jeszcze raz.",
 					});
 					return false;
 				}
 				updateItem(item.id, {
 					phase: "done",
-					message:
-						"Zdjęcie dotarło i zostanie przetworzone w ciągu kilku minut.",
+					message: "Zdjęcie dotarło. Za kilka minut będzie w galerii.",
 				});
 				return true;
 			} catch (error) {
@@ -132,6 +136,7 @@ export function useUploadBatch(onComplete: () => void) {
 				updateItem(item.id, {
 					phase: "uploading",
 					message: "Ponawiamy wysyłkę oryginału.",
+					progress: 0,
 				});
 				const token = await requestArchiveToken(item.photoId);
 				if (token.alreadyComplete) {
@@ -145,10 +150,14 @@ export function useUploadBatch(onComplete: () => void) {
 					item.photoId,
 					item.file,
 					token.archiveToken,
-					true,
+					{
+						readFailureMessage: true,
+						onProgress: (fraction) =>
+							updateItem(item.id, { progress: fraction }),
+					},
 				);
 				if (!archive.receipt) {
-					throw new Error(archive.error ?? "Drive nie przyjął oryginału.");
+					throw new Error(archive.error ?? "Archiwum nie przyjęło oryginału.");
 				}
 				await completeArchive(item.photoId, archive.receipt);
 				updateItem(item.id, {
@@ -169,9 +178,10 @@ export function useUploadBatch(onComplete: () => void) {
 	);
 
 	const upload = useCallback(async () => {
-		if (!consent || !items.length || busy) return;
+		if (!items.length || busy) return;
 		setBusy(true);
 		setSummary("");
+		setCelebrationMessage("");
 		try {
 			const freshItems = items.filter(
 				(item) => item.phase === "queued" || item.phase === "failed",
@@ -190,6 +200,7 @@ export function useUploadBatch(onComplete: () => void) {
 				})),
 				...retryItems.map((item) => ({ kind: "archive_retry" as const, item })),
 			];
+			setActiveBatchIds(jobs.map((job) => job.item.id));
 			const results = await runWithConcurrency(
 				jobs,
 				ORIGINAL_UPLOAD_CONCURRENCY,
@@ -200,7 +211,9 @@ export function useUploadBatch(onComplete: () => void) {
 			);
 			const succeeded = results.filter(Boolean).length;
 			if (results.length && succeeded === results.length) {
-				setSummary(completedUploadMessage());
+				const messages = completedUploadMessages();
+				setSummary(messages.summary);
+				setCelebrationMessage(messages.celebration);
 				onComplete();
 			} else {
 				setSummary(
@@ -213,17 +226,21 @@ export function useUploadBatch(onComplete: () => void) {
 			);
 		} finally {
 			setBusy(false);
+			setActiveBatchIds([]);
 		}
-	}, [busy, consent, items, onComplete, processFreshUpload, retryArchive]);
+	}, [busy, items, onComplete, processFreshUpload, retryArchive]);
+
+	const clearCelebration = useCallback(() => setCelebrationMessage(""), []);
 
 	return {
 		inputRef,
 		items,
-		consent,
+		activeBatchIds,
 		busy,
 		summary,
+		celebrationMessage,
 		chooseFiles,
-		setConsent,
+		clearCelebration,
 		upload,
 	};
 }

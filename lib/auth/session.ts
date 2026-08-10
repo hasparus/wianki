@@ -105,6 +105,23 @@ export async function requireAdmin() {
 	return session;
 }
 
+/**
+ * Guard for admin-only route handlers: returns the response to send back when
+ * the request may not proceed, or null when it may.
+ */
+export async function denyAdminRequest(
+	request: Request,
+): Promise<Response | null> {
+	if (!(await readAdminSession()))
+		return Response.json({ error: "Brak dostępu." }, { status: 401 });
+	if (request.headers.get("origin") !== serverEnv().APP_ORIGIN)
+		return Response.json(
+			{ error: "Nieprawidłowe źródło żądania." },
+			{ status: 403 },
+		);
+	return null;
+}
+
 export const guestCookieOptions = {
 	httpOnly: true,
 	secure: true,

@@ -42,7 +42,7 @@ export type Database = {
 					width: number | null;
 					height: number | null;
 					storage_path: string;
-					drive_file_id: string | null;
+					archive_key: string | null;
 					hot_status: Database["public"]["Enums"]["hot_status"];
 					archive_status: Database["public"]["Enums"]["archive_status"];
 					moderation_status: Database["public"]["Enums"]["moderation_status"];
@@ -64,7 +64,7 @@ export type Database = {
 					width?: number | null;
 					height?: number | null;
 					storage_path: string;
-					drive_file_id?: string | null;
+					archive_key?: string | null;
 					hot_status?: Database["public"]["Enums"]["hot_status"];
 					archive_status?: Database["public"]["Enums"]["archive_status"];
 					moderation_status?: Database["public"]["Enums"]["moderation_status"];
@@ -84,6 +84,56 @@ export type Database = {
 						referencedColumns: ["id"];
 					},
 				];
+			};
+			slideshow_slides: {
+				Row: {
+					id: string;
+					position: number;
+					kind: "photo" | "text";
+					photo_id: string | null;
+					title: string | null;
+					subtitle: string | null;
+					created_at: string;
+					updated_at: string;
+				};
+				Insert: {
+					id?: string;
+					position: number;
+					kind: "photo" | "text";
+					photo_id?: string | null;
+					title?: string | null;
+					subtitle?: string | null;
+					created_at?: string;
+					updated_at?: string;
+				};
+				Update: Partial<
+					Database["public"]["Tables"]["slideshow_slides"]["Insert"]
+				>;
+				Relationships: [
+					{
+						foreignKeyName: "slideshow_slides_photo_id_fkey";
+						columns: ["photo_id"];
+						isOneToOne: false;
+						referencedRelation: "photos";
+						referencedColumns: ["id"];
+					},
+				];
+			};
+			slideshow_settings: {
+				Row: {
+					id: boolean;
+					slide_seconds: number;
+					updated_at: string;
+				};
+				Insert: {
+					id?: boolean;
+					slide_seconds?: number;
+					updated_at?: string;
+				};
+				Update: Partial<
+					Database["public"]["Tables"]["slideshow_settings"]["Insert"]
+				>;
+				Relationships: [];
 			};
 			moderation_events: {
 				Row: {

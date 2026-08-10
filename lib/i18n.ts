@@ -21,6 +21,7 @@ export function formatGalleryStats(
 	contributingGuests: number,
 	approvedPhotos: number,
 ): string {
+	if (approvedPhotos === 0) return "";
 	const guests = declinePolish(contributingGuests, {
 		one: "gość",
 		few: "gości",

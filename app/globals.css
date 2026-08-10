@@ -12,6 +12,7 @@
 	--wedding-success: #21653a;
 	--wedding-disabled: #74746f;
 	--wedding-overlay: rgb(20 34 23 / 82%);
+	--wedding-green-deep: #1d3322;
 }
 
 @theme inline {
@@ -25,6 +26,7 @@
 	--color-wedding-warning: var(--wedding-warning);
 	--color-wedding-success: var(--wedding-success);
 	--color-wedding-disabled: var(--wedding-disabled);
+	--color-wedding-green-deep: var(--wedding-green-deep);
 	--font-sans: "Aptos", "Segoe UI", system-ui, -apple-system, sans-serif;
 	--font-serif:
 		"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -37,6 +39,8 @@
 html {
 	background: var(--wedding-ivory);
 	color: var(--wedding-green);
+	scrollbar-color: var(--wedding-green-soft) transparent;
+	scrollbar-width: thin;
 }
 
 body {
@@ -64,7 +68,282 @@ a {
 	color: var(--wedding-green);
 }
 
+.celebration-splash {
+	position: fixed;
+	z-index: 80;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+	padding: 1.5rem;
+	pointer-events: none;
+	background: var(--wedding-overlay);
+	animation: celebration-splash 4.4s ease-in-out both;
+}
+
+.celebration-card {
+	position: relative;
+	z-index: 1;
+	width: min(100%, 36rem);
+	padding: 2rem 1.5rem;
+	border: 2px solid var(--wedding-rose);
+	border-radius: 2rem;
+	background: var(--wedding-cream);
+	box-shadow: 0 1.5rem 4rem
+		color-mix(in srgb, var(--wedding-green) 35%, transparent);
+	color: var(--wedding-green);
+	text-align: center;
+	animation: celebration-card 700ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+.celebration-card__icon {
+	display: grid;
+	width: 3rem;
+	height: 3rem;
+	margin: 0 auto 1rem;
+	place-items: center;
+	border-radius: 999px;
+	background: var(--wedding-rose);
+	color: var(--wedding-green);
+	font-family: var(--font-serif);
+	font-size: 1.5rem;
+	animation: celebration-heart 900ms 500ms ease-in-out both;
+}
+
+.celebration-firework {
+	position: absolute;
+	width: 0;
+	height: 0;
+}
+
+.celebration-firework--left {
+	top: 24%;
+	left: 17%;
+}
+
+.celebration-firework--right {
+	top: 23%;
+	right: 17%;
+}
+
+.celebration-firework--top {
+	top: 13%;
+	left: 50%;
+}
+
+.celebration-spark {
+	--spark-angle: calc(var(--spark-index) * 30deg);
+
+	position: absolute;
+	top: -0.55rem;
+	left: -0.15rem;
+	width: 0.3rem;
+	height: 1.1rem;
+	border-radius: 999px;
+	background: var(--wedding-rose);
+	transform-origin: 50% 0.55rem;
+	animation: celebration-spark 1.15s var(--firework-delay) ease-out both;
+}
+
+.celebration-spark:nth-child(3n + 2) {
+	background: var(--wedding-ivory);
+}
+
+.celebration-spark:nth-child(3n) {
+	background: var(--wedding-green-soft);
+}
+
+@keyframes celebration-splash {
+	0% {
+		opacity: 0;
+	}
+	8%,
+	82% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+
+@keyframes celebration-card {
+	from {
+		opacity: 0;
+		transform: translateY(1.5rem) scale(0.88);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes celebration-heart {
+	0% {
+		transform: scale(0.7);
+	}
+	45% {
+		transform: scale(1.25) rotate(-8deg);
+	}
+	100% {
+		transform: scale(1) rotate(0);
+	}
+}
+
+@keyframes celebration-spark {
+	0% {
+		opacity: 0;
+		transform: rotate(var(--spark-angle)) translateY(0) scaleY(0.2);
+	}
+	18% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		transform: rotate(var(--spark-angle)) translateY(-5.5rem) scaleY(1);
+	}
+}
+
+/*
+ * Evening slideshow stage. The gallery stays ivory; the projected show plays
+ * on the deep-forest night variant of the palette, with rose used only as a
+ * decorative glow and for accents on green.
+ */
+.slideshow-stage {
+	background:
+		radial-gradient(
+			circle at 88% 112%,
+			rgb(243 176 183 / 16%),
+			transparent 34rem
+		),
+		radial-gradient(circle at 8% -12%, rgb(243 176 183 / 9%), transparent 26rem),
+		linear-gradient(180deg, var(--wedding-green), var(--wedding-green-deep));
+}
+
+/* On the night stage the light-page browser surfaces would disappear:
+ * retint focus rings, the caret, and text selection from the stage palette. */
+.slideshow-stage button,
+.slideshow-stage a,
+.slideshow-stage input {
+	outline-color: var(--wedding-ivory);
+}
+
+.slideshow-stage input {
+	caret-color: var(--wedding-rose);
+}
+
+/* Chrome without chrome: header controls sit directly on the photos, kept
+ * legible by a soft cast shadow instead of pill backgrounds. */
+.slideshow-control {
+	filter: drop-shadow(0 1px 3px rgb(20 34 23 / 85%))
+		drop-shadow(0 2px 10px rgb(20 34 23 / 45%));
+}
+
+.slideshow-stage ::selection {
+	background: var(--wedding-rose);
+	color: var(--wedding-green-deep);
+}
+
+@keyframes slideshow-slide-in {
+	from {
+		opacity: 0;
+		filter: blur(12px);
+		transform: scale(1.03);
+	}
+	to {
+		opacity: 1;
+		filter: blur(0);
+		transform: scale(1);
+	}
+}
+
+@keyframes slideshow-slide-out {
+	from {
+		opacity: 1;
+		filter: blur(0);
+		transform: scale(1);
+	}
+	to {
+		opacity: 0;
+		filter: blur(8px);
+		transform: scale(0.995);
+	}
+}
+
+.slideshow-slide-enter {
+	animation: slideshow-slide-in 380ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.slideshow-slide-exit {
+	animation: slideshow-slide-out 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes slideshow-float-up {
+	0% {
+		transform: translateY(0) scale(0.5);
+		opacity: 0;
+	}
+	12% {
+		transform: translateY(-8vh) scale(1);
+		opacity: 1;
+	}
+	85% {
+		opacity: 1;
+	}
+	100% {
+		transform: translateY(-108vh) scale(1.15);
+		opacity: 0;
+	}
+}
+
+.slideshow-reaction {
+	position: absolute;
+	bottom: -1.6em;
+	animation: slideshow-float-up linear both;
+	will-change: transform, opacity;
+}
+
+@keyframes slideshow-sway {
+	from {
+		transform: translateX(-0.4em) rotate(-7deg);
+	}
+	to {
+		transform: translateX(0.4em) rotate(7deg);
+	}
+}
+
+.slideshow-reaction > span {
+	display: inline-block;
+	animation: slideshow-sway 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes slideshow-drift {
+	from {
+		transform: translateX(100vw);
+	}
+	to {
+		transform: translateX(-102%);
+	}
+}
+
+.slideshow-comment {
+	position: absolute;
+	left: 0;
+	white-space: nowrap;
+	animation: slideshow-drift linear both;
+	will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
+	.celebration-splash,
+	.celebration-card,
+	.celebration-card__icon {
+		animation-name: none;
+	}
+
+	.celebration-spark {
+		display: none;
+	}
+
 	*,
 	*::before,
 	*::after {
