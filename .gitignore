@@ -61,3 +61,6 @@ workers/**/.wrangler/
 **/supabase/.branches
 **/supabase/.temp
 .codex
+
+# Local deploy secrets, never committed
+.secrets.deploy

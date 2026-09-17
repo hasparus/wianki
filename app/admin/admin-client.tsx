@@ -14,10 +14,26 @@ const labels: Record<AdminAction, string> = {
 	approve: "Zatwierdź i pokaż",
 	hide: "Ukryj z galerii",
 	retry_moderation: "Sprawdź ponownie",
-	reconcile_archive: "Znajdź w Drive",
+	reconcile_archive: "Znajdź w archiwum",
 };
 
-export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
+/**
+ * R2 removal is immediate and final; Drive keeps a trashed file recoverable
+ * for 30 days. The warning has to say which one the couple is about to do.
+ */
+const deleteWarning: Record<"r2" | "drive", string> = {
+	r2: "Usunąć kopię galeryjną i trwale skasować oryginał z archiwum? Tego nie da się cofnąć. W bazie pozostanie zapis potrzebny do audytu i ponowienia częściowo nieudanego usuwania.",
+	drive:
+		"Usunąć kopię galeryjną i przenieść oryginał do kosza Drive? Kosz Drive przechowa go jeszcze przez 30 dni. W bazie pozostanie zapis potrzebny do audytu i ponowienia częściowo nieudanego usuwania.",
+};
+
+export function AdminClient({
+	initial,
+	archiveBackend,
+}: {
+	initial: AdminPhotoPage;
+	archiveBackend: "r2" | "drive";
+}) {
 	const [photos, setPhotos] = useState(initial.photos);
 	const [nextCursor, setNextCursor] = useState(initial.nextCursor);
 	const [pendingId, setPendingId] = useState<string | null>(null);
@@ -82,11 +98,7 @@ export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
 	}
 
 	async function remove(photoId: string) {
-		if (
-			!window.confirm(
-				"Usunąć kopię galeryjną i przenieść oryginał do kosza Drive? W bazie pozostanie zapis potrzebny do audytu i ponowienia częściowo nieudanego usuwania.",
-			)
-		) {
+		if (!window.confirm(deleteWarning[archiveBackend])) {
 			return;
 		}
 		setPendingId(photoId);
@@ -127,6 +139,14 @@ export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
 					Kod QR administratora działa jak wspólne hasło. Nie udostępniaj go
 					gościom.
 				</p>
+				<p className="mt-4">
+					<a
+						href="/admin/pokaz"
+						className="inline-block min-h-11 rounded-full border-2 border-wedding-green px-5 py-2 font-bold hover:bg-wedding-rose/40"
+					>
+						Ułóż pokaz slajdów
+					</a>
+				</p>
 			</header>
 			{message ? (
 				<p role="alert" className="mt-6 font-bold text-wedding-error">
@@ -165,7 +185,7 @@ export function AdminClient({ initial }: { initial: AdminPhotoPage }) {
 								<dl className="mt-2 grid grid-cols-2 gap-1 text-sm">
 									<dt>Galeria</dt>
 									<dd>{photo.hotStatus}</dd>
-									<dt>Drive</dt>
+									<dt>Archiwum</dt>
 									<dd>{photo.archiveStatus}</dd>
 									<dt>Moderacja</dt>
 									<dd>{photo.moderationStatus}</dd>

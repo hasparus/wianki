@@ -16,7 +16,10 @@ export function LoginForm() {
 			body: form,
 		});
 		if (response.ok) {
-			window.location.assign("/");
+			const body = (await response.json().catch(() => null)) as {
+				redirect?: string;
+			} | null;
+			window.location.assign(body?.redirect ?? "/");
 			return;
 		}
 		const body = (await response.json().catch(() => null)) as {
@@ -29,7 +32,7 @@ export function LoginForm() {
 	return (
 		<form onSubmit={submit} className="mt-8 grid gap-4">
 			<label htmlFor="passphrase" className="font-semibold">
-				Hasło z zaproszenia
+				Hasło
 			</label>
 			<input
 				id="passphrase"

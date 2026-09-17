@@ -98,13 +98,13 @@ export async function POST(
 	const supabase = supabaseAdmin();
 	const { data: photo, error: photoError } = await supabase
 		.from("photos")
-		.select("id,storage_path,original_size,archive_status,drive_file_id")
+		.select("id,storage_path,original_size,archive_status,archive_key")
 		.eq("id", photoId)
 		.eq("guest_id", session.guestId)
 		.single();
 	if (photoError || !photo) return jsonError("Nie znaleziono zdjęcia.", 404);
 
-	let driveFileId: string | null = photo.drive_file_id;
+	let archiveKey: string | null = photo.archive_key;
 	let archiveStatus: ArchiveStatus =
 		photo.archive_status === "uploaded" ? "uploaded" : "failed";
 	let archiveError = parsed.data.archiveError ?? null;
@@ -117,7 +117,7 @@ export async function POST(
 			) {
 				throw new Error("Potwierdzenie dotyczy innego zdjęcia.");
 			}
-			driveFileId = receipt.driveFileId;
+			archiveKey = receipt.archiveKey;
 			archiveStatus = "uploaded";
 			archiveError = null;
 		} catch (error) {
@@ -140,7 +140,7 @@ export async function POST(
 			.update({
 				hot_status: "failed",
 				archive_status: archiveStatus,
-				drive_file_id: driveFileId,
+				archive_key: archiveKey,
 				last_error: lastError,
 			})
 			.eq("id", photoId);
@@ -157,7 +157,7 @@ export async function POST(
 			hot_status: "uploaded",
 			archive_status: archiveStatus,
 			moderation_status: moderationStatus,
-			drive_file_id: driveFileId,
+			archive_key: archiveKey,
 			derivative_size: parsed.data.derivativeSize,
 			derivative_content_type: parsed.data.derivativeType,
 			width: parsed.data.width,

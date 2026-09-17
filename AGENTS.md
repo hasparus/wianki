@@ -1,93 +1,97 @@
-# Wedding Gallery Agent Guide
+# Wedding gallery agent guide
 
 ## Project in one minute
 
-This repository is a private, Polish-first wedding photo gallery. Guests enter
-through a shared QR token or manual invitation passphrase, receive a signed
-guest cookie, accept the privacy notice, and upload photos from their phones.
-There are no named guest accounts and uploads must not be associated with names,
-email addresses, or IP addresses.
+Private Polish-first wedding photo gallery. Guest enters by shared QR token or
+invitation passphrase -> signed guest cookie -> privacy notice -> uploads from
+phone. No named accounts. Never tie an upload to name, email, or IP.
 
-For each photo, the browser creates an EXIF-free gallery derivative and uploads
-it directly to the private Supabase `gallery` bucket. The original streams
-through `workers/drive-archive` into the couple's private Google Drive folder.
-Finalization verifies both destinations, then Google Vision SafeSearch checks
-the derivative — unless `MODERATION_ENABLED=false`, in which case finalization
-auto-approves the photo and skips Vision entirely. Only successfully uploaded,
-moderation-approved derivatives appear in the manually refreshed, newest-first
-gallery; the gallery eligibility rule itself never changes.
+Per photo: browser builds EXIF-free derivative -> private Supabase `gallery`
+bucket. Original streams through `workers/archive` -> R2 (`ARCHIVE_BACKEND=r2`,
+default) or the couple's Drive folder (`=drive`). Finalize verifies both, then
+Vision SafeSearch checks the derivative. `MODERATION_ENABLED=false` ->
+auto-approve, skip Vision.
 
-Administrators enter through a separate private QR token and 12-hour signed
-cookie. `/admin` exposes moderation and recovery queues plus approve, hide,
-moderation retry, Drive reconciliation, and confirmed deletion actions.
-Deletion can partially fail, so Supabase deletion and Drive trashing remain
-retryable.
+Gallery shows uploaded + approved derivatives only, newest first, refreshed by
+hand. That rule never changes.
 
-The sole canonical production site is `https://wedding.pawel.space`. Do not add
-or restore alternative production domains without an explicit user request.
+Admin enters by separate private QR token, 12-hour signed cookie. `/admin` =
+moderation and recovery queues: approve, hide, retry moderation, reconcile
+archive, confirm deletion. Deletion can half-fail, so Supabase deletion and
+archive removal stay retryable.
 
-V1 intentionally excludes videos, comments, likes, facial recognition, named
-accounts, Realtime subscriptions, and background polling. External services are
-Supabase (database and private derivatives), a Cloudflare Worker (streaming
-boundary), Google Drive (private originals), Google Vision (moderation), and
-Vercel (Next.js hosting). Do not assume those services are already configured;
-follow `README.md`, `docs/integrations.md`, and `docs/operations.md`.
+Canonical production site: `https://wedding.pawel.space`. Do not add or restore
+other production domains unless asked. The `wianki.vercel.app` in the wrangler
+configs is a fork deploy, not a second canonical domain.
 
-Use this summary as the baseline for a new task, then inspect only the relevant
-source files and focused document under `docs/`. `docs/architecture.md` explains
-the full request flow, `docs/data-contracts.md` defines persisted states, and
-`docs/tasks/` contains delegatable workstream briefs.
+V1 excludes video, comments, likes, face recognition, named accounts, Realtime,
+background polling. One addition on top: live slideshow (`/pokaz`, editor
+`/admin/pokaz`, worker `workers/slideshow-live` on PartyServer Durable
+Objects). Anonymous ephemeral reactions and comments, never persisted. Gallery
+still has no comments or likes. See `docs/slideshow.md`.
+
+External services, none preconfigured: Supabase (DB, derivatives), Cloudflare
+Workers (streaming boundary), R2 or Drive (originals), Vision (moderation),
+Vercel (hosting). Follow `README.md`, `docs/integrations.md`,
+`docs/operations.md`.
+
+Start here, then read only the source and the one doc your task needs.
+`docs/architecture.md` = request flow. `docs/data-contracts.md` = persisted
+states.
 
 ## Next.js 16 rule
 
-This is not the Next.js remembered from older training data. Before changing a
-Next.js feature, read the matching guide in `node_modules/next/dist/docs/`.
-In particular:
+Not the Next.js in your training data. Read the matching guide in
+`node_modules/next/dist/docs/` before touching a Next feature.
 
-- use `proxy.ts`, not deprecated `middleware.ts`;
-- `cookies()` and route `params` are asynchronous;
-- Proxy is only an optimistic access check;
-- every Server Action and Route Handler authorizes its own request.
+- `proxy.ts`, not deprecated `middleware.ts`
+- `cookies()` and route `params` are async
+- proxy = optimistic check only
+- every Server Action and Route Handler authorizes its own request
 
 ## Immutable product decisions
 
 - Polish UI, mobile first, photos only.
-- Maximum 10 files per batch and 25 MiB per original.
-- Private Supabase bucket; no public table or object policies.
-- Originals stream through the Cloudflare Worker into a user-owned Drive folder.
-- `hot_status`, `archive_status`, and `moderation_status` are independent.
-- Gallery contains only `hot_status=uploaded` and `moderation_status=approved`.
-- No Realtime or background polling in v1.
-- Admin entry is a private bearer QR, not a user-account system.
-- No secret, OAuth output, generated QR code, or real photo may enter Git.
+- Max 10 files per batch, 25 MiB per original.
+- Private Supabase bucket. No public table or object policies.
+- One deployment, one archive, behind the `ArchiveBackend` contract and the
+  signed-receipt boundary.
+- `hot_status`, `archive_status`, `moderation_status` independent.
+- Gallery = `hot_status=uploaded` AND `moderation_status=approved`.
+- No Realtime, no background polling.
+- Admin entry = bearer QR, not user accounts.
+- **No secret, OAuth output, generated QR, or real photo may enter Git.**
 
 ## Visual invariants
 
-Use the tokens defined in `app/globals.css`; never duplicate palette hex values
-inside components. Forest green on ivory is the normal text pairing. Rose is
-decorative and must not be ordinary text on ivory. Do not add automatic dark
-mode. All interactive states must retain WCAG AA contrast and visible focus.
+Tokens live in `app/globals.css`. Never repeat palette hex in components.
+Forest green on ivory = normal text. Rose = decorative, never body text on
+ivory. No automatic dark mode. Every interactive state keeps WCAG AA contrast
+and a visible focus ring.
 
 ## Boundaries
 
-- `app/` owns pages and HTTP handlers.
-- `components/` owns interactive UI only.
-- `lib/auth` owns all session parsing and authorization.
-- `lib/supabase` owns Supabase client construction.
-- `lib/domain.ts` owns cross-boundary limits and status vocabulary.
-- `workers/drive-archive` owns Google Drive credentials and Drive API calls.
-- `supabase/migrations` is the only source of truth for production schema.
-- Planner briefs live in `docs/tasks`; implementation plans may refine internals
-  but must not silently change locked contracts.
+| Path | Owns |
+| --- | --- |
+| `app/` | pages, HTTP handlers |
+| `components/` | interactive UI |
+| `lib/auth` | session parsing, authorization |
+| `lib/supabase` | client construction |
+| `lib/domain.ts` | cross-boundary limits, status vocabulary |
+| `lib/slideshow-protocol.ts` | live wire contract, imported by the worker too |
+| `workers/archive` | archive credentials, archive API calls |
+| `supabase/migrations` | only source of truth for production schema |
+
+Plans may refine internals. Never silently change a locked contract — the
+locked ones are in `docs/data-contracts.md` and the immutable decisions above.
 
 ## Required quality gate
 
-Run `npm run check` before handing off. Add focused tests for every authorization
-or state-transition change. A clean checkout must build without network access
-to font providers. Do not modify generated Next.js declarations.
+`npm run check` before handing off. Focused tests for every authorization or
+state-transition change. Clean checkout builds with no network access to font
+providers. Do not edit generated Next declarations.
 
 ## Working-tree safety
 
-The `.agents` directory predates this application setup and is not part of the
-wedding implementation. Preserve it unless the user explicitly asks otherwise.
-Do not discard unrelated working-tree changes.
+`.agents` predates this app. Leave it alone unless asked. Do not discard
+unrelated working-tree changes.

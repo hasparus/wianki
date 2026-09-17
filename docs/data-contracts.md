@@ -1,76 +1,69 @@
-# Data and HTTP Contracts
+# Data and HTTP contracts
 
 ## Status invariants
 
 `hot_status`: `pending | uploaded | failed | deleted`
+`archive_status`: `pending | uploaded | failed | trashed | deletion_error`
+`moderation_status`: `pending | approved | flagged | review_required | rejected`
 
-`archive_status`:
-`pending | uploaded | failed | trashed | deletion_error`
-
-`moderation_status`:
-`pending | approved | flagged | review_required | rejected`
-
-Gallery eligibility is exactly:
-`hot_status = uploaded AND moderation_status = approved`.
+Gallery eligibility, exactly: `hot_status = uploaded AND moderation_status =
+approved`.
 
 ## Guest APIs
 
-### `POST /api/uploads/init`
+**`POST /api/uploads/init`** — in `{ consent: true, files: [{name,type,size}] }`,
+1-10 items, accepted image MIME, 25 MiB each. Out: batch UUID, and per item a
+photo UUID, Storage path, signed upload token, archive-operation token.
 
-Input: `{ consent: true, files: [{ name, type, size }] }`.
+**`POST /api/uploads/:photoId/finalize`** — in: derivative dimensions, type,
+size, optional archive receipt, optional archive error. Checks ownership,
+downloads the derivative, verifies size + receipt, saves both outcomes, returns
+`moderation_status=pending`. SafeSearch continues after the response ->
+`approved | flagged | review_required`. `MODERATION_ENABLED=false` -> returns
+`approved` at once, skips SafeSearch, logs an `approved` event with actor
+`system`. New clients send JPEG; WebP and PNG still accepted.
 
-Limits: 1–10 items, accepted image MIME types, maximum 25 MiB each.
+**`POST /api/uploads/:photoId/archive`** — `action=token` mints a fresh
+archive-only capability after a failed archive upload. `action=complete`
+verifies the new receipt, updates archive state only. Lets the same open
+browser retry without duplicating the hot row.
 
-Output: batch UUID and, per item, photo UUID, Storage path, signed upload token,
-and archive-operation token.
-
-### `POST /api/uploads/:photoId/finalize`
-
-Input: derivative dimensions/type/size, optional archive receipt, and optional
-archive error. The handler verifies ownership, downloads the private derivative,
-verifies its size and receipt, persists both upload outcomes, and returns with
-`moderation_status=pending`. SafeSearch continues after the response; it updates
-moderation to `approved`, `flagged`, or `review_required`. When
-`MODERATION_ENABLED=false`, the handler instead returns
-`moderation_status=approved` right away, skips SafeSearch, and logs an
-`approved` moderation event with actor `system`. New clients create
-JPEG derivatives; WebP and PNG remain accepted for compatibility.
-
-### `POST /api/uploads/:photoId/archive`
-
-`action=token` issues a fresh archive-only capability for a failed Drive upload.
-`action=complete` verifies the new Worker receipt and updates only archive state.
-This lets the same open browser retry its original without duplicating the hot
-photo row.
-
-### `GET /api/gallery`
-
-Optional opaque cursor containing the last timestamp/UUID pair. Returns at most
-25 approved items, one-hour signed read URLs, the next cursor, and
-approved-photo/approximate-guest statistics.
+**`GET /api/gallery`** — optional opaque cursor (last timestamp + UUID). Up to
+25 approved items, one-hour signed read URLs, next cursor, approved-photo and
+approximate-guest stats.
 
 ## Worker API
 
-`PUT /v1/archive/:photoId` accepts a raw original body and upload JWT.
+| Route | Token | Does |
+| --- | --- | --- |
+| `PUT /v1/archive/:photoId` | upload | streams the raw original in |
+| `GET /v1/archive/:photoId` | reconcile | finds by photo UUID: `originals/<photoId>__` prefix on R2, `appProperties.photoId` on Drive |
+| `DELETE /v1/archive/:photoId` | delete | removes it: permanent on R2, 30-day trash on Drive |
 
-`GET /v1/archive/:photoId` accepts a reconcile JWT and searches Drive by the
-photo UUID stored in `appProperties`.
+Failure statuses say which kind: 401 bad token, 403 wrong photo or origin, 400
+bad claims, 404 nothing archived, 500 misconfigured deploy, 502 archive itself
+failed. 500 and above log the detail and tell the browser only that the archive
+is unavailable.
 
-`DELETE /v1/archive/:photoId` accepts a delete JWT and trashes the Drive file.
-
-Browser CORS permits only the configured exact application origin.
+CORS allows exactly one configured origin.
 
 ## Admin API
 
-`GET /api/admin/photos` returns every actionable photo state, newest first, with
-an optional opaque cursor for older records. Fully deleted tombstones stay in
-Postgres for audit but are omitted once neither copy has a retryable action.
-This lets an administrator retract an approved photo as well as handle flagged,
-failed, and partially deleted items.
+**`GET /api/admin/photos`** — every actionable photo state, newest first,
+optional opaque cursor. Fully deleted tombstones stay in Postgres for audit but
+drop out once neither copy has a retryable action.
 
-`PATCH /api/admin/photos/:photoId` supports `approve`, `hide`,
-`retry_moderation`, and `reconcile_archive`.
+**`PATCH /api/admin/photos/:photoId`** — `approve | hide | retry_moderation |
+reconcile_archive`.
 
-`DELETE /api/admin/photos/:photoId` removes the derivative, trashes the
-original, and records any partial failure. It retains the photo row as an audit
-and retry tombstone instead of deleting it from Postgres.
+**`DELETE /api/admin/photos/:photoId`** — removes derivative and original,
+records partial failure, keeps the row as an audit and retry tombstone.
+
+## Slideshow APIs
+
+**`GET /api/slideshow/live`** — guest or admin cookie in, 12-hour HS256 room
+token out, or `{ live: null }` when the live worker is unconfigured.
+
+**`/api/admin/slides*`** — admin cookie + same origin, enforced by
+`denyAdminRequest`. Reorder takes a full permutation of current slide ids;
+anything else is 409.

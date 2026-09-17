@@ -1,0 +1,29 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "wedding-slideshow-live",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-07-23",
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		// Must equal the origin this deployment is actually served from. The
+		// canonical site is https://wedding.pawel.space (AGENTS.md); the value
+		// below is the wianki.vercel.app fork deploy this branch was tested on.
+		"ALLOWED_ORIGIN": "https://wianki.vercel.app"
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "SlideshowParty",
+				"class_name": "SlideshowParty"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["SlideshowParty"]
+		}
+	]
+}

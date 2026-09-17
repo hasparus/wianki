@@ -2,7 +2,7 @@ import { jwtVerify, SignJWT } from "jose";
 import { serverEnv } from "@/lib/env";
 
 const encoder = new TextEncoder();
-const audience = "wedding-drive-archive";
+const audience = "wedding-archive";
 
 export type ArchiveOperation = "upload" | "delete" | "reconcile";
 
@@ -12,12 +12,12 @@ export type ArchiveClaims = {
 	filename?: string;
 	contentType?: string;
 	size?: number;
-	driveFileId?: string;
+	archiveKey?: string;
 };
 
 export type ArchiveReceipt = {
 	photoId: string;
-	driveFileId: string;
+	archiveKey: string;
 	size: number;
 };
 
@@ -42,14 +42,14 @@ export async function verifyArchiveReceipt(token: string) {
 	if (
 		payload.kind !== "receipt" ||
 		typeof payload.photoId !== "string" ||
-		typeof payload.driveFileId !== "string" ||
+		typeof payload.archiveKey !== "string" ||
 		typeof payload.size !== "number"
 	) {
 		throw new Error("Nieprawidłowe potwierdzenie archiwizacji.");
 	}
 	return {
 		photoId: payload.photoId,
-		driveFileId: payload.driveFileId,
+		archiveKey: payload.archiveKey,
 		size: payload.size,
 	} satisfies ArchiveReceipt;
 }

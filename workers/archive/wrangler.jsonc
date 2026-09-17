@@ -1,0 +1,26 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "wedding-archive",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-07-23",
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		// Must equal the origin this deployment is actually served from. The
+		// canonical site is https://wedding.pawel.space (AGENTS.md); the value
+		// below is the wianki.vercel.app fork deploy this branch was tested on.
+		"ALLOWED_ORIGIN": "https://wianki.vercel.app",
+		// "r2" keeps originals in the bucket below. Switch to "drive" to stream
+		// them into a user-owned Google Drive folder instead: delete the
+		// "r2_buckets" block, run `npm run drive:bootstrap`, and put the four
+		// GOOGLE_* values from oauth-output/drive-oauth.json in as secrets.
+		"ARCHIVE_BACKEND": "r2"
+	},
+	"r2_buckets": [
+		{
+			"binding": "ARCHIVE_BUCKET",
+			"bucket_name": "wedding-originals"
+		}
+	]
+}

@@ -36,7 +36,7 @@ create table public.photos (
   width integer,
   height integer,
   storage_path text not null unique,
-  drive_file_id text unique,
+  archive_key text unique,
   hot_status public.hot_status not null default 'pending',
   archive_status public.archive_status not null default 'pending',
   moderation_status public.moderation_status not null default 'pending',

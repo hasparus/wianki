@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { createArchiveToken, verifyArchiveReceipt } from "@/lib/archive-token";
-import { readAdminSession } from "@/lib/auth/session";
+import { denyAdminRequest } from "@/lib/auth/session";
 import { type ArchiveStatus, GALLERY_BUCKET } from "@/lib/domain";
 import { serverEnv } from "@/lib/env";
-import { assertSameOrigin, jsonError, noStoreJson } from "@/lib/http";
+import { jsonError, noStoreJson } from "@/lib/http";
 import { moderateImage } from "@/lib/moderation";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -14,14 +14,14 @@ const actionSchema = z.object({
 async function photoById(photoId: string) {
 	const { data, error } = await supabaseAdmin()
 		.from("photos")
-		.select("id,storage_path,drive_file_id,original_size")
+		.select("id,storage_path,archive_key,original_size")
 		.eq("id", photoId)
 		.single();
 	if (error || !data) return null;
 	return data as {
 		id: string;
 		storage_path: string;
-		drive_file_id: string | null;
+		archive_key: string | null;
 		original_size: number;
 	};
 }
@@ -30,12 +30,8 @@ export async function PATCH(
 	request: Request,
 	{ params }: { params: Promise<{ photoId: string }> },
 ) {
-	if (!(await readAdminSession())) return jsonError("Brak dostępu.", 401);
-	try {
-		assertSameOrigin(request);
-	} catch (response) {
-		return response as Response;
-	}
+	const denied = await denyAdminRequest(request);
+	if (denied) return denied;
 	const parsed = actionSchema.safeParse(await request.json().catch(() => null));
 	if (!parsed.success) return jsonError("Nieznana akcja.", 400);
 	const { photoId } = await params;
@@ -102,7 +98,8 @@ export async function PATCH(
 		`${serverEnv().ARCHIVE_WORKER_URL}/v1/archive/${photoId}`,
 		{ headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
 	);
-	if (!response.ok) return jsonError("Nie znaleziono oryginału w Drive.", 404);
+	if (!response.ok)
+		return jsonError("Nie znaleziono oryginału w archiwum.", 404);
 	const body = (await response.json()) as { receipt?: string };
 	if (!body.receipt) return jsonError("Worker nie zwrócił potwierdzenia.", 502);
 	const receipt = await verifyArchiveReceipt(body.receipt);
@@ -110,7 +107,7 @@ export async function PATCH(
 		.from("photos")
 		.update({
 			archive_status: "uploaded",
-			drive_file_id: receipt.driveFileId,
+			archive_key: receipt.archiveKey,
 			last_error: null,
 		})
 		.eq("id", photoId);
@@ -121,12 +118,8 @@ export async function DELETE(
 	request: Request,
 	{ params }: { params: Promise<{ photoId: string }> },
 ) {
-	if (!(await readAdminSession())) return jsonError("Brak dostępu.", 401);
-	try {
-		assertSameOrigin(request);
-	} catch (response) {
-		return response as Response;
-	}
+	const denied = await denyAdminRequest(request);
+	if (denied) return denied;
 	const { photoId } = await params;
 	const photo = await photoById(photoId);
 	if (!photo) return jsonError("Nie znaleziono zdjęcia.", 404);
@@ -138,14 +131,14 @@ export async function DELETE(
 		.remove([photo.storage_path]);
 	if (storageError) errors.push("Nie usunięto kopii galeryjnej.");
 
-	let archiveStatus: ArchiveStatus = photo.drive_file_id
+	let archiveStatus: ArchiveStatus = photo.archive_key
 		? "deletion_error"
 		: "failed";
-	if (photo.drive_file_id) {
+	if (photo.archive_key) {
 		const token = await createArchiveToken({
 			photoId,
 			operation: "delete",
-			driveFileId: photo.drive_file_id,
+			archiveKey: photo.archive_key,
 		});
 		const response = await fetch(
 			`${serverEnv().ARCHIVE_WORKER_URL}/v1/archive/${photoId}`,
@@ -156,7 +149,7 @@ export async function DELETE(
 			},
 		);
 		if (response.ok) archiveStatus = "trashed";
-		else errors.push("Nie przeniesiono oryginału do kosza Drive.");
+		else errors.push("Nie usunięto oryginału z archiwum.");
 	}
 
 	await supabase

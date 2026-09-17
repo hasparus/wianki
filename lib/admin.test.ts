@@ -32,14 +32,14 @@ describe("admin photo visibility", () => {
 			isAdminPhotoActionable({
 				hot_status: "deleted",
 				archive_status: "trashed",
-				drive_file_id: "drive-file",
+				archive_key: "originals/photo__x.jpg",
 			}),
 		).toBe(false);
 		expect(
 			isAdminPhotoActionable({
 				hot_status: "deleted",
 				archive_status: "failed",
-				drive_file_id: null,
+				archive_key: null,
 			}),
 		).toBe(false);
 	});
@@ -49,14 +49,14 @@ describe("admin photo visibility", () => {
 			isAdminPhotoActionable({
 				hot_status: "deleted",
 				archive_status: "deletion_error",
-				drive_file_id: "drive-file",
+				archive_key: "originals/photo__x.jpg",
 			}),
 		).toBe(true);
 		expect(
 			isAdminPhotoActionable({
 				hot_status: "failed",
 				archive_status: "trashed",
-				drive_file_id: "drive-file",
+				archive_key: "originals/photo__x.jpg",
 			}),
 		).toBe(true);
 	});

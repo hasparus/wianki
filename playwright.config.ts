@@ -7,6 +7,7 @@ const ciEnv = {
 	APP_ORIGIN: "http://localhost:3000",
 	NEXT_PUBLIC_APP_ORIGIN: "http://localhost:3000",
 	GUEST_ENTRY_TOKEN: "e2e_guest_entry_token_value_32_bytes",
+	GUEST_JOIN_CODE: "e2e-join-code",
 	GUEST_ACCESS_PASSPHRASE: "e2e invitation passphrase",
 	GUEST_SESSION_SECRET: "e2e_guest_session_secret_value_32b",
 	ADMIN_ENTRY_TOKEN: "e2e_admin_entry_token_value_32_bytes",

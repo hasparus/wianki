@@ -20,6 +20,7 @@
 			"!!**/blob-report",
 			"!!**/.wrangler",
 			"!!.agents",
+			"!!.claude",
 			"!!.codex",
 			"!!.uv-cache",
 			"!!.vercel",
