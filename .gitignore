@@ -64,3 +64,10 @@ workers/**/.wrangler/
 
 # Local deploy secrets, never committed
 .secrets.deploy
+
+# Impeccable design skill: local settings and the generated engine payload
+# (platform binary + font index). Restore with `npx impeccable update`.
+.claude/settings.local.json
+.claude/skills/impeccable/scripts/bin/
+.claude/skills/impeccable/scripts/data/
+.claude/skills/impeccable/scripts/VERSION
