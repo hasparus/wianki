@@ -3,25 +3,27 @@ import Link from "next/link";
 export function UploadSubmitControls({
 	busy,
 	busyLabel,
-	hasItems,
+	sendable,
 	onUpload,
 }: {
 	busy: boolean;
 	busyLabel: string;
-	hasItems: boolean;
+	sendable: boolean;
 	onUpload: () => void;
 }) {
 	return (
 		<>
-			<button
-				type="button"
-				onClick={onUpload}
-				disabled={!hasItems || busy}
-				className="ma-action mt-8 w-full"
-			>
-				{busy ? busyLabel : "Wyślij zdjęcia"}
-			</button>
-			<p className="mt-4 max-w-lg text-sm leading-relaxed text-ma-pine">
+			{sendable || busy ? (
+				<button
+					type="button"
+					onClick={onUpload}
+					disabled={!sendable || busy}
+					className="ma-action mt-8 w-full"
+				>
+					{busy ? busyLabel : "Wyślij zdjęcia"}
+				</button>
+			) : null}
+			<p className="mt-6 max-w-md text-sm leading-relaxed text-ma-pine">
 				Wysyłając zdjęcia, zgadzasz się na ich przechowanie i sprawdzenie
 				zgodnie z{" "}
 				<Link

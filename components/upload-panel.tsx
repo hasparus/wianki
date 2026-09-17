@@ -36,51 +36,53 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 			item.phase !== "uploading" &&
 			item.phase !== "queued",
 	).length;
+	// The submit line only exists once there is something to send: an empty well
+	// is a composed invitation, not a disabled bar.
+	const sendable = pendingItems.some((item) =>
+		["queued", "failed", "archive_failed"].includes(item.phase),
+	);
 
 	return (
-		<>
-			<section
-				id="dodaj"
-				aria-labelledby="upload-title"
-				className="scroll-mt-8"
+		<section
+			id="dodaj"
+			aria-labelledby="upload-title"
+			className="ma-plane scroll-mt-8 p-6 sm:p-10"
+		>
+			<h2
+				id="upload-title"
+				className="font-serif text-[clamp(2rem,5vw,3.25rem)] leading-[0.95]"
 			>
-				<h2
-					id="upload-title"
-					className="font-serif text-[clamp(2.5rem,7vw,4.5rem)] leading-[0.95]"
-				>
-					Dodaj swoje zdjęcia
-				</h2>
-				<hr className="ma-rule mt-5" />
-				<p className="mt-6 max-w-lg text-ma-pine">
-					Możesz wysłać do 10 zdjęć naraz. Po weselu udostępnimy wszystkim
-					folder z oryginałami.
-				</p>
-				<UploadFilePicker
-					inputRef={inputRef}
-					busy={busy}
-					onSelect={chooseFiles}
-				/>
-				<UploadItemList items={pendingItems} />
-				<UploadSubmitControls
-					busy={busy}
-					busyLabel={`Wysyłamy… (${finishedInBatch} z ${activeBatchIds.length})`}
-					hasItems={pendingItems.some((item) =>
-						["queued", "failed", "archive_failed"].includes(item.phase),
-					)}
-					onUpload={upload}
-				/>
-				<p role="status" className="mt-5 min-h-6 text-sm font-medium">
+				Dodaj swoje zdjęcia
+			</h2>
+			<hr className="ma-rule mt-5" />
+			<p className="mt-6 max-w-md text-ma-pine">
+				Możesz wysłać do 10 zdjęć naraz. Po weselu udostępnimy wszystkim folder
+				z oryginałami.
+			</p>
+			<UploadFilePicker
+				inputRef={inputRef}
+				busy={busy}
+				onSelect={chooseFiles}
+			/>
+			<UploadItemList items={pendingItems} />
+			<UploadSubmitControls
+				busy={busy}
+				busyLabel={`Wysyłamy… (${finishedInBatch} z ${activeBatchIds.length})`}
+				sendable={sendable}
+				onUpload={upload}
+			/>
+			{summary ? (
+				<p role="status" className="mt-5 text-sm font-medium">
 					{summary}
 				</p>
-				<UploadedPhotos items={deliveredItems} />
-			</section>
-
+			) : null}
 			{celebrationMessage ? (
 				<SuccessCelebration
 					message={celebrationMessage}
 					onFinished={clearCelebration}
 				/>
 			) : null}
-		</>
+			<UploadedPhotos items={deliveredItems} />
+		</section>
 	);
 }

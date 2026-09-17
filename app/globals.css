@@ -23,8 +23,14 @@
 	--ma-bottle: #1e4d2b;
 	--ma-amber: #6b4a00;
 
-	/* The plaster wall. Authored as material, not as a gradient effect. */
-	--ma-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='0.05'/%3E%3C/svg%3E");
+	/*
+	 * The two material surfaces of the alcove, authored as exact tiles by
+	 * scripts/make-textures.mjs. They carry their own tone, so they are set as
+	 * the surface rather than screened over a flat field.
+	 */
+	--ma-plaster-surface: url("/textures/plaster.png");
+	--ma-bronze-surface: url("/textures/bronze.png");
+	--ma-tile: 256px 256px;
 
 	/* One authored moment, one easing. */
 	--ma-ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -65,8 +71,9 @@
 
 	body {
 		background-color: var(--ma-plaster);
-		background-image: var(--ma-grain);
+		background-image: var(--ma-plaster-surface);
 		background-repeat: repeat;
+		background-size: var(--ma-tile);
 		color: var(--ma-ink);
 		font-family: var(--font-sans);
 		font-size: 1rem;
@@ -280,7 +287,7 @@
 	/* The marginal vertical mark, in Latin script: tracked caps up the right edge. */
 	.ma-marginalia {
 		position: absolute;
-		top: 0;
+		top: 4.5rem;
 		right: 0;
 		display: none;
 		color: var(--ma-pine);
@@ -288,6 +295,16 @@
 		letter-spacing: 0.5em;
 		text-transform: uppercase;
 		writing-mode: vertical-rl;
+	}
+
+	/* The column closes on a rule, the way the alcove's does. */
+	.ma-marginalia::after {
+		display: block;
+		width: 1px;
+		height: 2rem;
+		margin: 0.75rem auto 0;
+		background: var(--ma-ash-deep);
+		content: "";
 	}
 
 	@media (min-width: 1280px) {
@@ -320,8 +337,24 @@
 
 	/* The suiban: the dark base plane that anchors a light field. */
 	.ma-suiban {
-		background: var(--ma-bronze);
+		background-color: var(--ma-bronze);
+		background-image: var(--ma-bronze-surface);
+		background-repeat: repeat;
+		background-size: var(--ma-tile);
 		color: var(--ma-plaster);
+	}
+
+	/*
+	 * The base a light field rests on. The suiban is not a footer: every
+	 * arrangement is anchored by the dark plane beneath it, so a page that ends
+	 * without one is floating.
+	 */
+	.ma-base {
+		height: 0.75rem;
+		background-color: var(--ma-bronze);
+		background-image: var(--ma-bronze-surface);
+		background-repeat: repeat;
+		background-size: var(--ma-tile);
 	}
 
 	.ma-suiban .ma-label {
@@ -346,7 +379,6 @@
 
 	.ma-stage {
 		background-color: var(--ma-ink-deep);
-		background-image: var(--ma-grain);
 		color: var(--ma-plaster);
 	}
 
@@ -441,27 +473,14 @@
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Delivery. One card, placed, with a single rule struck beneath it.
+	 * Delivery. The batch lands in the well it was sent from — no overlay and no
+	 * protected focus, so placement stays the one authored moment.
 	 * ------------------------------------------------------------------------ */
 
 	.ma-delivery {
-		position: fixed;
-		z-index: 80;
-		inset: 0;
-		display: grid;
-		place-items: center;
-		padding: 1.5rem;
-		pointer-events: none;
-		background: color-mix(in srgb, var(--ma-ink-deep) 72%, transparent);
+		border-left: 1px solid var(--ma-ink);
+		padding-left: 1.25rem;
 		animation: ma-delivery 4.4s ease-in-out both;
-	}
-
-	.ma-delivery__card {
-		width: min(100%, 32rem);
-		padding: clamp(2rem, 6vw, 3.25rem) clamp(1.5rem, 5vw, 3rem);
-		background: var(--ma-plaster-lit);
-		color: var(--ma-ink);
-		animation: ma-place 700ms var(--ma-ease) both;
 	}
 }
 
@@ -550,19 +569,23 @@
 @keyframes ma-delivery {
 	0% {
 		opacity: 0;
+		transform: translateY(0.5rem);
 	}
 	6%,
 	84% {
 		opacity: 1;
+		transform: translateY(0);
 	}
 	100% {
 		opacity: 0;
+		transform: translateY(0);
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
+	/* Not just shortened: the delivery note fades out at the end of its
+	 * keyframes, so a collapsed duration would hide it outright. */
 	.ma-delivery,
-	.ma-delivery__card,
 	.ma-placed,
 	.ma-alcove {
 		animation-name: none;

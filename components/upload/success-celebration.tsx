@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 
 /**
- * Delivery. The old splash threw sparks; this world places one card on the
- * ground and strikes a single rule beneath it, then lets the room go quiet.
+ * Delivery. The old splash threw sparks across a full-screen overlay; this one
+ * lands in the well the batch was sent from — a struck rule and the couple's
+ * line — so placement stays the only moment that takes the screen.
  */
 export function SuccessCelebration({
 	message,
@@ -17,14 +18,8 @@ export function SuccessCelebration({
 	}, [onFinished]);
 
 	return (
-		<div className="ma-delivery" aria-hidden="true">
-			<div className="ma-delivery__card">
-				<p className="ma-label">Dostarczone</p>
-				<p className="mt-6 font-serif text-3xl leading-tight text-balance sm:text-4xl">
-					{message}
-				</p>
-				<hr className="ma-rule mt-8" />
-			</div>
-		</div>
+		<p className="ma-delivery mt-8 font-serif text-2xl leading-tight text-balance sm:text-3xl">
+			{message}
+		</p>
 	);
 }

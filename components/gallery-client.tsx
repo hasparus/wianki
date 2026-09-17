@@ -23,22 +23,22 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 		<>
 			<main className="w-full grow px-5 sm:px-10 lg:px-16">
 				{/*
-				 * Shin, soe, hikae. The three lines sit at different heights and
-				 * indents so the void between them is composed rather than left
-				 * over; the arrangement itself starts below the fold.
+				 * The arrangement: shin the tallest line, soe the middle one, hikae
+				 * the short one that comes forward. They sit at different heights and
+				 * indents so the emptiness between them is composed rather than left
+				 * over, and the upload well — the thing a guest actually came to do —
+				 * is the line that reaches the viewer, inside the first viewport.
 				 */}
-				<header className="relative mx-auto w-full max-w-6xl pb-[9vh] pt-[8vh] sm:pb-[11vh] sm:pt-[12vh]">
+				<header className="relative mx-auto w-full max-w-6xl pb-[7vh] pt-[8vh] sm:pt-[11vh]">
 					<span className="ma-marginalia">Galeria</span>
 
-					{/* Shin: the tallest line, flush to the left margin. */}
 					<h1 className="font-serif text-[clamp(3.25rem,13vw,7.5rem)] leading-[0.92] tracking-[-0.02em]">
 						Rosia <span className="text-ma-pine">&amp;</span> Piotrek
 					</h1>
 					<hr className="ma-rule mt-7" />
 
-					{/* Soe: the middle line, stepped in, the void kept open to its left. */}
-					<div className="mt-[7vh] grid gap-10 sm:grid-cols-12 sm:items-end sm:gap-8">
-						<p className="text-balance text-lg leading-relaxed text-ma-pine sm:col-span-5 sm:col-start-4">
+					<div className="mt-[5vh] grid gap-8 sm:grid-cols-12 sm:items-end">
+						<p className="text-balance text-lg leading-relaxed text-ma-pine sm:col-span-5">
 							Dziękujemy, że świętujecie razem z nami. Wrzućcie swoje zdjęcia i
 							zobaczcie, co uchwycili inni goście.
 						</p>
@@ -75,27 +75,20 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 						</div>
 					</div>
 
-					{/* Hikae: the short line that comes forward — the primary action. */}
-					<div className="mt-[5vh] grid sm:grid-cols-12">
-						<div className="flex flex-col gap-3 sm:col-span-6 sm:col-start-4 sm:flex-row">
-							<a href="#dodaj" className="ma-action">
-								Dodaj zdjęcia
-							</a>
-							<Link href="/pokaz" className="ma-action ma-action--ghost">
-								Pokaz slajdów
-							</Link>
+					{/* Soe: the upload well, offset right and lower, on the lit plane. */}
+					<div className="mt-[6vh] grid sm:grid-cols-12">
+						<div className="sm:col-span-8 sm:col-start-5">
+							<UploadPanel onComplete={refresh} />
 						</div>
 					</div>
 				</header>
+			</main>
 
-				<hr className="ma-rule--wide mx-auto max-w-6xl border-0" />
+			{/* The arrangement rests on its base, not on the edge of the page. */}
+			<div className="ma-base" aria-hidden />
 
-				<div className="mx-auto grid w-full max-w-6xl gap-16 py-16 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-20">
-					<UploadPanel onComplete={refresh} />
-					<PhotoChallenge />
-				</div>
-
-				<div className="mx-auto w-full max-w-6xl pb-24">
+			<div className="w-full px-5 sm:px-10 lg:px-16">
+				<div className="mx-auto grid w-full max-w-6xl gap-14 py-16 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-20">
 					<GalleryGrid
 						items={items}
 						hasMore={Boolean(cursor)}
@@ -105,8 +98,9 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 						onLoadMore={loadMore}
 						onSelect={setSelected}
 					/>
+					<PhotoChallenge />
 				</div>
-			</main>
+			</div>
 
 			<footer className="ma-suiban px-5 py-10 sm:px-10 lg:px-16">
 				<div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4">

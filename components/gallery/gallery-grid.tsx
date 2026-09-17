@@ -26,7 +26,7 @@ export function GalleryGrid({
 				<div>
 					<h2
 						id="gallery-title"
-						className="font-serif text-[clamp(2.5rem,7vw,4.5rem)] leading-[0.95]"
+						className="font-serif text-[clamp(2.25rem,6vw,3.75rem)] leading-[0.95]"
 					>
 						Galeria
 					</h2>
