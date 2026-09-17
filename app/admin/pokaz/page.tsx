@@ -5,7 +5,7 @@ import { SLIDESHOW_DEFAULT_SECONDS } from "@/lib/slideshow-protocol";
 import { SlideEditor } from "./slide-editor";
 
 export const metadata: Metadata = {
-	title: "Paweł & Magdalena — edytor pokazu",
+	title: "Rosia & Piotrek — edytor pokazu",
 };
 
 export default async function SlideEditorPage() {

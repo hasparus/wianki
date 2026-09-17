@@ -11,7 +11,7 @@ import path from "node:path";
  * deck.json is a plain ordered array; the deck ends up matching it exactly:
  *
  *   [
- *     { "text": "Paweł & Magdalena", "subtitle": "Dziękujemy, że jesteście" },
+ *     { "text": "Rosia & Piotrek", "subtitle": "Dziękujemy, że jesteście" },
  *     { "photo": "foto-001.jpg", "caption": "Pierwsze wakacje", "subtitle": "2019" },
  *     { "photo": "foto-002.jpg" }
  *   ]

@@ -11,7 +11,7 @@ import {
 import { SLIDESHOW_DEFAULT_SECONDS } from "@/lib/slideshow-protocol";
 
 export const metadata: Metadata = {
-	title: "Paweł & Magdalena — pokaz slajdów",
+	title: "Rosia & Piotrek — pokaz slajdów",
 };
 
 async function loadDeck(): Promise<SlideshowDeck> {

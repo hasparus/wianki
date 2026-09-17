@@ -341,7 +341,7 @@ export function SlideEditor({
 						value={textSubtitle}
 						onChange={(event) => setTextSubtitle(event.target.value)}
 						maxLength={SLIDESHOW_MAX_SUBTITLE}
-						placeholder="Paweł i Magdalena"
+						placeholder="Rosia i Piotrek"
 						className="min-h-12 rounded-2xl border-2 border-wedding-green/50 bg-white px-4"
 					/>
 					<button

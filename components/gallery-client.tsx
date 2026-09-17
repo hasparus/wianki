@@ -8,6 +8,7 @@ import {
 } from "@/components/gallery/gallery-feed";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import { PhotoLightbox } from "@/components/gallery/photo-lightbox";
+import { PhotoChallenge } from "@/components/photo-challenge";
 import { UploadPanel } from "@/components/upload-panel";
 import type { GalleryItem } from "@/lib/domain";
 import { formatGalleryStats } from "@/lib/i18n";
@@ -26,7 +27,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 						Wspomnienia z naszego dnia
 					</p>
 					<h1 className="font-serif text-5xl font-bold sm:text-7xl">
-						Paweł & Magdalena
+						Rosia & Piotrek
 					</h1>
 					<p className="mx-auto max-w-2xl text-lg leading-8">
 						Dziękujemy, że świętujecie razem z nami. Wrzućcie swoje zdjęcia i
@@ -45,7 +46,8 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 					</p>
 				</header>
 
-				<div className="mx-auto mb-10 max-w-2xl">
+				<div className="mx-auto mb-10 grid max-w-2xl gap-6">
+					<PhotoChallenge />
 					<UploadPanel onComplete={refresh} />
 				</div>
 
