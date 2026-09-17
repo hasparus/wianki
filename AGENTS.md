@@ -20,9 +20,10 @@ moderation and recovery queues: approve, hide, retry moderation, reconcile
 archive, confirm deletion. Deletion can half-fail, so Supabase deletion and
 archive removal stay retryable.
 
-Canonical production site: `https://wedding.pawel.space`. Do not add or restore
-other production domains unless asked. The `wianki.vercel.app` in the wrangler
-configs is a fork deploy, not a second canonical domain.
+Canonical production site of this fork: `https://wesele.monwid-olechnowicz.com`.
+`wianki.vercel.app` is the Vercel deploy behind it. Upstream runs the same code
+at `https://wedding.pawel.space`. One deployment serves one wedding, so do not
+add production domains unless asked.
 
 V1 excludes video, comments, likes, face recognition, named accounts, Realtime,
 background polling. One addition on top: live slideshow (`/pokaz`, editor
