@@ -7,10 +7,8 @@
 		"enabled": true
 	},
 	"vars": {
-		// Must equal the origin this deployment is actually served from. The
-		// canonical site is https://wedding.pawel.space (AGENTS.md); the value
-		// below is the wianki.vercel.app fork deploy this branch was tested on.
-		"ALLOWED_ORIGIN": "https://wianki.vercel.app"
+		// Must equal the origin this deployment is actually served from.
+		"ALLOWED_ORIGIN": "https://wesele.monwid-olechnowicz.com"
 	},
 	"durable_objects": {
 		"bindings": [
