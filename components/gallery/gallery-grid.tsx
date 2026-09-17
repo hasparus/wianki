@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { GalleryItem } from "@/lib/domain";
 
 type GalleryGridProps = {
@@ -32,14 +33,19 @@ export function GalleryGrid({
 					</h2>
 					<hr className="ma-rule mt-5" />
 				</div>
-				<button
-					type="button"
-					onClick={onRefresh}
-					disabled={pending}
-					className="ma-action ma-action--ghost"
-				>
-					{pending ? "Odświeżamy…" : "Odśwież"}
-				</button>
+				<div className="flex flex-wrap gap-3">
+					<Link href="/pokaz" className="ma-action ma-action--ghost">
+						Pokaz slajdów
+					</Link>
+					<button
+						type="button"
+						onClick={onRefresh}
+						disabled={pending}
+						className="ma-action ma-action--ghost"
+					>
+						{pending ? "Odświeżamy…" : "Odśwież"}
+					</button>
+				</div>
 			</div>
 
 			{message ? (

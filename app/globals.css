@@ -218,19 +218,29 @@
 	}
 
 	/*
-	 * Destruction is available, never loud: a hairline in oxblood at rest, and
-	 * it only fills once the pointer has committed to it.
+	 * Destruction is available, never loud. In a queue it repeats on every row,
+	 * so at rest it is not a box at all — an underlined word in oxblood, which
+	 * takes its border and its fill only once the pointer commits to it.
 	 */
 	.ma-action--danger {
-		border-color: var(--ma-oxblood);
+		border-color: transparent;
 		background: transparent;
 		color: var(--ma-oxblood);
+		text-decoration: underline;
+		text-decoration-color: color-mix(
+			in srgb,
+			var(--ma-oxblood) 40%,
+			transparent
+		);
+		text-underline-offset: 0.35em;
 	}
 
-	.ma-action--danger:hover:not(:disabled) {
+	.ma-action--danger:hover:not(:disabled),
+	.ma-action--danger:focus-visible {
 		background: var(--ma-oxblood);
 		border-color: var(--ma-oxblood);
 		color: var(--ma-plaster-lit);
+		text-decoration-color: transparent;
 	}
 
 	/* Hairline field. The alcove's text input: a box drawn in one stroke. */

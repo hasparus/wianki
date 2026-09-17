@@ -29,7 +29,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 				 * over, and the upload well — the thing a guest actually came to do —
 				 * is the line that reaches the viewer, inside the first viewport.
 				 */}
-				<header className="relative mx-auto w-full max-w-6xl pb-[7vh] pt-[8vh] sm:pt-[11vh]">
+				<header className="relative mx-auto w-full max-w-6xl pb-[6vh] pt-[5vh] sm:pb-[7vh] sm:pt-[11vh]">
 					<span className="ma-marginalia">Galeria</span>
 
 					<h1 className="font-serif text-[clamp(3.25rem,13vw,7.5rem)] leading-[0.92] tracking-[-0.02em]">
@@ -37,7 +37,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 					</h1>
 					<hr className="ma-rule mt-7" />
 
-					<div className="mt-[5vh] grid gap-8 sm:grid-cols-12 sm:items-end">
+					<div className="mt-[4vh] grid gap-7 sm:grid-cols-12 sm:items-end">
 						<p className="text-balance text-lg leading-relaxed text-ma-pine sm:col-span-5">
 							Dziękujemy, że świętujecie razem z nami. Wrzućcie swoje zdjęcia i
 							zobaczcie, co uchwycili inni goście.
@@ -76,7 +76,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 					</div>
 
 					{/* Soe: the upload well, offset right and lower, on the lit plane. */}
-					<div className="mt-[6vh] grid sm:grid-cols-12">
+					<div className="mt-[4vh] grid sm:mt-[6vh] sm:grid-cols-12">
 						<div className="sm:col-span-8 sm:col-start-5">
 							<UploadPanel onComplete={refresh} />
 						</div>
@@ -105,12 +105,20 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 			<footer className="ma-suiban px-5 py-10 sm:px-10 lg:px-16">
 				<div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4">
 					<p className="font-serif text-2xl">Rosia &amp; Piotrek</p>
-					<Link
-						href="/privacy"
-						className="ma-label underline decoration-ma-ash-deep hover:text-ma-plaster"
-					>
-						Informacja o prywatności
-					</Link>
+					<nav className="flex flex-wrap gap-x-8 gap-y-2">
+						<Link
+							href="/pokaz"
+							className="ma-label underline decoration-ma-ash-deep hover:text-ma-plaster"
+						>
+							Pokaz slajdów
+						</Link>
+						<Link
+							href="/privacy"
+							className="ma-label underline decoration-ma-ash-deep hover:text-ma-plaster"
+						>
+							Informacja o prywatności
+						</Link>
+					</nav>
 				</div>
 			</footer>
 

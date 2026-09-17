@@ -46,7 +46,7 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 		<section
 			id="dodaj"
 			aria-labelledby="upload-title"
-			className="ma-plane scroll-mt-8 p-6 sm:p-10"
+			className="ma-plane scroll-mt-8 p-5 sm:p-8 lg:p-10"
 		>
 			<h2
 				id="upload-title"
@@ -55,13 +55,14 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 				Dodaj swoje zdjęcia
 			</h2>
 			<hr className="ma-rule mt-5" />
-			<p className="mt-6 max-w-md text-ma-pine">
+			<p className="mt-5 max-w-md text-ma-pine">
 				Możesz wysłać do 10 zdjęć naraz. Po weselu udostępnimy wszystkim folder
 				z oryginałami.
 			</p>
 			<UploadFilePicker
 				inputRef={inputRef}
 				busy={busy}
+				hasQueue={pendingItems.length > 0}
 				onSelect={chooseFiles}
 			/>
 			<UploadItemList items={pendingItems} />
