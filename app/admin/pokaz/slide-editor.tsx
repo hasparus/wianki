@@ -202,10 +202,8 @@ export function SlideEditor({
 						</h1>
 						<hr className="ma-rule mt-6" />
 						<p className="mt-8 max-w-xl leading-relaxed text-ma-pine">
-							Ułóż wieczorny pokaz ze zdjęć galerii i slajdów z tekstem. Bez
-							własnej listy pokaz gra wszystkie zatwierdzone zdjęcia
-							chronologicznie. Kolejność zmienisz przeciągając slajdy lub
-							strzałkami.
+							Bez własnej listy pokaz gra wszystkie zatwierdzone zdjęcia
+							chronologicznie.
 						</p>
 					</div>
 					<div className="flex flex-wrap gap-3">
