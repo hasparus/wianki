@@ -14,7 +14,10 @@ const serverSchema = z
 		APP_ORIGIN: z.url(),
 		GUEST_ENTRY_TOKEN: z.string().min(32),
 		GUEST_JOIN_CODE: z.string().min(6).optional(),
-		GUEST_ACCESS_PASSPHRASE: z.string().min(12),
+		GUEST_ACCESS_PASSPHRASE: z.string().min(8),
+		// While this is in the future, the site hands every first visit a guest
+		// session instead of asking for the passphrase. Unset = always ask.
+		GUEST_OPEN_UNTIL: z.coerce.date().optional(),
 		GUEST_SESSION_SECRET: z.string().min(32),
 		ADMIN_ENTRY_TOKEN: z.string().min(32),
 		ADMIN_ACCESS_PASSPHRASE: z.string().min(16).optional(),

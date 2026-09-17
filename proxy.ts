@@ -75,6 +75,23 @@ export async function proxy(request: NextRequest) {
 		return response;
 	}
 
+	// Open house: while GUEST_OPEN_UNTIL is in the future, a first visit mints
+	// its own guest session, so nobody has to type the passphrase.
+	if (
+		env.GUEST_OPEN_UNTIL &&
+		Date.now() < env.GUEST_OPEN_UNTIL.getTime() &&
+		!request.cookies.has(GUEST_COOKIE)
+	) {
+		const session = await createGuestSession();
+		request.cookies.set(GUEST_COOKIE, session);
+		const response =
+			pathname === "/login"
+				? NextResponse.redirect(new URL("/", request.url))
+				: NextResponse.next({ request: { headers: request.headers } });
+		response.cookies.set(GUEST_COOKIE, session, guestCookieOptions);
+		return response;
+	}
+
 	const publicPath =
 		pathname === "/login" ||
 		pathname === "/privacy" ||
