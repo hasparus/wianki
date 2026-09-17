@@ -76,7 +76,7 @@ describe("tokonoma palette", () => {
 			return r !== g || g !== b;
 		});
 		expect([...new Set(tinted)].sort()).toEqual(
-[OXBLOOD, BOTTLE, AMBER].sort(),
+			[OXBLOOD, BOTTLE, AMBER].sort(),
 		);
 	});
 
