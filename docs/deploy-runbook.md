@@ -15,7 +15,7 @@ photos, slideshow runs at the reception.
 
 | Thing | Value |
 |---|---|
-| Production origin | `https://wianki.vercel.app` (this fork's deploy, not the canonical `wedding.pawel.space`) |
+| Production origin | `https://wianki.vercel.app`, moving to `https://wesele.monwid-olechnowicz.com` |
 | Vercel project | `hasparus-projects/wianki` |
 | R2 bucket | `wedding-originals` |
 | Workers | `wedding-archive`, `wedding-slideshow-live` |
