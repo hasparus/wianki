@@ -83,9 +83,7 @@ export function GalleryGrid({
 							Pierwsze zdjęcia pojawią się tutaj.
 						</p>
 						<hr className="ma-rule mt-6" />
-						<p className="mt-6 text-ma-pine">
-							Miejsce jest przygotowane. Może zaczniesz nasz wspólny album?
-						</p>
+						<p className="mt-6 text-ma-pine">Jeszcze nikt nic nie wrzucił.</p>
 					</div>
 				</div>
 			)}

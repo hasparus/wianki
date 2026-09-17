@@ -18,7 +18,7 @@ function SlideText({ slide }: { slide: AdminSlide }) {
 			<p className="ma-label">Zdjęcie z galerii</p>
 		) : (
 			<p className="text-sm font-medium text-ma-amber">
-				Zdjęcie niewidoczne — pominięte w pokazie
+				Ukryte, więc pokaz je pominie
 			</p>
 		);
 	}

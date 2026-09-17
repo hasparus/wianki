@@ -8,7 +8,7 @@ export default function PrivacyPage() {
 				<span className="ma-marginalia">Prywatność</span>
 				<article>
 					<h1 className="font-serif text-[clamp(2.75rem,9vw,5.5rem)] leading-[0.95] tracking-[-0.02em]">
-						Krótko i po ludzku
+						Co się dzieje ze zdjęciami
 					</h1>
 					<hr className="ma-rule mt-8" />
 					<div className="mt-12 grid gap-10 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-x-10">
@@ -22,8 +22,7 @@ export default function PrivacyPage() {
 						<h2 className="ma-label sm:pt-1">Kto je widzi</h2>
 						<p className="max-w-[65ch] leading-relaxed">
 							Zdjęcia trafiają do galerii od razu, bez automatycznego
-							sprawdzania treści. Możemy ukryć każde zdjęcie, jeśli zajdzie taka
-							potrzeba.
+							sprawdzania treści. Możemy ukryć każde zdjęcie.
 						</p>
 
 						<h2 className="ma-label sm:pt-1">Czego nie zapisujemy</h2>
@@ -35,7 +34,7 @@ export default function PrivacyPage() {
 
 						<h2 className="ma-label sm:pt-1">Jak długo</h2>
 						<p className="max-w-[65ch] leading-relaxed">
-							Przechowujemy zdjęcia do czasu ręcznego usunięcia. Jeżeli chcesz
+							Trzymamy zdjęcia, dopóki sami ich nie usuniemy. Jeżeli chcesz
 							usunąć konkretne zdjęcie, napisz na:{" "}
 							<strong className="font-normal underline decoration-ma-ash-deep">
 								{email}

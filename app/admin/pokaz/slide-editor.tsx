@@ -68,7 +68,9 @@ export function SlideEditor({
 			await work();
 		} catch (error) {
 			setMessage(
-				error instanceof Error ? error.message : "Coś poszło nie tak.",
+				error instanceof Error
+					? error.message
+					: "Nie udało się. Odśwież stronę i spróbuj ponownie.",
 			);
 		} finally {
 			setPending(false);
@@ -287,11 +289,11 @@ export function SlideEditor({
 						<div className="ma-empty mt-8">
 							<div className="max-w-md">
 								<p className="font-serif text-2xl leading-tight">
-									Lista jest pusta — pokaz gra teraz automatycznie z galerii.
+									Lista jest pusta, więc pokaz gra automatycznie z galerii.
 								</p>
 								<hr className="ma-rule mt-6" />
 								<p className="mt-6 text-ma-pine">
-									Dodaj pierwszy slajd, aby ułożyć własną historię.
+									Dodaj pierwszy slajd, żeby ustawić własną kolejność.
 								</p>
 							</div>
 						</div>
