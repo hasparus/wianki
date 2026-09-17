@@ -1,4 +1,12 @@
-@import "tailwindcss";
+/*
+ * Scanning is scoped to the two directories that actually hold class names.
+ * Left to itself Tailwind reads the markdown too, and prose about the design
+ * system was generating utilities the system forbids — `.rounded` shipped in
+ * the bundle because DESIGN.md says not to use one.
+ */
+@import "tailwindcss" source(none);
+@source "../app";
+@source "../components";
 
 /*
  * Tokonoma. The alcove wall is plaster, the base plane is a dark bronze
@@ -31,6 +39,14 @@
 	--ma-plaster-surface: url("/textures/plaster.png");
 	--ma-bronze-surface: url("/textures/bronze.png");
 	--ma-tile: 256px 256px;
+
+	/*
+	 * The cut corner. Not a radius — the alcove's edges are carved out of the
+	 * plane, so the corner bites inward instead of bulging. Two depths: the
+	 * control scale and the plane scale.
+	 */
+	--ma-scoop: 0.5rem;
+	--ma-scoop-plane: 0.875rem;
 
 	/* One authored moment, one easing. */
 	--ma-ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -329,6 +345,31 @@
 		font-feature-settings: "tnum" 1;
 		font-variant-numeric: tabular-nums;
 		line-height: 1;
+	}
+
+	/* ---------------------------------------------------------------------------
+	 * The cut corner.
+	 *
+	 * `corner-shape: scoop` needs a radius to bite into, so the radius is only
+	 * ever declared inside the feature query. A browser without corner-shape
+	 * never sees a border-radius and keeps the square edge — the fallback is the
+	 * plain corner, never a rounded one.
+	 * ------------------------------------------------------------------------ */
+
+	@supports (corner-shape: scoop) {
+		.ma-action,
+		.ma-field,
+		.ma-stage-action,
+		.ma-stage-field {
+			border-radius: var(--ma-scoop);
+			corner-shape: scoop;
+		}
+
+		.ma-plane,
+		.ma-empty {
+			border-radius: var(--ma-scoop-plane);
+			corner-shape: scoop;
+		}
 	}
 
 	/* ---------------------------------------------------------------------------

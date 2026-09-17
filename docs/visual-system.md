@@ -61,8 +61,20 @@ still override them.
 - `.ma-suiban` / `.ma-stage` — the dark base plane, and the night side that
   `/pokaz` runs on.
 
-Nothing is rounded. Depth comes from the hairline and the dark ground, never
-from a shadow.
+## Corners
+
+Nothing is rounded. The corner language is the **scoop**: a corner cut into the
+plane, the way the alcove's edges are carved rather than filled. It is set with
+`corner-shape: scoop` at `--ma-scoop` (0.5rem, controls and fields) or
+`--ma-scoop-plane` (0.875rem, lifted planes and empty states).
+
+`corner-shape` needs a radius to bite into, so the radius is declared **only**
+inside `@supports (corner-shape: scoop)`. A browser without the property never
+sees a `border-radius` and keeps the square edge — the fallback is the plain
+corner, never a rounded one. `test/corner-shape.test.ts` fails the build if a
+radius escapes that query.
+
+Depth comes from the hairline and the dark ground, never from a shadow.
 
 ## Motion
 

@@ -8,90 +8,240 @@
         "role": "neutral",
         "displayName": "Plaster Wall",
         "canonical": "#efefef",
-        "tonalRamp": ["#262626", "#3d3d3d", "#5c5c5c", "#808080", "#a3a3a3", "#c7c7c7", "#efefef", "#f7f7f7"]
+        "tonalRamp": [
+          "#262626",
+          "#3d3d3d",
+          "#5c5c5c",
+          "#808080",
+          "#a3a3a3",
+          "#c7c7c7",
+          "#efefef",
+          "#f7f7f7"
+        ]
       },
       "plaster-lit": {
         "role": "neutral",
         "displayName": "Lit Plane",
         "canonical": "#f7f7f7",
-        "tonalRamp": ["#262626", "#3d3d3d", "#5c5c5c", "#808080", "#a3a3a3", "#cccccc", "#e8e8e8", "#f7f7f7"]
+        "tonalRamp": [
+          "#262626",
+          "#3d3d3d",
+          "#5c5c5c",
+          "#808080",
+          "#a3a3a3",
+          "#cccccc",
+          "#e8e8e8",
+          "#f7f7f7"
+        ]
       },
       "paper": {
         "role": "neutral",
         "displayName": "Paper White",
         "canonical": "#ffffff",
-        "tonalRamp": ["#262626", "#404040", "#616161", "#858585", "#ababab", "#d1d1d1", "#f0f0f0", "#ffffff"]
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#616161",
+          "#858585",
+          "#ababab",
+          "#d1d1d1",
+          "#f0f0f0",
+          "#ffffff"
+        ]
       },
       "ash": {
         "role": "neutral",
         "displayName": "Ash Hairline",
         "canonical": "#d8d8d8",
-        "tonalRamp": ["#242424", "#3b3b3b", "#585858", "#7a7a7a", "#9d9d9d", "#bcbcbc", "#d8d8d8", "#f2f2f2"]
+        "tonalRamp": [
+          "#242424",
+          "#3b3b3b",
+          "#585858",
+          "#7a7a7a",
+          "#9d9d9d",
+          "#bcbcbc",
+          "#d8d8d8",
+          "#f2f2f2"
+        ]
       },
       "ash-deep": {
         "role": "neutral",
         "displayName": "Earth Ash",
         "canonical": "#b4b4b4",
-        "tonalRamp": ["#222222", "#383838", "#545454", "#747474", "#949494", "#b4b4b4", "#d4d4d4", "#f0f0f0"]
+        "tonalRamp": [
+          "#222222",
+          "#383838",
+          "#545454",
+          "#747474",
+          "#949494",
+          "#b4b4b4",
+          "#d4d4d4",
+          "#f0f0f0"
+        ]
       },
       "pine": {
         "role": "neutral",
         "displayName": "Pine Grey",
         "canonical": "#666666",
-        "tonalRamp": ["#1f1f1f", "#333333", "#4d4d4d", "#666666", "#878787", "#a8a8a8", "#cccccc", "#efefef"]
+        "tonalRamp": [
+          "#1f1f1f",
+          "#333333",
+          "#4d4d4d",
+          "#666666",
+          "#878787",
+          "#a8a8a8",
+          "#cccccc",
+          "#efefef"
+        ]
       },
       "disabled": {
         "role": "neutral",
         "displayName": "Withheld Grey",
         "canonical": "#767676",
-        "tonalRamp": ["#1f1f1f", "#343434", "#4e4e4e", "#626262", "#767676", "#9b9b9b", "#c4c4c4", "#ededed"]
+        "tonalRamp": [
+          "#1f1f1f",
+          "#343434",
+          "#4e4e4e",
+          "#626262",
+          "#767676",
+          "#9b9b9b",
+          "#c4c4c4",
+          "#ededed"
+        ]
       },
       "bronze": {
         "role": "secondary",
         "displayName": "Bronze Suiban",
         "canonical": "#2a2a2a",
-        "tonalRamp": ["#0a0a0a", "#1a1a1a", "#2a2a2a", "#454545", "#666666", "#8f8f8f", "#bcbcbc", "#e8e8e8"]
+        "tonalRamp": [
+          "#0a0a0a",
+          "#1a1a1a",
+          "#2a2a2a",
+          "#454545",
+          "#666666",
+          "#8f8f8f",
+          "#bcbcbc",
+          "#e8e8e8"
+        ]
       },
       "ink": {
         "role": "primary",
         "displayName": "Committed Ink",
         "canonical": "#1a1a1a",
-        "tonalRamp": ["#0a0a0a", "#1a1a1a", "#2e2e2e", "#4a4a4a", "#6e6e6e", "#979797", "#c2c2c2", "#ececec"]
+        "tonalRamp": [
+          "#0a0a0a",
+          "#1a1a1a",
+          "#2e2e2e",
+          "#4a4a4a",
+          "#6e6e6e",
+          "#979797",
+          "#c2c2c2",
+          "#ececec"
+        ]
       },
       "ink-deep": {
         "role": "primary",
         "displayName": "Night Ground",
         "canonical": "#0a0a0a",
-        "tonalRamp": ["#000000", "#0a0a0a", "#1c1c1c", "#373737", "#5c5c5c", "#878787", "#b6b6b6", "#e8e8e8"]
+        "tonalRamp": [
+          "#000000",
+          "#0a0a0a",
+          "#1c1c1c",
+          "#373737",
+          "#5c5c5c",
+          "#878787",
+          "#b6b6b6",
+          "#e8e8e8"
+        ]
       },
       "oxblood": {
         "role": "tertiary",
         "displayName": "Muted Oxblood",
         "canonical": "#8c2318",
-        "tonalRamp": ["#280a07", "#40100c", "#5c1810", "#752014", "#8c2318", "#b04a3d", "#d2857b", "#f0cbc5"]
+        "tonalRamp": [
+          "#280a07",
+          "#40100c",
+          "#5c1810",
+          "#752014",
+          "#8c2318",
+          "#b04a3d",
+          "#d2857b",
+          "#f0cbc5"
+        ]
       },
       "bottle": {
         "role": "tertiary",
         "displayName": "Bottle Green",
         "canonical": "#1e4d2b",
-        "tonalRamp": ["#0a1c10", "#123018", "#1a4224", "#1e4d2b", "#3a7249", "#63996f", "#9bc2a3", "#d6e8da"]
+        "tonalRamp": [
+          "#0a1c10",
+          "#123018",
+          "#1a4224",
+          "#1e4d2b",
+          "#3a7249",
+          "#63996f",
+          "#9bc2a3",
+          "#d6e8da"
+        ]
       },
       "amber": {
         "role": "tertiary",
         "displayName": "Dark Amber",
         "canonical": "#6b4a00",
-        "tonalRamp": ["#221700", "#382700", "#4f3600", "#6b4a00", "#8f6600", "#b98d21", "#dcb862", "#f2e2b8"]
+        "tonalRamp": [
+          "#221700",
+          "#382700",
+          "#4f3600",
+          "#6b4a00",
+          "#8f6600",
+          "#b98d21",
+          "#dcb862",
+          "#f2e2b8"
+        ]
       }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "The wordmark and the page-owning title. One per page, flush left, high in the frame, with a 2rem ink rule beneath." },
-      "headline": { "displayName": "Headline", "purpose": "The section that owns the rest of the page, such as the gallery heading." },
-      "title": { "displayName": "Title", "purpose": "A well's own heading: upload panel, photo challenge, empty-state invitation, admin row." },
-      "numeral": { "displayName": "Struck Numeral", "purpose": "Counts, totals and positions set as real serif figures with tabular numerics." },
-      "body": { "displayName": "Body", "purpose": "All running prose. Long-form capped at a 65ch measure." },
-      "label": { "displayName": "Supporting Label", "purpose": "Marginal annotation naming a value, a field or a status. Never a kicker above a heading." },
-      "action": { "displayName": "Action", "purpose": "Control type only: uppercase, tracked, 500 weight." }
+      "display": {
+        "displayName": "Display",
+        "purpose": "The wordmark and the page-owning title. One per page, flush left, high in the frame, with a 2rem ink rule beneath."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The section that owns the rest of the page, such as the gallery heading."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "A well's own heading: upload panel, photo challenge, empty-state invitation, admin row."
+      },
+      "numeral": {
+        "displayName": "Struck Numeral",
+        "purpose": "Counts, totals and positions set as real serif figures with tabular numerics."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All running prose. Long-form capped at a 65ch measure."
+      },
+      "label": {
+        "displayName": "Supporting Label",
+        "purpose": "Marginal annotation naming a value, a field or a status. Never a kicker above a heading."
+      },
+      "action": {
+        "displayName": "Action",
+        "purpose": "Control type only: uppercase, tracked, 500 weight."
+      }
     },
+    "corners": [
+      {
+        "name": "ma-scoop",
+        "value": "0.5rem",
+        "purpose": "The control-scale scoop. Applied as border-radius + corner-shape: scoop to .ma-action, .ma-field, .ma-stage-action and .ma-stage-field, only inside @supports (corner-shape: scoop). Without the property no radius is ever seen and the corner stays square."
+      },
+      {
+        "name": "ma-scoop-plane",
+        "value": "0.875rem",
+        "purpose": "The plane-scale scoop. Applied the same guarded way to .ma-plane and .ma-empty. Photographs, thumbnails and the placed plate take no corner treatment at all."
+      }
+    ],
     "shadows": [
       {
         "name": "stage-control-legibility",
@@ -100,22 +250,67 @@
       }
     ],
     "motion": [
-      { "name": "ma-ease", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "The world's one easing, used by every transition and animation." },
-      { "name": "ma-place-ms", "value": "420ms", "purpose": "The authored placement moment: a chosen photograph settles onto the bronze plane from scale(0.94) translateY(1.25rem) blur(6px)." },
-      { "name": "alcove-in", "value": "220ms", "purpose": "The ink-deep scrim fading the arrangement back behind a placed photograph." },
-      { "name": "state-transition", "value": "160ms", "purpose": "Colour and border-colour transitions on actions and fields. Nothing moves or scales." },
-      { "name": "slide-in", "value": "380ms", "purpose": "Night-side slide entry from blur(12px) scale(1.02)." },
-      { "name": "slide-out", "value": "260ms", "purpose": "Night-side slide exit into blur(8px)." },
-      { "name": "delivery", "value": "4.4s", "purpose": "The upload delivery note: lands in the well it was sent from, holds, then fades. Removed outright under reduced motion rather than shortened." }
+      {
+        "name": "ma-ease",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The world's one easing, used by every transition and animation."
+      },
+      {
+        "name": "ma-place-ms",
+        "value": "420ms",
+        "purpose": "The authored placement moment: a chosen photograph settles onto the bronze plane from scale(0.94) translateY(1.25rem) blur(6px)."
+      },
+      {
+        "name": "alcove-in",
+        "value": "220ms",
+        "purpose": "The ink-deep scrim fading the arrangement back behind a placed photograph."
+      },
+      {
+        "name": "state-transition",
+        "value": "160ms",
+        "purpose": "Colour and border-colour transitions on actions and fields. Nothing moves or scales."
+      },
+      {
+        "name": "slide-in",
+        "value": "380ms",
+        "purpose": "Night-side slide entry from blur(12px) scale(1.02)."
+      },
+      {
+        "name": "slide-out",
+        "value": "260ms",
+        "purpose": "Night-side slide exit into blur(8px)."
+      },
+      {
+        "name": "delivery",
+        "value": "4.4s",
+        "purpose": "The upload delivery note: lands in the well it was sent from, holds, then fades. Removed outright under reduced motion rather than shortened."
+      }
     ],
     "breakpoints": [
-      { "name": "sm", "value": "640px" },
-      { "name": "lg", "value": "1024px" },
-      { "name": "marginalia", "value": "1280px" }
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "marginalia",
+        "value": "1280px"
+      }
     ],
     "textures": [
-      { "name": "plaster", "value": "url(\"/textures/plaster.png\") repeat / 256px 256px", "purpose": "The alcove wall. Deterministic seeded value-noise tile authored at 512px by scripts/make-textures.mjs (base 239, amplitude 7, 5 octaves, seed 20260620). Set as the surface, not screened over a flat field." },
-      { "name": "bronze", "value": "url(\"/textures/bronze.png\") repeat / 256px 256px", "purpose": "The suiban base plane. Same generator, coarser patina (base 42, amplitude 11, 4 octaves, seed 19940317)." }
+      {
+        "name": "plaster",
+        "value": "url(\"/textures/plaster.png\") repeat / 256px 256px",
+        "purpose": "The alcove wall. Deterministic seeded value-noise tile authored at 512px by scripts/make-textures.mjs (base 239, amplitude 7, 5 octaves, seed 20260620). Set as the surface, not screened over a flat field."
+      },
+      {
+        "name": "bronze",
+        "value": "url(\"/textures/bronze.png\") repeat / 256px 256px",
+        "purpose": "The suiban base plane. Same generator, coarser patina (base 42, amplitude 11, 4 octaves, seed 19940317)."
+      }
     ]
   },
   "components": [
@@ -125,7 +320,7 @@
       "refersTo": "action",
       "description": "The reversed ink block. The one committed action in a well; everything else there is the hairline outline.",
       "html": "<button class=\"ds-action\">Wyślij zdjęcia</button>",
-      "css": ".ds-action { display: inline-flex; min-height: 3rem; align-items: center; justify-content: center; gap: 0.625rem; padding-inline: 1.75rem; border: 1px solid var(--ma-ink, #1a1a1a); border-radius: 0; background: var(--ma-ink, #1a1a1a); color: var(--ma-plaster-lit, #f7f7f7); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-action:hover:not(:disabled) { background: var(--ma-ink-deep, #0a0a0a); border-color: var(--ma-ink-deep, #0a0a0a); } .ds-action:focus-visible { outline: 2px solid var(--ma-ink, #1a1a1a); outline-offset: 3px; } .ds-action:disabled { border-color: var(--ma-ash, #d8d8d8); background: transparent; color: var(--ma-disabled, #767676); cursor: not-allowed; }"
+      "css": ".ds-action { display: inline-flex; min-height: 3rem; align-items: center; justify-content: center; gap: 0.625rem; padding-inline: 1.75rem; border: 1px solid var(--ma-ink, #1a1a1a); background: var(--ma-ink, #1a1a1a); color: var(--ma-plaster-lit, #f7f7f7); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-action:hover:not(:disabled) { background: var(--ma-ink-deep, #0a0a0a); border-color: var(--ma-ink-deep, #0a0a0a); } .ds-action:focus-visible { outline: 2px solid var(--ma-ink, #1a1a1a); outline-offset: 3px; } .ds-action:disabled { border-color: var(--ma-ash, #d8d8d8); background: transparent; color: var(--ma-disabled, #767676); cursor: not-allowed; } @supports (corner-shape: scoop) { .ds-action { border-radius: var(--ma-scoop, 0.5rem); corner-shape: scoop; } }"
     },
     {
       "name": "Ghost Action",
@@ -133,7 +328,7 @@
       "refersTo": "action-ghost",
       "description": "The same box unfilled. Hover inverts it into the filled ink block, so rest and commitment are visibly the same object.",
       "html": "<button class=\"ds-action-ghost\">Otwórz pokaz</button>",
-      "css": ".ds-action-ghost { display: inline-flex; min-height: 3rem; align-items: center; justify-content: center; gap: 0.625rem; padding-inline: 1.75rem; border: 1px solid var(--ma-ink, #1a1a1a); border-radius: 0; background: transparent; color: var(--ma-ink, #1a1a1a); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-action-ghost:hover { background: var(--ma-ink, #1a1a1a); color: var(--ma-plaster-lit, #f7f7f7); } .ds-action-ghost:focus-visible { outline: 2px solid var(--ma-ink, #1a1a1a); outline-offset: 3px; }"
+      "css": ".ds-action-ghost { display: inline-flex; min-height: 3rem; align-items: center; justify-content: center; gap: 0.625rem; padding-inline: 1.75rem; border: 1px solid var(--ma-ink, #1a1a1a); background: transparent; color: var(--ma-ink, #1a1a1a); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-action-ghost:hover { background: var(--ma-ink, #1a1a1a); color: var(--ma-plaster-lit, #f7f7f7); } .ds-action-ghost:focus-visible { outline: 2px solid var(--ma-ink, #1a1a1a); outline-offset: 3px; } @supports (corner-shape: scoop) { .ds-action-ghost { border-radius: var(--ma-scoop, 0.5rem); corner-shape: scoop; } }"
     },
     {
       "name": "Danger Action",
@@ -141,7 +336,7 @@
       "refersTo": "action-danger",
       "description": "Destruction is available, never loud. At rest an underlined oxblood word; it takes its box and its fill only once the pointer or focus commits.",
       "html": "<button class=\"ds-action-danger\">Usuń kopie</button>",
-      "css": ".ds-action-danger { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; padding-inline: 1rem; border: 1px solid transparent; border-radius: 0; background: transparent; color: var(--ma-oxblood, #8c2318); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.6875rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ma-oxblood, #8c2318) 40%, transparent); text-underline-offset: 0.35em; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-action-danger:hover, .ds-action-danger:focus-visible { background: var(--ma-oxblood, #8c2318); border-color: var(--ma-oxblood, #8c2318); color: var(--ma-plaster-lit, #f7f7f7); text-decoration-color: transparent; }"
+      "css": ".ds-action-danger { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; padding-inline: 1rem; border: 1px solid transparent; background: transparent; color: var(--ma-oxblood, #8c2318); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.6875rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ma-oxblood, #8c2318) 40%, transparent); text-underline-offset: 0.35em; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-action-danger:hover, .ds-action-danger:focus-visible { background: var(--ma-oxblood, #8c2318); border-color: var(--ma-oxblood, #8c2318); color: var(--ma-plaster-lit, #f7f7f7); text-decoration-color: transparent; } @supports (corner-shape: scoop) { .ds-action-danger { border-radius: var(--ma-scoop, 0.5rem); corner-shape: scoop; } }"
     },
     {
       "name": "Hairline Field",
@@ -149,15 +344,15 @@
       "refersTo": "field",
       "description": "The alcove's text input: a box drawn in one stroke on paper white. Focus doubles the hairline instead of glowing.",
       "html": "<label class=\"ds-field-label\" for=\"ds-field\">Hasło zaproszenia</label><input id=\"ds-field\" class=\"ds-field\" type=\"text\" placeholder=\"np. wianki-2026\" />",
-      "css": ".ds-field-label { display: block; margin-bottom: 0.75rem; color: var(--ma-pine, #666666); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.6875rem; letter-spacing: 0.24em; line-height: 1.4; text-transform: uppercase; } .ds-field { min-height: 3rem; width: 100%; padding-inline: 1rem; border: 1px solid var(--ma-ash-deep, #b4b4b4); border-radius: 0; background: var(--ma-paper, #ffffff); color: var(--ma-ink, #1a1a1a); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 1rem; caret-color: var(--ma-ink, #1a1a1a); transition: border-color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-field::placeholder { color: var(--ma-pine, #666666); opacity: 1; } .ds-field:hover { border-color: var(--ma-pine, #666666); } .ds-field:focus-visible { border-color: var(--ma-ink, #1a1a1a); outline: 1px solid var(--ma-ink, #1a1a1a); outline-offset: 2px; }"
+      "css": ".ds-field-label { display: block; margin-bottom: 0.75rem; color: var(--ma-pine, #666666); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.6875rem; letter-spacing: 0.24em; line-height: 1.4; text-transform: uppercase; } .ds-field { min-height: 3rem; width: 100%; padding-inline: 1rem; border: 1px solid var(--ma-ash-deep, #b4b4b4); background: var(--ma-paper, #ffffff); color: var(--ma-ink, #1a1a1a); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 1rem; caret-color: var(--ma-ink, #1a1a1a); transition: border-color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-field::placeholder { color: var(--ma-pine, #666666); opacity: 1; } .ds-field:hover { border-color: var(--ma-pine, #666666); } .ds-field:focus-visible { border-color: var(--ma-ink, #1a1a1a); outline: 1px solid var(--ma-ink, #1a1a1a); outline-offset: 2px; } @supports (corner-shape: scoop) { .ds-field { border-radius: var(--ma-scoop, 0.5rem); corner-shape: scoop; } }"
     },
     {
       "name": "Lifted Plane",
       "kind": "card",
       "refersTo": "plane",
-      "description": "There are no cards, only planes: one step lighter than the wall, inside a 1px ash rule, square, no shadow. Shown here with the heading and its ranking rule.",
+      "description": "There are no cards, only planes: one step lighter than the wall, inside a 1px ash rule, scooped at the plane depth, no shadow. Shown here with the heading and its ranking rule.",
       "html": "<section class=\"ds-plane\"><h2 class=\"ds-plane-title\">Dorzuć swoje zdjęcia</h2><hr class=\"ds-rule\" /><p class=\"ds-plane-body\">Do 10 plików naraz, każdy do 25 MiB. Nie zapisujemy Twojego imienia.</p></section>",
-      "css": ".ds-plane { border: 1px solid var(--ma-ash, #d8d8d8); border-radius: 0; background: var(--ma-plaster-lit, #f7f7f7); padding: 2rem; } .ds-plane-title { margin: 0; font-family: var(--font-serif, 'Iowan Old Style', Georgia, serif); font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 400; line-height: 0.95; color: var(--ma-ink, #1a1a1a); } .ds-rule { display: block; width: 2rem; height: 1px; margin: 1.25rem 0 0; border: 0; background: var(--ma-ink, #1a1a1a); } .ds-plane-body { margin: 1.25rem 0 0; max-width: 28rem; color: var(--ma-pine, #666666); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 1rem; line-height: 1.65; }"
+      "css": ".ds-plane { border: 1px solid var(--ma-ash, #d8d8d8); background: var(--ma-plaster-lit, #f7f7f7); padding: 2rem; } .ds-plane-title { margin: 0; font-family: var(--font-serif, 'Iowan Old Style', Georgia, serif); font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 400; line-height: 0.95; color: var(--ma-ink, #1a1a1a); } .ds-rule { display: block; width: 2rem; height: 1px; margin: 1.25rem 0 0; border: 0; background: var(--ma-ink, #1a1a1a); } .ds-plane-body { margin: 1.25rem 0 0; max-width: 28rem; color: var(--ma-pine, #666666); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 1rem; line-height: 1.65; } @supports (corner-shape: scoop) { .ds-plane { border-radius: var(--ma-scoop-plane, 0.875rem); corner-shape: scoop; } }"
     },
     {
       "name": "Charged Empty State",
@@ -165,7 +360,7 @@
       "refersTo": "plane",
       "description": "An empty state is a composed invitation, so it keeps the full field of the thing it is waiting for instead of collapsing to a line.",
       "html": "<div class=\"ds-empty\"><div class=\"ds-empty-inner\"><p class=\"ds-empty-title\">Jeszcze nikt nic nie wrzucił.</p><hr class=\"ds-empty-rule\" /><p class=\"ds-empty-body\">Bądź pierwszy — zdjęcia pojawią się tutaj po zatwierdzeniu.</p></div></div>",
-      "css": ".ds-empty { display: grid; place-items: center; padding: clamp(2.5rem, 9vw, 5rem) 1.5rem; border: 1px solid var(--ma-ash, #d8d8d8); border-radius: 0; background: transparent; text-align: left; } .ds-empty-inner { max-width: 28rem; } .ds-empty-title { margin: 0; font-family: var(--font-serif, 'Iowan Old Style', Georgia, serif); font-size: 1.875rem; font-weight: 400; line-height: 1.15; color: var(--ma-ink, #1a1a1a); } .ds-empty-rule { display: block; width: 2rem; height: 1px; margin: 1.5rem 0 0; border: 0; background: var(--ma-ink, #1a1a1a); } .ds-empty-body { margin: 1.5rem 0 0; color: var(--ma-pine, #666666); font-family: ui-sans-serif, system-ui, sans-serif; line-height: 1.65; }"
+      "css": ".ds-empty { display: grid; place-items: center; padding: clamp(2.5rem, 9vw, 5rem) 1.5rem; border: 1px solid var(--ma-ash, #d8d8d8); background: transparent; text-align: left; } .ds-empty-inner { max-width: 28rem; } .ds-empty-title { margin: 0; font-family: var(--font-serif, 'Iowan Old Style', Georgia, serif); font-size: 1.875rem; font-weight: 400; line-height: 1.15; color: var(--ma-ink, #1a1a1a); } .ds-empty-rule { display: block; width: 2rem; height: 1px; margin: 1.5rem 0 0; border: 0; background: var(--ma-ink, #1a1a1a); } .ds-empty-body { margin: 1.5rem 0 0; color: var(--ma-pine, #666666); font-family: ui-sans-serif, system-ui, sans-serif; line-height: 1.65; } @supports (corner-shape: scoop) { .ds-empty { border-radius: var(--ma-scoop-plane, 0.875rem); corner-shape: scoop; } }"
     },
     {
       "name": "Struck Counts",
@@ -189,7 +384,7 @@
       "refersTo": "stage-action",
       "description": "The projected show is the same world with its planes inverted: plaster fill, ink-deep type. Shown with the cast-shadow legibility treatment used by chrome sitting on a photograph.",
       "html": "<div class=\"ds-stage\"><button class=\"ds-stage-action\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M15 18l-6-6 6-6\"/></svg>Wróć</button><span class=\"ds-stage-control\">Zdjęcie 12 / 248</span></div>",
-      "css": ".ds-stage { display: flex; align-items: center; gap: 1.5rem; padding: 2rem; background-color: var(--ma-ink-deep, #0a0a0a); color: var(--ma-plaster, #efefef); } .ds-stage-action { display: inline-flex; min-height: 3rem; align-items: center; justify-content: center; gap: 0.5rem; padding-inline: 1.25rem; border: 1px solid var(--ma-plaster, #efefef); border-radius: 0; background: var(--ma-plaster, #efefef); color: var(--ma-ink-deep, #0a0a0a); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; transition: opacity 160ms cubic-bezier(0.16,1,0.3,1); } .ds-stage-action:hover { opacity: 0.85; } .ds-stage-action:focus-visible { outline: 2px solid var(--ma-plaster, #efefef); outline-offset: 3px; } .ds-stage-control { filter: drop-shadow(0 1px 3px rgb(0 0 0 / 90%)) drop-shadow(0 2px 12px rgb(0 0 0 / 55%)); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-variant-numeric: tabular-nums; }"
+      "css": ".ds-stage { display: flex; align-items: center; gap: 1.5rem; padding: 2rem; background-color: var(--ma-ink-deep, #0a0a0a); color: var(--ma-plaster, #efefef); } .ds-stage-action { display: inline-flex; min-height: 3rem; align-items: center; justify-content: center; gap: 0.5rem; padding-inline: 1.25rem; border: 1px solid var(--ma-plaster, #efefef); background: var(--ma-plaster, #efefef); color: var(--ma-ink-deep, #0a0a0a); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; transition: opacity 160ms cubic-bezier(0.16,1,0.3,1); } .ds-stage-action:hover { opacity: 0.85; } .ds-stage-action:focus-visible { outline: 2px solid var(--ma-plaster, #efefef); outline-offset: 3px; } .ds-stage-control { filter: drop-shadow(0 1px 3px rgb(0 0 0 / 90%)) drop-shadow(0 2px 12px rgb(0 0 0 / 55%)); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-variant-numeric: tabular-nums; } @supports (corner-shape: scoop) { .ds-stage-action { border-radius: var(--ma-scoop, 0.5rem); corner-shape: scoop; } }"
     },
     {
       "name": "Placed Photograph",
@@ -197,32 +392,76 @@
       "refersTo": "suiban",
       "description": "The signature moment. Choosing a photograph recedes the arrangement behind an ink-deep scrim and places the photograph over the bronze vessel strip. Reduced motion removes the animation outright.",
       "html": "<div class=\"ds-alcove\"><div class=\"ds-alcove-stage\"><div class=\"ds-placed\"></div></div><div class=\"ds-vessel\"><span class=\"ds-vessel-label\">Zdjęcie gościa</span><button class=\"ds-vessel-close\">Zamknij</button></div></div>",
-      "css": ".ds-alcove { display: flex; flex-direction: column; min-height: 20rem; background: color-mix(in srgb, var(--ma-ink-deep, #0a0a0a) 92%, transparent); animation: ds-alcove-in 220ms cubic-bezier(0.16,1,0.3,1) both; } .ds-alcove-stage { display: flex; flex: 1; align-items: center; justify-content: flex-end; padding: 2.5rem 12% 2.5rem 2.5rem; } .ds-placed { width: 60%; aspect-ratio: 3 / 2; background: var(--ma-ash-deep, #b4b4b4); animation: ds-place 420ms cubic-bezier(0.16,1,0.3,1) both; } .ds-vessel { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 2.5rem; border-top: 1px solid var(--ma-pine, #666666); background-color: var(--ma-bronze, #2a2a2a); background-image: var(--ma-bronze-surface, none); background-repeat: repeat; background-size: 256px 256px; color: var(--ma-plaster, #efefef); } .ds-vessel-label { color: var(--ma-ash-deep, #b4b4b4); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.6875rem; letter-spacing: 0.24em; text-transform: uppercase; } .ds-vessel-close { min-height: 3rem; padding-inline: 1.25rem; border: 1px solid var(--ma-plaster, #efefef); border-radius: 0; background: var(--ma-plaster, #efefef); color: var(--ma-ink-deep, #0a0a0a); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; } @keyframes ds-alcove-in { from { opacity: 0; } to { opacity: 1; } } @keyframes ds-place { from { opacity: 0; transform: scale(0.94) translateY(1.25rem); filter: blur(6px); } to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } } @media (prefers-reduced-motion: reduce) { .ds-alcove, .ds-placed { animation-name: none; } }"
+      "css": ".ds-alcove { display: flex; flex-direction: column; min-height: 20rem; background: color-mix(in srgb, var(--ma-ink-deep, #0a0a0a) 92%, transparent); animation: ds-alcove-in 220ms cubic-bezier(0.16,1,0.3,1) both; } .ds-alcove-stage { display: flex; flex: 1; align-items: center; justify-content: flex-end; padding: 2.5rem 12% 2.5rem 2.5rem; } .ds-placed { width: 60%; aspect-ratio: 3 / 2; background: var(--ma-ash-deep, #b4b4b4); animation: ds-place 420ms cubic-bezier(0.16,1,0.3,1) both; } .ds-vessel { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 2.5rem; border-top: 1px solid var(--ma-pine, #666666); background-color: var(--ma-bronze, #2a2a2a); background-image: var(--ma-bronze-surface, none); background-repeat: repeat; background-size: 256px 256px; color: var(--ma-plaster, #efefef); } .ds-vessel-label { color: var(--ma-ash-deep, #b4b4b4); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.6875rem; letter-spacing: 0.24em; text-transform: uppercase; } .ds-vessel-close { min-height: 3rem; padding-inline: 1.25rem; border: 1px solid var(--ma-plaster, #efefef); background: var(--ma-plaster, #efefef); color: var(--ma-ink-deep, #0a0a0a); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; } @keyframes ds-alcove-in { from { opacity: 0; } to { opacity: 1; } } @keyframes ds-place { from { opacity: 0; transform: scale(0.94) translateY(1.25rem); filter: blur(6px); } to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } } @media (prefers-reduced-motion: reduce) { .ds-alcove, .ds-placed { animation-name: none; } } @supports (corner-shape: scoop) { .ds-vessel-close { border-radius: var(--ma-scoop, 0.5rem); corner-shape: scoop; } }"
     }
   ],
   "narrative": {
     "northStar": "The Tokonoma",
-    "overview": "This is an alcove, not a page. The wall is plaster, the base plane is a dark bronze suiban, and every screen is an arrangement of three lines — a primary line (the wordmark), a supporting line (the thanks and the struck counts), and a secondary line (the well you act in) — with the emptiness between them left charged and deliberately empty. The system's entire job is to hold a guest's photograph and get out of its way, so the interface removed its own colour: every interface token is achromatic (R = G = B), and the photographs guests upload are the only live colour on screen.\n\nThe world's one accent was translated rather than dropped. Where the alcove used iris blue, this interface reverses the ink: a committed action is a filled ink block with plaster type, and at rest that same control is only a hairline outline. Depth is made of two materials and nothing else — a 1px ash rule, and the dark bronze ground that anchors every light field. Nothing has a corner radius. Nothing casts a decorative shadow. The one authored motion moment is placement: choosing a photograph recedes the arrangement and sets that photograph over the bronze plane, 420ms, once.\n\nThe night side (/pokaz, the projected slideshow) is the same world with its planes inverted — ink ground, plaster type, photograph still the only colour in the room. It is not a second theme and must never be styled as one.",
+    "overview": "This is an alcove, not a page. The wall is plaster, the base plane is a dark bronze suiban, and every screen is an arrangement of three lines — a primary line (the wordmark), a supporting line (the thanks and the struck counts), and a secondary line (the well you act in) — with the emptiness between them left charged and deliberately empty. The system's entire job is to hold a guest's photograph and get out of its way, so the interface removed its own colour: every interface token is achromatic (R = G = B), and the photographs guests upload are the only live colour on screen.\n\nThe world's one accent was translated rather than dropped. Where the alcove used iris blue, this interface reverses the ink: a committed action is a filled ink block with plaster type, and at rest that same control is only a hairline outline. Depth is made of two materials and nothing else — a 1px ash rule, and the dark bronze ground that anchors every light field. No corner is rounded: where the browser supports it, a corner is a scoop cut into the plane, and everywhere else it stays square. Nothing casts a decorative shadow. The one authored motion moment is placement: choosing a photograph recedes the arrangement and sets that photograph over the bronze plane, 420ms, once.\n\nThe night side (/pokaz, the projected slideshow) is the same world with its planes inverted — ink ground, plaster type, photograph still the only colour in the room. It is not a second theme and must never be styled as one.",
     "keyCharacteristics": [
       "Achromatic interface; exactly three tinted inks, reserved for error, success, and warning",
-      "Zero border radius anywhere in the system",
+      "The cut corner: a concave scoop (0.5rem on controls, 0.875rem on planes) that degrades to the square edge, never to a round one",
       "Hairline 1px rules and a dark bronze base instead of shadows",
       "Instrument Serif set large with tight negative leading, upright only",
       "Asymmetric three-line arrangements with composed, load-bearing voids",
       "One authored motion moment (placement), instantly cut under reduced motion"
     ],
     "rules": [
-      { "name": "The Achromatic Room Rule", "body": "Every interface colour satisfies R = G = B. Exactly three tinted values exist in the system — oxblood for error, bottle for success, amber for warning — and test/contrast.test.ts fails the build the moment a fourth hex with unequal channels appears in app/globals.css. A new accent is not a design decision here; it is a broken build.", "section": "colors" },
-      { "name": "The Only Colour Rule", "body": "The guests' photographs are the only other colour on screen. Never tint a surface, an icon, a chart, or a state chip to compete with them.", "section": "colors" },
-      { "name": "The Reversed Ink Rule", "body": "The active accent is a filled ink block with plaster type. Exactly one filled block is live at a time in a given well; every other control in that well is the hairline outline at rest. Two filled blocks side by side means one of them is wrong.", "section": "colors" },
-      { "name": "The Never An Eyebrow Rule", "body": "The label style is a marginal annotation, never a kicker above a heading. It names a value, a field, or a status. A small tracked caps line sitting directly above a display heading is a violation of this system, not an instance of it.", "section": "typography" },
-      { "name": "The Upright Rule", "body": "Instrument Serif ships upright only. There is no italic in this world; emphasis is size, position, or the rule beneath.", "section": "typography" },
-      { "name": "The Struck Fact Rule", "body": "Numbers that are facts — counts, totals, positions — are set in the serif with tabular figures, never in the body sans.", "section": "typography" },
-      { "name": "The Anchored Base Rule", "body": "Every page closes on the bronze plane — either a full suiban footer or the 0.75rem base bar. A light field that ends without a dark plane beneath it is floating, and floating is wrong.", "section": "layout" },
-      { "name": "The Hairline Depth Rule", "body": "Depth is the rule and the ground, never a shadow. If a surface needs to feel raised, give it the lit plane and a 1px ash stroke; if it needs to feel anchored, put bronze underneath it.", "section": "elevation" },
-      { "name": "The Structural Rule Rule", "body": "The 2rem ink rule ranks a heading. It is structure, not ornament — never a decorative divider between sections, and never centred. The full-width ash rule is the only rule allowed to separate.", "section": "elevation" },
-      { "name": "The Utilities Win Rule", "body": "Every ma-* class is defined inside @layer components on purpose, so a Tailwind utility always overrides it. Compose by putting the component class first and adjusting with utilities; never fight it with !important.", "section": "components" },
-      { "name": "The One Authored Moment Rule", "body": "Placement is the only motion this system authors. Everything else is a 160ms colour transition from an already-visible default. Reduced motion cuts placement to an instant, and the delivery note's animation is removed rather than shortened, because a collapsed duration would hide it.", "section": "components" }
+      {
+        "name": "The Achromatic Room Rule",
+        "body": "Every interface colour satisfies R = G = B. Exactly three tinted values exist in the system — oxblood for error, bottle for success, amber for warning — and test/contrast.test.ts fails the build the moment a fourth hex with unequal channels appears in app/globals.css. A new accent is not a design decision here; it is a broken build.",
+        "section": "colors"
+      },
+      {
+        "name": "The Only Colour Rule",
+        "body": "The guests' photographs are the only other colour on screen. Never tint a surface, an icon, a chart, or a state chip to compete with them.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reversed Ink Rule",
+        "body": "The active accent is a filled ink block with plaster type. Exactly one filled block is live at a time in a given well; every other control in that well is the hairline outline at rest. Two filled blocks side by side means one of them is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never An Eyebrow Rule",
+        "body": "The label style is a marginal annotation, never a kicker above a heading. It names a value, a field, or a status. A small tracked caps line sitting directly above a display heading is a violation of this system, not an instance of it.",
+        "section": "typography"
+      },
+      {
+        "name": "The Upright Rule",
+        "body": "Instrument Serif ships upright only. There is no italic in this world; emphasis is size, position, or the rule beneath.",
+        "section": "typography"
+      },
+      {
+        "name": "The Struck Fact Rule",
+        "body": "Numbers that are facts — counts, totals, positions — are set in the serif with tabular figures, never in the body sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The Anchored Base Rule",
+        "body": "Every page closes on the bronze plane — either a full suiban footer or the 0.75rem base bar. A light field that ends without a dark plane beneath it is floating, and floating is wrong.",
+        "section": "layout"
+      },
+      {
+        "name": "The Hairline Depth Rule",
+        "body": "Depth is the rule and the ground, never a shadow. If a surface needs to feel raised, give it the lit plane and a 1px ash stroke; if it needs to feel anchored, put bronze underneath it.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Structural Rule Rule",
+        "body": "The 2rem ink rule ranks a heading. It is structure, not ornament — never a decorative divider between sections, and never centred. The full-width ash rule is the only rule allowed to separate.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Utilities Win Rule",
+        "body": "Every ma-* class is defined inside @layer components on purpose, so a Tailwind utility always overrides it. Compose by putting the component class first and adjusting with utilities; never fight it with !important.",
+        "section": "components"
+      },
+      {
+        "name": "The One Authored Moment Rule",
+        "body": "Placement is the only motion this system authors. Everything else is a 160ms colour transition from an already-visible default. Reduced motion cuts placement to an instant, and the delivery note's animation is removed rather than shortened, because a collapsed duration would hide it.",
+        "section": "components"
+      }
     ],
     "dos": [
       "Do keep every new interface colour achromatic (R = G = B) and pull it from the existing ramp; test/contrast.test.ts is the audit.",
@@ -235,7 +474,8 @@
       "Do author new texture as a deterministic seeded tile through scripts/make-textures.mjs so a clean checkout can regenerate it."
     ],
     "donts": [
-      "Don't add a border radius anywhere. There is no radius token because there is no radius.",
+      "Don't add a rounded corner anywhere. The only radius in the system lives inside @supports (corner-shape: scoop), where it is what the scoop cuts into; a radius outside that query is a round corner, and the build fails on it.",
+      "Don't scoop a photograph, a thumbnail or the placed plate. The corner treatment belongs to the interface, and the interface does not cut into a guest's image.",
       "Don't introduce a shadow for elevation. Use the lit plane plus an ash hairline, or the bronze ground. The only shadow in the system is the night-side legibility drop-shadow on chrome sitting over a photograph.",
       "Don't set a small tracked-caps line above a heading. The label is a marginal annotation for a value, a field, or a status — never a kicker or eyebrow.",
       "Don't centre a display heading or a page's primary line; the arrangement is asymmetric and flush left.",

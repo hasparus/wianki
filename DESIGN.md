@@ -60,6 +60,8 @@ typography:
     letterSpacing: "0.16em"
 rounded:
   none: "0"
+  scoop: "0.5rem"
+  scoop-plane: "0.875rem"
 spacing:
   hairline: "1px"
   rule: "2rem"
@@ -79,7 +81,7 @@ components:
     backgroundColor: "{colors.ink}"
     textColor: "{colors.plaster-lit}"
     typography: "{typography.action}"
-    rounded: "{rounded.none}"
+    rounded: "{rounded.scoop}"
     padding: "0 1.75rem"
     height: "{spacing.control-height}"
   action-hover:
@@ -92,7 +94,7 @@ components:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
     typography: "{typography.action}"
-    rounded: "{rounded.none}"
+    rounded: "{rounded.scoop}"
     padding: "0 1.75rem"
     height: "{spacing.control-height}"
   action-ghost-hover:
@@ -113,14 +115,14 @@ components:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
     typography: "{typography.body}"
-    rounded: "{rounded.none}"
+    rounded: "{rounded.scoop}"
     padding: "0 1rem"
     height: "{spacing.control-height}"
     width: "100%"
   plane:
     backgroundColor: "{colors.plaster-lit}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.none}"
+    rounded: "{rounded.scoop-plane}"
     padding: "{spacing.plane-pad-md}"
   plane-paper:
     backgroundColor: "{colors.paper}"
@@ -136,7 +138,7 @@ components:
     backgroundColor: "{colors.plaster}"
     textColor: "{colors.ink-deep}"
     typography: "{typography.action}"
-    rounded: "{rounded.none}"
+    rounded: "{rounded.scoop}"
     padding: "0 1.25rem"
     height: "{spacing.control-height}"
   label:
@@ -152,13 +154,13 @@ components:
 
 This is an alcove, not a page. The wall is plaster, the base plane is a dark bronze *suiban*, and every screen is an arrangement of three lines — a primary line (the wordmark), a supporting line (the thanks and the struck counts), and a secondary line (the well you act in) — with the emptiness between them left charged and deliberately empty. The system's entire job is to hold a guest's photograph and get out of its way, so the interface removed its own colour: every interface token is achromatic (R = G = B), and the photographs guests upload are the only live colour on screen.
 
-The world's one accent was translated rather than dropped. Where the alcove used iris blue, this interface reverses the ink: a committed action is a filled ink block with plaster type, and at rest that same control is only a hairline outline. Depth is made of two materials and nothing else — a 1px ash rule, and the dark bronze ground that anchors every light field. Nothing has a corner radius. Nothing casts a decorative shadow. The one authored motion moment is **placement**: choosing a photograph recedes the arrangement and sets that photograph over the bronze plane, 420ms, once.
+The world's one accent was translated rather than dropped. Where the alcove used iris blue, this interface reverses the ink: a committed action is a filled ink block with plaster type, and at rest that same control is only a hairline outline. Depth is made of two materials and nothing else — a 1px ash rule, and the dark bronze ground that anchors every light field. No corner is rounded: where the browser supports it, a corner is a scoop cut into the plane, and everywhere else it stays square. Nothing casts a decorative shadow. The one authored motion moment is **placement**: choosing a photograph recedes the arrangement and sets that photograph over the bronze plane, 420ms, once.
 
 The night side (`/pokaz`, the projected slideshow) is the same world with its planes inverted — ink ground, plaster type, photograph still the only colour in the room. It is not a second theme and must never be styled as one.
 
 **Key Characteristics:**
 - Achromatic interface; exactly three tinted inks, reserved for error, success, and warning
-- Zero border radius anywhere in the system
+- The cut corner: a concave scoop (0.5rem on controls, 0.875rem on planes) that degrades to the square edge, never to a round one
 - Hairline 1px rules and a dark bronze base instead of shadows
 - Instrument Serif set large with tight negative leading, upright only
 - Asymmetric three-line arrangements with composed, load-bearing voids
@@ -246,7 +248,9 @@ One cast shadow exists and it is not decoration. On the night side, controls sit
 
 ## Shapes
 
-Square. `border-radius` is genuinely absent from this system: no token defines one, and no component carries one. Corners are corners, on buttons, fields, planes, thumbnails, the empty state, and the placed photograph alike.
+Cut, never rounded. The corner language is the **scoop**: `corner-shape: scoop` at `--ma-scoop` (0.5rem) on controls and fields, and `--ma-scoop-plane` (0.875rem) on lifted planes and empty states. The corner bites into the plane the way the alcove's edges are carved out of it, rather than bulging away from it.
+
+`corner-shape` needs a radius to bite into, so `border-radius` is declared **only** inside `@supports (corner-shape: scoop)` — it exists nowhere else in the system. A browser without the property never sees a radius and keeps the square edge; the fallback is the plain corner, never a rounded one, and `test/corner-shape.test.ts` fails the build if a radius escapes that query. Photographs, thumbnails and the placed plate take no corner treatment at all: the guests' images are not cut into.
 
 The recurring silhouette is the hairline box drawn in one stroke — a 1px rectangle around a field, a plane, an empty state, or a queue row — and its inverse, the filled ink block. A control moves between those two states and nothing in between. Horizontal geometry is set by two rule lengths: the 2rem short rule that ranks a heading, and the full-width ash rule that separates. Photographs are never cropped to a circle or a fixed ratio in the feed; only the small confirmation thumbnails take a square aspect, and the queue thumbnail a 3.5rem square.
 
@@ -255,7 +259,7 @@ Icons are line-drawn SVG at the ambient stroke weight; the app icon itself is tw
 ## Components
 
 ### Buttons
-- **Shape:** Square, no radius, 1px stroke, 3rem tall (2.75rem for the quiet variant), 1.75rem of horizontal padding, uppercase 0.8125rem/500 at 0.16em tracking.
+- **Shape:** 1px stroke with a 0.5rem scooped corner (square where `corner-shape` is unsupported), 3rem tall (2.75rem for the quiet variant), 1.75rem of horizontal padding, uppercase 0.8125rem/500 at 0.16em tracking.
 - **Primary (`ma-action`):** The reversed ink block — ink fill, plaster-lit type, ink stroke. Hover deepens to ink-deep. Only one is live in a well.
 - **Ghost (`ma-action--ghost`):** The same box unfilled — transparent fill, ink type, ink stroke. Hover inverts it into the filled block, which is how the rest state and the committed state stay visibly the same object.
 - **Quiet (`ma-action--quiet`):** No stroke and no fill at rest; hover draws the ink stroke only. For repeated in-row affordances where a box would shout.
@@ -264,14 +268,14 @@ Icons are line-drawn SVG at the ambient stroke weight; the app icon itself is tw
 - **Transitions:** background and colour at 160ms on the world easing. Nothing moves, scales, or lifts.
 
 ### Inputs / Fields
-- **Style (`ma-field`):** A box drawn in one stroke — 1px ash-deep on paper white, 3rem tall, full width, 1rem inline padding, body type at 1rem.
+- **Style (`ma-field`):** A box drawn in one stroke — 1px ash-deep on paper white, 3rem tall, full width, 1rem inline padding, body type at 1rem, with the 0.5rem scooped corner (square where `corner-shape` is unsupported).
 - **Hover:** stroke darkens to pine. **Focus:** stroke goes ink *and* a 1px ink outline is drawn at 2px offset — a doubled hairline, not a glow.
 - **Disabled:** ash stroke, disabled grey type. **Error:** the field keeps its stroke; the message appears beneath it as oxblood body copy at 500.
 - Placeholders are pine at full opacity; the caret is ink (plaster on the night side).
 
 ### Cards / Containers
-- **Plane (`ma-plane`):** There are no cards, only planes. Lit plaster inside a 1px ash stroke, square corners, no shadow, internal padding stepping 1.25rem → 2rem → 2.5rem. `ma-plane--paper` swaps the fill to paper white.
-- **Empty state (`ma-empty`):** A composed invitation, not a collapsed line. It keeps the full field of the thing it is waiting for — a 1px ash box with `clamp(2.5rem, 9vw, 5rem)` of vertical padding, its content left-aligned inside a centred grid, holding a serif title, a 2rem rule, and one line of pine prose.
+- **Plane (`ma-plane`):** There are no cards, only planes. Lit plaster inside a 1px ash stroke, a 0.875rem scooped corner (square where `corner-shape` is unsupported), no shadow, internal padding stepping 1.25rem → 2rem → 2.5rem. `ma-plane--paper` swaps the fill to paper white.
+- **Empty state (`ma-empty`):** A composed invitation, not a collapsed line. It keeps the full field of the thing it is waiting for — a 1px ash box scooped at the plane depth (0.875rem), with `clamp(2.5rem, 9vw, 5rem)` of vertical padding, its content left-aligned inside a centred grid, holding a serif title, a 2rem rule, and one line of pine prose.
 - **Lists:** hairline-divided rows (`divide-ash` inside a top-and-bottom ash border), never boxed per item.
 
 ### Navigation
@@ -301,7 +305,8 @@ The same world with the planes inverted: ink-deep ground, plaster type, ash-deep
 - **Do** author new texture as a deterministic seeded tile through `scripts/make-textures.mjs` so a clean checkout can regenerate it.
 
 ### Don't:
-- **Don't** add a border radius anywhere. There is no radius token because there is no radius.
+- **Don't** add a rounded corner anywhere. The only radius in the system lives inside `@supports (corner-shape: scoop)`, where it is what the scoop cuts into; a radius outside that query is a round corner, and the build fails on it.
+- **Don't** scoop a photograph, a thumbnail or the placed plate. The corner treatment belongs to the interface, and the interface does not cut into a guest's image.
 - **Don't** introduce a shadow for elevation. Use the lit plane plus an ash hairline, or the bronze ground. The only shadow in the system is the night-side legibility drop-shadow on chrome sitting over a photograph.
 - **Don't** set a small tracked-caps line above a heading. The label is a marginal annotation for a value, a field, or a status — never a kicker or eyebrow.
 - **Don't** centre a display heading or a page's primary line; the arrangement is asymmetric and flush left.
