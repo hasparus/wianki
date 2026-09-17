@@ -290,7 +290,7 @@ The same world with the planes inverted: ink-deep ground, plaster type, ash-deep
 ### Named Rules
 **The Utilities Win Rule.** Every `ma-*` class is defined inside `@layer components` on purpose, so a Tailwind utility always overrides it. Compose by putting the component class first and adjusting with utilities; never fight it with `!important`.
 
-**The One Authored Moment Rule.** Placement is the only motion this system authors. Everything else is a 160ms colour transition from an already-visible default. Reduced motion cuts placement to an instant, and the delivery note's animation is removed rather than shortened, because a collapsed duration would hide it.
+**The One Authored Moment Rule.** Placement is the only motion this system authors. Everything else is a 160ms colour transition from an already-visible default, and reduced motion cuts placement to an instant. A second animated moment was built once, for the upload confirmation, and removed: two authored moments is none.
 
 ## Do's and Don'ts
 

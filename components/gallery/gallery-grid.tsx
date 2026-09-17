@@ -78,13 +78,9 @@ export function GalleryGrid({
 				</ul>
 			) : (
 				<div className="ma-empty mt-12">
-					<div className="max-w-md">
-						<p className="font-serif text-3xl leading-tight">
-							Pierwsze zdjęcia pojawią się tutaj.
-						</p>
-						<hr className="ma-rule mt-6" />
-						<p className="mt-6 text-ma-pine">Jeszcze nikt nic nie wrzucił.</p>
-					</div>
+					<p className="max-w-md font-serif text-3xl leading-tight">
+						Jeszcze nikt nic nie wrzucił.
+					</p>
 				</div>
 			)}
 

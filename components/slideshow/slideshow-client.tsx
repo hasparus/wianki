@@ -223,8 +223,7 @@ export function SlideshowClient({
 					</h1>
 					<hr className="ma-rule mt-8" />
 					<p className="mt-8 text-lg text-ma-ash-deep">
-						Jeszcze nie ma czego wyświetlić. Pokaz ułoży się sam z
-						zatwierdzonych zdjęć galerii.
+						Ułoży się sam z zatwierdzonych zdjęć galerii.
 					</p>
 					<Link href="/" className="ma-stage-action mt-10">
 						Wróć do galerii

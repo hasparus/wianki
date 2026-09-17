@@ -1,6 +1,5 @@
 "use client";
 
-import { SuccessCelebration } from "@/components/upload/success-celebration";
 import { UploadFilePicker } from "@/components/upload/upload-file-picker";
 import { UploadItemList } from "@/components/upload/upload-item-list";
 import { UploadSubmitControls } from "@/components/upload/upload-submit-controls";
@@ -14,9 +13,7 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 		activeBatchIds,
 		busy,
 		summary,
-		celebrationMessage,
 		chooseFiles,
-		clearCelebration,
 		upload,
 	} = useUploadBatch(onComplete);
 	// Items keep their place in the list while a batch is in flight and move to
@@ -56,8 +53,7 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 			</h2>
 			<hr className="ma-rule mt-5" />
 			<p className="mt-5 max-w-md text-ma-pine">
-				Możesz wysłać do 10 zdjęć naraz. Po weselu udostępnimy wszystkim folder
-				z oryginałami.
+				Do 10 zdjęć naraz. Po weselu udostępnimy folder z oryginałami.
 			</p>
 			<UploadFilePicker
 				inputRef={inputRef}
@@ -76,12 +72,6 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 				<p role="status" className="mt-5 text-sm font-medium">
 					{summary}
 				</p>
-			) : null}
-			{celebrationMessage ? (
-				<SuccessCelebration
-					message={celebrationMessage}
-					onFinished={clearCelebration}
-				/>
 			) : null}
 			<UploadedPhotos items={deliveredItems} />
 		</section>

@@ -46,13 +46,14 @@ function tile({ size, base, amplitude, octaves, seed }) {
 	return sharp(px, { raw: { width: size, height: size, channels: 1 } });
 }
 
-// The alcove wall: fine tooth just past the threshold of visibility on #EFEFEF.
-await tile({ size: 512, base: 239, amplitude: 7, octaves: 5, seed: 20260620 })
+// The alcove wall: a tooth you notice only once you look for it on #EFEFEF.
+await tile({ size: 512, base: 239, amplitude: 3.5, octaves: 5, seed: 20260620 })
 	.png({ compressionLevel: 9, colours: 64 })
 	.toFile("public/textures/plaster.png");
 
-// The suiban: a coarser, deeper patina on #2A2A2A.
-await tile({ size: 512, base: 42, amplitude: 11, octaves: 4, seed: 19940317 })
+// The suiban: the same tooth, slightly coarser, on #2A2A2A. Mottling reads
+// louder against a dark ground than a light one, so it stays quiet here too.
+await tile({ size: 512, base: 42, amplitude: 5.5, octaves: 4, seed: 19940317 })
 	.png({ compressionLevel: 9, colours: 64 })
 	.toFile("public/textures/bronze.png");
 

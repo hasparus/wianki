@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { retainDeliveredItems } from "@/components/upload/items";
-import { completedUploadMessages } from "@/components/upload/messages";
+import { uploadCompleteInstruction } from "@/components/upload/messages";
 import { validateUploadSelection } from "@/components/upload/selection";
 import type {
 	FinalizeResult,
@@ -27,7 +27,6 @@ export function useUploadBatch(onComplete: () => void) {
 	const [busy, setBusy] = useState(false);
 	const [summary, setSummary] = useState("");
 	const [activeBatchIds, setActiveBatchIds] = useState<readonly string[]>([]);
-	const [celebrationMessage, setCelebrationMessage] = useState("");
 
 	const itemsRef = useRef<UploadItem[]>([]);
 	itemsRef.current = items;
@@ -48,7 +47,6 @@ export function useUploadBatch(onComplete: () => void) {
 
 	const chooseFiles = useCallback((files: FileList | null) => {
 		setSummary("");
-		setCelebrationMessage("");
 		const selection = validateUploadSelection(Array.from(files ?? []));
 		if (inputRef.current) inputRef.current.value = "";
 		if (!selection.valid) {
@@ -181,7 +179,6 @@ export function useUploadBatch(onComplete: () => void) {
 		if (!items.length || busy) return;
 		setBusy(true);
 		setSummary("");
-		setCelebrationMessage("");
 		try {
 			const freshItems = items.filter(
 				(item) => item.phase === "queued" || item.phase === "failed",
@@ -211,9 +208,7 @@ export function useUploadBatch(onComplete: () => void) {
 			);
 			const succeeded = results.filter(Boolean).length;
 			if (results.length && succeeded === results.length) {
-				const messages = completedUploadMessages();
-				setSummary(messages.summary);
-				setCelebrationMessage(messages.celebration);
+				setSummary(uploadCompleteInstruction);
 				onComplete();
 			} else {
 				setSummary(
@@ -230,17 +225,13 @@ export function useUploadBatch(onComplete: () => void) {
 		}
 	}, [busy, items, onComplete, processFreshUpload, retryArchive]);
 
-	const clearCelebration = useCallback(() => setCelebrationMessage(""), []);
-
 	return {
 		inputRef,
 		items,
 		activeBatchIds,
 		busy,
 		summary,
-		celebrationMessage,
 		chooseFiles,
-		clearCelebration,
 		upload,
 	};
 }

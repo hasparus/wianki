@@ -522,17 +522,6 @@
 		animation: ma-drift linear both;
 		will-change: transform;
 	}
-
-	/* ---------------------------------------------------------------------------
-	 * Delivery. The batch lands in the well it was sent from — no overlay and no
-	 * protected focus, so placement stays the one authored moment.
-	 * ------------------------------------------------------------------------ */
-
-	.ma-delivery {
-		border-left: 1px solid var(--ma-ink);
-		padding-left: 1.25rem;
-		animation: ma-delivery 4.4s ease-in-out both;
-	}
 }
 
 @keyframes ma-alcove-in {
@@ -617,26 +606,7 @@
 	}
 }
 
-@keyframes ma-delivery {
-	0% {
-		opacity: 0;
-		transform: translateY(0.5rem);
-	}
-	6%,
-	84% {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	100% {
-		opacity: 0;
-		transform: translateY(0);
-	}
-}
-
 @media (prefers-reduced-motion: reduce) {
-	/* Not just shortened: the delivery note fades out at the end of its
-	 * keyframes, so a collapsed duration would hide it outright. */
-	.ma-delivery,
 	.ma-placed,
 	.ma-alcove {
 		animation-name: none;

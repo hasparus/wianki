@@ -28,9 +28,6 @@ export function UploadedPhotos({ items }: { items: UploadItem[] }) {
 					</li>
 				))}
 			</ul>
-			<p className="mt-3 text-sm text-ma-pine">
-				Pojawią się w galerii, gdy tylko je zatwierdzimy.
-			</p>
 		</section>
 	);
 }

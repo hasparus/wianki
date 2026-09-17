@@ -38,10 +38,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 					<hr className="ma-rule mt-7" />
 
 					<div className="mt-[4vh] grid gap-7 sm:grid-cols-12 sm:items-end">
-						<p className="text-balance text-lg leading-relaxed text-ma-pine sm:col-span-5">
-							Dziękujemy, że świętujecie razem z nami. Wrzućcie swoje zdjęcia i
-							zobaczcie, co uchwycili inni goście.
-						</p>
+						<p className="text-lg text-ma-pine sm:col-span-5">Dzięki</p>
 						{/*
 						 * Struck facts: the numeral leads, the declined noun labels it.
 						 * Screen readers get the whole sentence instead of two bare

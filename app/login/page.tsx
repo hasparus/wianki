@@ -18,16 +18,12 @@ export default function LoginPage() {
 					</div>
 					<div>
 						<LoginForm />
-						<p className="mt-8 text-sm leading-relaxed text-ma-pine">
-							Wchodząc do galerii, pamiętaj o naszej{" "}
-							<Link
-								href="/privacy"
-								className="text-ma-ink underline decoration-ma-ash-deep hover:decoration-ma-ink"
-							>
-								informacji o prywatności
-							</Link>
-							.
-						</p>
+						<Link
+							href="/privacy"
+							className="ma-label mt-8 inline-block underline decoration-ma-ash-deep hover:text-ma-ink"
+						>
+							Informacja o prywatności
+						</Link>
 					</div>
 				</div>
 			</main>

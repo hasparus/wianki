@@ -287,15 +287,9 @@ export function SlideEditor({
 					</div>
 					{slides.length === 0 ? (
 						<div className="ma-empty mt-8">
-							<div className="max-w-md">
-								<p className="font-serif text-2xl leading-tight">
-									Lista jest pusta, więc pokaz gra automatycznie z galerii.
-								</p>
-								<hr className="ma-rule mt-6" />
-								<p className="mt-6 text-ma-pine">
-									Dodaj pierwszy slajd, żeby ustawić własną kolejność.
-								</p>
-							</div>
+							<p className="max-w-md font-serif text-2xl leading-tight">
+								Lista jest pusta, więc pokaz gra automatycznie z galerii.
+							</p>
 						</div>
 					) : (
 						<ol className="mt-8 border-t border-ma-ash">
@@ -343,7 +337,7 @@ export function SlideEditor({
 							onChange={(event) => setTextTitle(event.target.value)}
 							required
 							maxLength={SLIDESHOW_MAX_TITLE}
-							placeholder="Dziękujemy, że jesteście z nami!"
+							placeholder="Pierwszy taniec"
 							className="ma-field"
 						/>
 						<label htmlFor="text-slide-subtitle" className="ma-label mt-2">

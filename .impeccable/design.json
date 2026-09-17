@@ -279,11 +279,6 @@
         "name": "slide-out",
         "value": "260ms",
         "purpose": "Night-side slide exit into blur(8px)."
-      },
-      {
-        "name": "delivery",
-        "value": "4.4s",
-        "purpose": "The upload delivery note: lands in the well it was sent from, holds, then fades. Removed outright under reduced motion rather than shortened."
       }
     ],
     "breakpoints": [
@@ -304,12 +299,12 @@
       {
         "name": "plaster",
         "value": "url(\"/textures/plaster.png\") repeat / 256px 256px",
-        "purpose": "The alcove wall. Deterministic seeded value-noise tile authored at 512px by scripts/make-textures.mjs (base 239, amplitude 7, 5 octaves, seed 20260620). Set as the surface, not screened over a flat field."
+        "purpose": "The alcove wall. Deterministic seeded value-noise tile authored at 512px by scripts/make-textures.mjs (base 239, amplitude 3.5, 5 octaves, seed 20260620). Set as the surface, not screened over a flat field."
       },
       {
         "name": "bronze",
         "value": "url(\"/textures/bronze.png\") repeat / 256px 256px",
-        "purpose": "The suiban base plane. Same generator, coarser patina (base 42, amplitude 11, 4 octaves, seed 19940317)."
+        "purpose": "The suiban base plane. Same generator, coarser patina (base 42, amplitude 5.5, 4 octaves, seed 19940317)."
       }
     ]
   },
@@ -459,7 +454,7 @@
       },
       {
         "name": "The One Authored Moment Rule",
-        "body": "Placement is the only motion this system authors. Everything else is a 160ms colour transition from an already-visible default. Reduced motion cuts placement to an instant, and the delivery note's animation is removed rather than shortened, because a collapsed duration would hide it.",
+        "body": "Placement is the only motion this system authors. Everything else is a 160ms colour transition from an already-visible default, and reduced motion cuts placement to an instant. A second animated moment was built once, for the upload confirmation, and removed: two authored moments is none.",
         "section": "components"
       }
     ],

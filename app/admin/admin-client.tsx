@@ -135,10 +135,9 @@ export function AdminClient({
 					</div>
 					<div className="lg:col-span-4 lg:col-start-9">
 						<p className="leading-relaxed text-ma-pine">
-							Są tu wszystkie zdjęcia: widoczne, ukryte, oznaczone i te, które
-							czekają na decyzję. Ukrycie wycofuje zdjęcie z galerii bez
-							usuwania jego kopii. Kod QR administratora działa jak wspólne
-							hasło. Nie udostępniaj go gościom.
+							Ukrycie wycofuje zdjęcie z galerii bez usuwania jego kopii. Kod QR
+							administratora działa jak wspólne hasło. Nie udostępniaj go
+							gościom.
 						</p>
 						<a href="/admin/pokaz" className="ma-action ma-action--ghost mt-6">
 							Ułóż pokaz slajdów
@@ -277,15 +276,9 @@ export function AdminClient({
 					</ul>
 				) : (
 					<div className="ma-empty mt-14">
-						<div className="max-w-md">
-							<p className="font-serif text-3xl leading-tight">
-								Nie ma jeszcze żadnych zdjęć.
-							</p>
-							<hr className="ma-rule mt-6" />
-							<p className="mt-6 text-ma-pine">
-								Wszystko, co wyślą goście, trafi najpierw tutaj.
-							</p>
-						</div>
+						<p className="max-w-md font-serif text-3xl leading-tight">
+							Nie ma jeszcze żadnych zdjęć.
+						</p>
 					</div>
 				)}
 

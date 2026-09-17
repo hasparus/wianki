@@ -47,8 +47,7 @@ export function PhotoLightbox({
 					className="ma-placed max-h-full w-auto max-w-full object-contain"
 				/>
 			</div>
-			<div className="ma-suiban relative z-10 flex shrink-0 items-center justify-between gap-4 border-t border-ma-pine px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-10">
-				<span className="ma-label">Zdjęcie gościa</span>
+			<div className="ma-suiban relative z-10 flex shrink-0 items-center justify-end border-t border-ma-pine px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-10">
 				<button type="button" onClick={onClose} className="ma-stage-action">
 					Zamknij
 				</button>
