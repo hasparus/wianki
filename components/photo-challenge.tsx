@@ -8,21 +8,20 @@ const tasks = [
 
 export function PhotoChallenge() {
 	return (
-		<section className="rounded-[2rem] border border-wedding-rose bg-wedding-cream p-6 shadow-lg shadow-wedding-rose/15 sm:p-8">
-			<h2 className="font-serif text-2xl font-bold">Fotowyzwanie</h2>
-			<ol className="mt-4 grid gap-3">
-				{tasks.map((task, index) => (
-					<li key={task} className="flex gap-3 leading-7">
-						<span
-							aria-hidden
-							className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-wedding-rose text-sm font-bold"
-						>
-							{index + 1}
-						</span>
+		<section
+			aria-labelledby="challenge-title"
+			className="border-t border-ma-ink pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0"
+		>
+			<h2 id="challenge-title" className="font-serif text-3xl leading-tight">
+				Fotowyzwanie
+			</h2>
+			<ul className="mt-6 divide-y divide-ma-ash border-y border-ma-ash">
+				{tasks.map((task) => (
+					<li key={task} className="py-3 text-sm leading-relaxed text-ma-pine">
 						{task}
 					</li>
 				))}
-			</ol>
+			</ul>
 		</section>
 	);
 }

@@ -71,3 +71,9 @@ workers/**/.wrangler/
 .claude/skills/impeccable/scripts/bin/
 .claude/skills/impeccable/scripts/data/
 .claude/skills/impeccable/scripts/VERSION
+
+# Impeccable working artifacts: local overrides, generated comps and review captures
+.impeccable/config.local.json
+.impeccable/mocks/
+.impeccable/review/
+.impeccable/build/

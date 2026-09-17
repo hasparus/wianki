@@ -43,3 +43,25 @@ export function formatGalleryStats(
 
 	return `${contributingGuests} ${guests} ${added} już ${approvedPhotos} ${photos}`;
 }
+
+/**
+ * The gallery prints its counts as struck numerals with a noun beneath them,
+ * so the noun has to decline on its own rather than inside a sentence.
+ */
+export function photoCountNoun(approvedPhotos: number): string {
+	return declinePolish(approvedPhotos, {
+		one: "zdjęcie",
+		few: "zdjęcia",
+		many: "zdjęć",
+		other: "zdjęcia",
+	});
+}
+
+export function guestCountNoun(contributingGuests: number): string {
+	return declinePolish(contributingGuests, {
+		one: "gość",
+		few: "gości",
+		many: "gości",
+		other: "gościa",
+	});
+}

@@ -63,7 +63,7 @@ export async function getSlideshowJoinInfo(): Promise<SlideshowJoinInfo | null> 
 		width: 240,
 		margin: 1,
 		errorCorrectionLevel: "M",
-		color: { dark: "#1d3322", light: "#fbf6ef" },
+		color: { dark: "#1a1a1a", light: "#f7f7f7" },
 	});
 	return { qrDataUrl };
 }

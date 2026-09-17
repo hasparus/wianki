@@ -1,15 +1,9 @@
-import { type CSSProperties, useEffect } from "react";
+import { useEffect } from "react";
 
-const FIREWORK_SPARKS = Array.from({ length: 12 }, (_, index) => ({
-	key: `spark-${index}`,
-	index,
-}));
-const FIREWORKS = [
-	{ className: "celebration-firework--left", delay: "0ms" },
-	{ className: "celebration-firework--right", delay: "360ms" },
-	{ className: "celebration-firework--top", delay: "720ms" },
-] as const;
-
+/**
+ * Delivery. The old splash threw sparks; this world places one card on the
+ * ground and strikes a single rule beneath it, then lets the room go quiet.
+ */
 export function SuccessCelebration({
 	message,
 	onFinished,
@@ -23,36 +17,13 @@ export function SuccessCelebration({
 	}, [onFinished]);
 
 	return (
-		<div className="celebration-splash" aria-hidden="true">
-			{FIREWORKS.map((firework) => (
-				<div
-					className={`celebration-firework ${firework.className}`}
-					style={
-						{
-							"--firework-delay": firework.delay,
-						} as CSSProperties
-					}
-					key={firework.className}
-				>
-					{FIREWORK_SPARKS.map((spark) => (
-						<span
-							className="celebration-spark"
-							style={
-								{
-									"--spark-index": spark.index,
-								} as CSSProperties
-							}
-							key={spark.key}
-						/>
-					))}
-				</div>
-			))}
-
-			<div className="celebration-card">
-				<span className="celebration-card__icon">♥</span>
-				<p className="font-serif text-2xl font-bold leading-tight sm:text-3xl">
+		<div className="ma-delivery" aria-hidden="true">
+			<div className="ma-delivery__card">
+				<p className="ma-label">Dostarczone</p>
+				<p className="mt-6 font-serif text-3xl leading-tight text-balance sm:text-4xl">
 					{message}
 				</p>
+				<hr className="ma-rule mt-8" />
 			</div>
 		</div>
 	);

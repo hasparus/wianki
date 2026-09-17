@@ -17,14 +17,17 @@ export function UploadSubmitControls({
 				type="button"
 				onClick={onUpload}
 				disabled={!hasItems || busy}
-				className="mt-5 min-h-12 w-full rounded-full bg-wedding-green px-6 font-bold text-wedding-rose hover:bg-wedding-green-soft disabled:cursor-not-allowed disabled:bg-wedding-disabled disabled:text-white"
+				className="ma-action mt-8 w-full"
 			>
 				{busy ? busyLabel : "Wyślij zdjęcia"}
 			</button>
-			<p className="mt-3 text-sm leading-6">
+			<p className="mt-4 max-w-lg text-sm leading-relaxed text-ma-pine">
 				Wysyłając zdjęcia, zgadzasz się na ich przechowanie i sprawdzenie
 				zgodnie z{" "}
-				<Link href="/privacy" className="font-bold underline">
+				<Link
+					href="/privacy"
+					className="text-ma-ink underline decoration-ma-ash-deep hover:decoration-ma-ink"
+				>
 					informacją o prywatności
 				</Link>
 				.

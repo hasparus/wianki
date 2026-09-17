@@ -3,22 +3,32 @@ import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
 	return (
-		<main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-5 py-12">
-			<section className="w-full rounded-[2rem] border border-wedding-rose bg-wedding-cream p-7 shadow-xl shadow-wedding-rose/20 sm:p-10">
-				<p className="text-sm font-bold uppercase tracking-[0.25em]">
-					Rosia & Piotrek
-				</p>
-				<h1 className="mt-3 font-serif text-4xl font-bold">Witaj w galerii</h1>
-				<p className="mt-4 leading-7">Zeskanuj kod QR albo wpisz hasło</p>
-				<LoginForm />
-				<p className="mt-7 text-sm">
-					Wchodząc do galerii, pamiętaj o naszej{" "}
-					<Link href="/privacy" className="font-bold underline">
-						informacji o prywatności
-					</Link>
-					.
-				</p>
-			</section>
+		<main className="relative mx-auto flex min-h-svh w-full max-w-6xl flex-col px-5 pb-24 pt-[18vh] sm:px-10 sm:pt-[22vh]">
+			<span className="ma-marginalia top-[18vh]">Wejście</span>
+			<div className="grid gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-end lg:gap-24">
+				<div>
+					<h1 className="font-serif text-[clamp(3rem,11vw,6.5rem)] leading-[0.92] tracking-[-0.02em]">
+						Rosia <span className="text-ma-pine">&amp;</span> Piotrek
+					</h1>
+					<hr className="ma-rule mt-8" />
+					<p className="mt-8 max-w-sm text-lg leading-relaxed text-ma-pine">
+						Zeskanuj kod QR albo wpisz hasło z zaproszenia.
+					</p>
+				</div>
+				<div>
+					<LoginForm />
+					<p className="mt-8 text-sm leading-relaxed text-ma-pine">
+						Wchodząc do galerii, pamiętaj o naszej{" "}
+						<Link
+							href="/privacy"
+							className="text-ma-ink underline decoration-ma-ash-deep hover:decoration-ma-ink"
+						>
+							informacji o prywatności
+						</Link>
+						.
+					</p>
+				</div>
+			</div>
 		</main>
 	);
 }

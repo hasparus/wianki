@@ -123,150 +123,156 @@ export function AdminClient({
 	}
 
 	return (
-		<main className="mx-auto min-h-screen w-full max-w-6xl px-5 py-10">
-			<header>
-				<p className="text-sm font-bold uppercase tracking-[0.25em]">
-					Panel pary młodej
-				</p>
-				<h1 className="mt-2 font-serif text-5xl font-bold">
-					Wszystkie zdjęcia
-				</h1>
-				<p className="mt-3">
-					W panelu są zdjęcia widoczne, ukryte, oznaczone i wymagające reakcji.
-					Ukrycie wycofuje zdjęcie z galerii bez usuwania jego kopii.
-				</p>
-				<p className="mt-2 text-sm">
-					Kod QR administratora działa jak wspólne hasło. Nie udostępniaj go
-					gościom.
-				</p>
-				<p className="mt-4">
-					<a
-						href="/admin/pokaz"
-						className="inline-block min-h-11 rounded-full border-2 border-wedding-green px-5 py-2 font-bold hover:bg-wedding-rose/40"
-					>
-						Ułóż pokaz slajdów
-					</a>
-				</p>
+		<main className="relative mx-auto w-full max-w-6xl px-5 py-16 sm:px-10">
+			<span className="ma-marginalia">Panel</span>
+			<header className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+				<div>
+					<h1 className="font-serif text-[clamp(2.75rem,9vw,5.5rem)] leading-[0.95] tracking-[-0.02em]">
+						Wszystkie zdjęcia
+					</h1>
+					<hr className="ma-rule mt-6" />
+					<p className="mt-8 max-w-xl leading-relaxed text-ma-pine">
+						W panelu są zdjęcia widoczne, ukryte, oznaczone i wymagające
+						reakcji. Ukrycie wycofuje zdjęcie z galerii bez usuwania jego kopii.
+						Kod QR administratora działa jak wspólne hasło — nie udostępniaj go
+						gościom.
+					</p>
+				</div>
+				<a href="/admin/pokaz" className="ma-action ma-action--ghost">
+					Ułóż pokaz slajdów
+				</a>
 			</header>
+
 			{message ? (
-				<p role="alert" className="mt-6 font-bold text-wedding-error">
+				<p role="alert" className="mt-10 font-medium text-ma-oxblood">
 					{message}
 				</p>
 			) : null}
+
 			{photos.length ? (
-				<ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-					{photos.map((photo) => (
-						<li
-							key={photo.id}
-							className="overflow-hidden rounded-[1.5rem] border border-wedding-rose bg-wedding-cream shadow-md"
-						>
-							{photo.imageUrl ? (
-								<Image
-									src={photo.imageUrl}
-									alt=""
-									width={800}
-									height={600}
-									unoptimized
-									className="aspect-[4/3] w-full object-cover"
-								/>
-							) : (
-								<div className="grid aspect-[4/3] place-items-center bg-wedding-rose/30">
-									Brak kopii galeryjnej
-								</div>
-							)}
-							<div className="p-4">
-								<p className="truncate font-bold">{photo.originalFilename}</p>
-								<p className="mt-2 text-sm font-bold">
-									{photo.hotStatus === "uploaded" &&
-									photo.moderationStatus === "approved"
-										? "Widoczne w galerii"
-										: "Niewidoczne w galerii"}
-								</p>
-								<dl className="mt-2 grid grid-cols-2 gap-1 text-sm">
-									<dt>Galeria</dt>
-									<dd>{photo.hotStatus}</dd>
-									<dt>Archiwum</dt>
-									<dd>{photo.archiveStatus}</dd>
-									<dt>Moderacja</dt>
-									<dd>{photo.moderationStatus}</dd>
-								</dl>
-								{photo.lastError ? (
-									<p className="mt-2 text-sm text-wedding-error">
-										{photo.lastError}
+				<ul className="mt-14 grid gap-px border border-ma-ash bg-ma-ash sm:grid-cols-2 lg:grid-cols-3">
+					{photos.map((photo) => {
+						const visible =
+							photo.hotStatus === "uploaded" &&
+							photo.moderationStatus === "approved";
+						return (
+							<li key={photo.id} className="bg-ma-plaster-lit">
+								{photo.imageUrl ? (
+									<Image
+										src={photo.imageUrl}
+										alt=""
+										width={800}
+										height={600}
+										unoptimized
+										className={`aspect-[4/3] w-full object-cover ${
+											visible ? "" : "opacity-45"
+										}`}
+									/>
+								) : (
+									<div className="grid aspect-[4/3] place-items-center bg-ma-ash text-sm text-ma-pine">
+										Brak kopii galeryjnej
+									</div>
+								)}
+								<div className="p-5">
+									<p className="truncate text-sm">{photo.originalFilename}</p>
+									<p className="ma-label mt-3 text-ma-ink">
+										{visible ? "Widoczne w galerii" : "Niewidoczne w galerii"}
 									</p>
-								) : null}
-								<div className="mt-4 flex flex-wrap gap-2">
-									{photo.hotStatus === "uploaded" ? (
-										<button
-											type="button"
-											disabled={pendingId === photo.id}
-											onClick={() =>
-												act(
-													photo.id,
-													photo.moderationStatus === "approved"
-														? "hide"
-														: "approve",
-												)
-											}
-											className="min-h-10 rounded-full border border-wedding-green px-3 text-sm font-bold hover:bg-wedding-rose/40 disabled:opacity-50"
-										>
-											{photo.moderationStatus === "approved"
-												? labels.hide
-												: labels.approve}
-										</button>
+									<dl className="mt-4 grid grid-cols-[6rem_minmax(0,1fr)] gap-y-1 border-t border-ma-ash pt-4 text-sm">
+										<dt className="ma-label">Galeria</dt>
+										<dd className="tabular-nums">{photo.hotStatus}</dd>
+										<dt className="ma-label">Archiwum</dt>
+										<dd className="tabular-nums">{photo.archiveStatus}</dd>
+										<dt className="ma-label">Moderacja</dt>
+										<dd className="tabular-nums">{photo.moderationStatus}</dd>
+									</dl>
+									{photo.lastError ? (
+										<p className="mt-3 text-sm text-ma-oxblood">
+											{photo.lastError}
+										</p>
 									) : null}
-									{["flagged", "review_required"].includes(
-										photo.moderationStatus,
-									) && photo.hotStatus === "uploaded" ? (
-										<button
-											type="button"
-											disabled={pendingId === photo.id}
-											onClick={() => act(photo.id, "retry_moderation")}
-											className="min-h-10 rounded-full border border-wedding-green px-3 text-sm font-bold hover:bg-wedding-rose/40 disabled:opacity-50"
-										>
-											{labels.retry_moderation}
-										</button>
-									) : null}
-									{["pending", "failed"].includes(photo.archiveStatus) ? (
-										<button
-											type="button"
-											disabled={pendingId === photo.id}
-											onClick={() => act(photo.id, "reconcile_archive")}
-											className="min-h-10 rounded-full border border-wedding-green px-3 text-sm font-bold hover:bg-wedding-rose/40 disabled:opacity-50"
-										>
-											{labels.reconcile_archive}
-										</button>
-									) : null}
-									{photo.hotStatus !== "deleted" ||
-									photo.archiveStatus !== "trashed" ? (
-										<button
-											type="button"
-											disabled={pendingId === photo.id}
-											onClick={() => remove(photo.id)}
-											className="min-h-10 rounded-full bg-wedding-error px-3 text-sm font-bold text-white disabled:opacity-50"
-										>
-											Usuń kopie
-										</button>
-									) : (
-										<p className="py-2 text-sm font-bold">Usunięto kopie</p>
-									)}
+									<div className="mt-5 flex flex-wrap gap-2">
+										{photo.hotStatus === "uploaded" ? (
+											<button
+												type="button"
+												disabled={pendingId === photo.id}
+												onClick={() =>
+													act(
+														photo.id,
+														photo.moderationStatus === "approved"
+															? "hide"
+															: "approve",
+													)
+												}
+												className="ma-action ma-action--ghost min-h-11 px-4 text-[0.6875rem]"
+											>
+												{photo.moderationStatus === "approved"
+													? labels.hide
+													: labels.approve}
+											</button>
+										) : null}
+										{["flagged", "review_required"].includes(
+											photo.moderationStatus,
+										) && photo.hotStatus === "uploaded" ? (
+											<button
+												type="button"
+												disabled={pendingId === photo.id}
+												onClick={() => act(photo.id, "retry_moderation")}
+												className="ma-action ma-action--ghost min-h-11 px-4 text-[0.6875rem]"
+											>
+												{labels.retry_moderation}
+											</button>
+										) : null}
+										{["pending", "failed"].includes(photo.archiveStatus) ? (
+											<button
+												type="button"
+												disabled={pendingId === photo.id}
+												onClick={() => act(photo.id, "reconcile_archive")}
+												className="ma-action ma-action--ghost min-h-11 px-4 text-[0.6875rem]"
+											>
+												{labels.reconcile_archive}
+											</button>
+										) : null}
+										{photo.hotStatus !== "deleted" ||
+										photo.archiveStatus !== "trashed" ? (
+											<button
+												type="button"
+												disabled={pendingId === photo.id}
+												onClick={() => remove(photo.id)}
+												className="ma-action ma-action--danger min-h-11 px-4 text-[0.6875rem]"
+											>
+												Usuń kopie
+											</button>
+										) : (
+											<p className="ma-label py-3">Usunięto kopie</p>
+										)}
+									</div>
 								</div>
-							</div>
-						</li>
-					))}
+							</li>
+						);
+					})}
 				</ul>
 			) : (
-				<p className="mt-10 rounded-3xl bg-wedding-cream p-8 text-center text-lg">
-					Nie ma jeszcze żadnych zdjęć.
-				</p>
+				<div className="ma-empty mt-14">
+					<div className="max-w-md">
+						<p className="font-serif text-3xl leading-tight">
+							Nie ma jeszcze żadnych zdjęć.
+						</p>
+						<hr className="ma-rule mt-6" />
+						<p className="mt-6 text-ma-pine">
+							Kolejka moderacji zapełni się, gdy goście zaczną wysyłać.
+						</p>
+					</div>
+				</div>
 			)}
+
 			{nextCursor ? (
-				<div className="mt-8 text-center">
+				<div className="mt-12">
 					<button
 						type="button"
 						disabled={isLoadingMore}
 						onClick={loadMore}
-						className="min-h-11 rounded-full border border-wedding-green px-5 font-bold hover:bg-wedding-rose/40 disabled:opacity-50"
+						className="ma-action ma-action--ghost"
 					>
 						{isLoadingMore ? "Pobieranie…" : "Pokaż starsze zdjęcia"}
 					</button>

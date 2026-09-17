@@ -109,3 +109,11 @@ export function GripIcon(props: SVGProps<SVGSVGElement>) {
 		</Icon>
 	);
 }
+
+export function CheckIcon(props: SVGProps<SVGSVGElement>) {
+	return (
+		<Icon {...props}>
+			<path d="M5 12.5 9.8 17 19 7" />
+		</Icon>
+	);
+}

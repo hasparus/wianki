@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { useState } from "react";
+import { CheckIcon } from "@/components/slideshow/icons";
 import type { GalleryItem } from "@/lib/domain";
 import { readError } from "@/lib/http-client";
 
@@ -80,30 +81,33 @@ export function PhotoPicker({
 	}
 
 	return (
-		<section aria-labelledby="add-photos-title" className="mt-12">
-			<div className="flex flex-wrap items-center justify-between gap-3">
-				<h2 id="add-photos-title" className="font-serif text-3xl font-bold">
-					Dodaj zdjęcia
-				</h2>
+		<section aria-labelledby="add-photos-title" className="mt-16">
+			<div className="flex flex-wrap items-end justify-between gap-4">
+				<div>
+					<h2
+						id="add-photos-title"
+						className="font-serif text-3xl leading-tight"
+					>
+						Dodaj zdjęcia
+					</h2>
+					<hr className="ma-rule mt-4" />
+				</div>
 				<button
 					type="button"
 					onClick={toggle}
-					className="min-h-11 rounded-full border-2 border-wedding-green px-5 font-bold hover:bg-wedding-rose/40"
+					className="ma-action ma-action--ghost"
 				>
 					{open ? "Zwiń wybór zdjęć" : "Wybierz z galerii"}
 				</button>
 			</div>
 			{open ? (
-				<div className="mt-5">
+				<div className="mt-8">
 					{!loaded ? (
-						<p
-							aria-live="polite"
-							className="rounded-3xl bg-wedding-cream p-6 text-center"
-						>
+						<p aria-live="polite" className="ma-empty text-ma-pine">
 							Wczytujemy zdjęcia z galerii…
 						</p>
 					) : photos.length === 0 ? (
-						<p className="rounded-3xl bg-wedding-cream p-6 text-center">
+						<p className="ma-empty text-ma-pine">
 							W galerii nie ma jeszcze zatwierdzonych zdjęć.
 						</p>
 					) : (
@@ -123,8 +127,8 @@ export function PhotoPicker({
 													? "Zdjęcie jest już w pokazie"
 													: "Zaznacz zdjęcie do pokazu"
 											}
-											className={`relative block w-full overflow-hidden rounded-2xl border-4 ${
-												selected ? "border-wedding-green" : "border-transparent"
+											className={`relative block w-full overflow-hidden outline-offset-0 ${
+												selected ? "outline-3 outline-ma-ink" : "outline-0"
 											} ${used ? "opacity-40" : ""}`}
 										>
 											<Image
@@ -136,13 +140,16 @@ export function PhotoPicker({
 												className="aspect-square w-full object-cover"
 											/>
 											{used ? (
-												<span className="absolute inset-x-0 bottom-0 bg-wedding-green/90 py-1 text-center text-xs font-bold text-wedding-ivory">
+												<span className="ma-suiban absolute inset-x-0 bottom-0 py-1 text-center text-[0.625rem] uppercase tracking-[0.2em]">
 													W pokazie
 												</span>
 											) : null}
 											{selected ? (
-												<span className="absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full bg-wedding-green text-sm font-bold text-wedding-ivory">
-													✓
+												<span
+													aria-hidden
+													className="absolute right-0 top-0 grid size-7 place-items-center bg-ma-ink text-sm text-ma-plaster-lit"
+												>
+													<CheckIcon />
 												</span>
 											) : null}
 										</button>
@@ -151,12 +158,12 @@ export function PhotoPicker({
 							})}
 						</ul>
 					)}
-					<div className="mt-4 flex flex-wrap items-center gap-3">
+					<div className="mt-6 flex flex-wrap items-center gap-3">
 						<button
 							type="button"
 							onClick={addSelected}
 							disabled={pending || selection.size === 0}
-							className="min-h-11 rounded-full bg-wedding-green px-6 font-bold text-wedding-rose hover:bg-wedding-green-soft disabled:opacity-50"
+							className="ma-action"
 						>
 							Dodaj wybrane ({selection.size})
 						</button>
@@ -165,7 +172,7 @@ export function PhotoPicker({
 								type="button"
 								onClick={() => run(() => loadPage(cursor))}
 								disabled={pending}
-								className="min-h-11 rounded-full border border-wedding-green px-5 font-bold hover:bg-wedding-rose/40 disabled:opacity-50"
+								className="ma-action ma-action--ghost"
 							>
 								Pokaż więcej zdjęć
 							</button>

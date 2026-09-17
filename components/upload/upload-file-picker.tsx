@@ -23,9 +23,9 @@ export function UploadFilePicker({
 				type="button"
 				onClick={() => inputRef.current?.click()}
 				disabled={busy}
-				className="mt-5 min-h-12 rounded-full border-2 border-wedding-green px-6 font-bold hover:bg-wedding-rose/40 disabled:opacity-60"
+				className="ma-action ma-action--ghost mt-8 w-full sm:w-auto"
 			>
-				Dodaj zdjęcia
+				Wybierz zdjęcia
 			</button>
 		</>
 	);

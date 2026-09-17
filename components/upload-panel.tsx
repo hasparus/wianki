@@ -40,13 +40,18 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 	return (
 		<>
 			<section
+				id="dodaj"
 				aria-labelledby="upload-title"
-				className="rounded-[2rem] border border-wedding-rose bg-wedding-cream p-5 shadow-lg shadow-wedding-rose/15 sm:p-7"
+				className="scroll-mt-8"
 			>
-				<h2 id="upload-title" className="font-serif text-3xl font-bold">
+				<h2
+					id="upload-title"
+					className="font-serif text-[clamp(2.5rem,7vw,4.5rem)] leading-[0.95]"
+				>
 					Dodaj swoje zdjęcia
 				</h2>
-				<p className="mt-2 leading-7">
+				<hr className="ma-rule mt-5" />
+				<p className="mt-6 max-w-lg text-ma-pine">
 					Możesz wysłać do 10 zdjęć naraz. Po weselu udostępnimy wszystkim
 					folder z oryginałami.
 				</p>
@@ -58,13 +63,13 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 				<UploadItemList items={pendingItems} />
 				<UploadSubmitControls
 					busy={busy}
-					busyLabel={`Wysyłamy zdjęcia… (${finishedInBatch} z ${activeBatchIds.length})`}
+					busyLabel={`Wysyłamy… (${finishedInBatch} z ${activeBatchIds.length})`}
 					hasItems={pendingItems.some((item) =>
 						["queued", "failed", "archive_failed"].includes(item.phase),
 					)}
 					onUpload={upload}
 				/>
-				<p role="status" className="mt-4 min-h-12 font-bold">
+				<p role="status" className="mt-5 min-h-6 text-sm font-medium">
 					{summary}
 				</p>
 				<UploadedPhotos items={deliveredItems} />

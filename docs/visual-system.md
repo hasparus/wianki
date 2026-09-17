@@ -1,28 +1,82 @@
 # Visual system
 
+The world is a **tokonoma alcove**: a plaster wall, an asymmetric arrangement of
+three lines — primary, secondary, supporting — and the emptiness between them
+left charged rather than filled. Guests' photographs are the arrangement's one
+live accent, and the only colour on screen.
+
+`DESIGN.md` is the generated record of the built system; this page is the short
+version a contributor needs before touching a component.
+
 ## Tokens
 
 | Token | Value | Role |
 | --- | --- | --- |
-| wedding-rose | `#F3B0B7` | primary decorative accent |
-| wedding-rose-soft | `#F2AEBD` | secondary decorative accent |
-| wedding-green | `#2A482F` | text, buttons, borders |
-| wedding-green-soft | `#36533A` | hover, secondary green |
-| wedding-ivory | `#FBF6EF` | page background |
-| wedding-cream | `#FCF8F2` | cards, dialogs |
+| ma-plaster | `#EFEFEF` | the alcove wall — page ground |
+| ma-plaster-lit | `#F7F7F7` | a plane lifted off the wall |
+| ma-paper | `#FFFFFF` | the inset white of a field |
+| ma-ash | `#D8D8D8` | hairline rules and dividers |
+| ma-ash-deep | `#B4B4B4` | earth ash: field borders, muted marks |
+| ma-pine | `#666666` | secondary text |
+| ma-disabled | `#767676` | inactive control text |
+| ma-bronze | `#2A2A2A` | the suiban: base planes, footer, vessel strip |
+| ma-ink | `#1A1A1A` | primary text and reversed-ink fields |
+| ma-ink-deep | `#0A0A0A` | pressed state and the night stage |
+| ma-oxblood | `#8C2318` | error, and only error |
+| ma-bottle | `#1E4D2B` | success, and only success |
+| ma-amber | `#6B4A00` | warning |
 
-Contrast: green on ivory ~9.45:1. Rose on green ~5.66:1. Rose on ivory ~1.67:1,
-so rose is never ordinary text.
+Every interface token is achromatic (R = G = B). The three semantic inks are the
+only tinted values in the system, and `test/contrast.test.ts` fails the build if
+a fourth appears in `app/globals.css`.
 
-Error, warning, success, disabled, focus, overlay are separate variables in
-`app/globals.css`. No automatic dark mode. Reduced-motion kills decorative
-transitions.
+Contrast: ink on plaster ~15.1:1, pine on plaster ~5.0:1, oxblood on plaster
+~7.7:1, bottle ~8.5:1, amber ~7.0:1, ash-deep on bronze ~6.9:1, plaster on the
+night ground ~17.2:1.
 
-Slideshow runs on the dark side of the same palette: deep forest background,
-rose as glow and as accents on green.
+## Type
+
+Display is **Instrument Serif**, vendored as woff2 under `public/fonts` and
+loaded with `next/font/local`, so a clean checkout builds with no network access
+to a font provider. Both Latin subsets ship — Polish needs latin-ext. Body and
+UI text use a neutral system sans stack. Supporting labels are `.ma-label`:
+0.6875rem, 0.24em tracking, uppercase.
+
+## Components
+
+Defined in `app/globals.css` under `@layer components`, so Tailwind utilities
+still override them.
+
+- `.ma-rule` — the 2rem rule that ranks a heading. Structural, never a divider.
+  It takes the ground it sits on inside `.ma-suiban` and `.ma-stage`.
+- `.ma-action` — the active accent, translated from the alcove's iris blue into
+  reversed ink: a filled ink block. `--ghost` is the hairline outline at rest,
+  `--danger` is oxblood, and disabled is always a hairline, never a grey slab.
+- `.ma-field` — a text input drawn in one hairline stroke.
+- `.ma-empty` — an empty state as a composed invitation: it keeps the full field
+  of the thing it is waiting for.
+- `.ma-marginalia` — a tracked word set vertically up the right margin, from
+  1280px.
+- `.ma-numeral` — struck facts: real tabular numerals in the display face.
+- `.ma-suiban` / `.ma-stage` — the dark base plane, and the night side that
+  `/pokaz` runs on.
+
+Nothing is rounded. Depth comes from the hairline and the dark ground, never
+from a shadow.
+
+## Motion
+
+One authored moment: **placement**. Choosing a photograph recedes the
+arrangement and places that photograph over the suiban plane — `ma-place`,
+420ms, `cubic-bezier(0.16, 1, 0.3, 1)`, from an already-visible default.
+Reduced motion replaces it with an instant cut.
 
 ## Interaction
 
-Touch targets >= 44px. Every icon-only control has an accessible name. Dialogs
-close by button, backdrop, or Escape. Gallery images use empty alt — no
-meaningful caption exists; the surrounding button names the action.
+Touch targets >= 44px. Every icon-only control has an accessible name, drawn
+from `components/slideshow/icons.tsx` (24px grid, 2px round stroke) — never an
+emoji. Reaction emoji on the slideshow are content, not icons. Dialogs close by
+button, backdrop, or Escape. Gallery images use empty alt — no meaningful
+caption exists; the surrounding button names the action. Browser surfaces
+(selection, caret, scrollbar, focus ring, underline offset) are themed from the
+palette.
