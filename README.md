@@ -25,3 +25,4 @@ shots were taken with `GUEST_JOIN_CODE` unset, so no generated QR code appears.
 | `desktop-pokaz.png` / `mobile-pokaz.png` | `/pokaz`, the night side |
 | `desktop-admin.png` / `mobile-admin.png` | `/admin` moderation queue |
 | `desktop-admin-pokaz.png` / `mobile-admin-pokaz.png` | `/admin/pokaz` slide editor |
+| `corner-detail.png` | the cut corner, close up: a field and an ink block at 3x |
