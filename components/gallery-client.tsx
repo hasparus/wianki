@@ -36,14 +36,14 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 					<hr className="ma-rule mt-7" />
 
 					<div className="mt-[4vh] grid gap-7 sm:grid-cols-12 sm:items-end">
-						<p className="text-lg text-ma-pine sm:col-span-5">Dzięki</p>
+						<p className="text-lg text-ma-pine sm:col-span-2">Dzięki</p>
 						{/*
 						 * Struck facts: the numeral leads, the declined noun labels it.
 						 * Screen readers get the whole sentence instead of two bare
 						 * numbers.
 						 */}
-						<div className="sm:col-span-3 sm:col-start-10">
-							<dl className="flex gap-10 sm:justify-end" aria-hidden>
+						<div className="sm:col-span-6 sm:col-start-3">
+							<dl className="flex gap-10" aria-hidden>
 								<div>
 									<dd className="ma-numeral text-5xl sm:text-6xl">
 										{stats.approvedPhotos}

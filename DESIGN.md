@@ -14,7 +14,6 @@ colors:
   ink-deep: "#0a0a0a"
   oxblood: "#8c2318"
   bottle: "#1e4d2b"
-  amber: "#6b4a00"
 typography:
   display:
     fontFamily: "var(--font-instrument-serif), Iowan Old Style, Georgia, serif"
@@ -187,10 +186,9 @@ An achromatic room with three tinted inks held in reserve; the guests' photograp
 ### Tertiary (semantic inks)
 - **Oxblood** (`#8c2318`): Error only — an alert line, a per-row failure note, and the destructive action.
 - **Bottle** (`#1e4d2b`): Success only.
-- **Amber** (`#6b4a00`): Warning only. Dark enough to be read as ink first and amber second.
 
 ### Named Rules
-**The Achromatic Room Rule.** Every interface colour satisfies R = G = B. Exactly three tinted values exist in the system — oxblood for error, bottle for success, amber for warning — and `test/contrast.test.ts` fails the build the moment a fourth hex with unequal channels appears in `app/globals.css`. A new accent is not a design decision here; it is a broken build.
+**The Achromatic Room Rule.** Every interface colour satisfies R = G = B. Exactly two tinted values exist in the system — oxblood for error and bottle for success — and `test/contrast.test.ts` fails the build the moment a third hex with unequal channels appears in `app/globals.css`. Warning is not a colour here: it is full ink against the pine of an ordinary label, plus copy that says what will happen. A new accent is not a design decision here; it is a broken build.
 
 **The Only Colour Rule.** The guests' photographs are the only other colour on screen. Never tint a surface, an icon, a chart, or a state chip to compete with them.
 
@@ -295,7 +293,7 @@ The same world with the planes inverted: ink-deep ground, plaster type, ash-deep
 
 ### Do:
 - **Do** keep every new interface colour achromatic (R = G = B) and pull it from the existing ramp; `test/contrast.test.ts` is the audit.
-- **Do** reserve oxblood (`#8c2318`), bottle (`#1e4d2b`), and amber (`#6b4a00`) for error, success, and warning respectively, and use them as ink — on type or as a fill under plaster-lit type.
+- **Do** reserve oxblood (`#8c2318`) and bottle (`#1e4d2b`) for error and success, and use them as ink — on type or as a fill under plaster-lit type. Every other state, warning included, is achromatic.
 - **Do** put exactly one filled ink block in a well; every other control there is the hairline outline.
 - **Do** close every page on the bronze plane — a `ma-suiban` footer or the 0.75rem `ma-base` bar.
 - **Do** rank a heading with the 2rem ink rule and compose the line beneath it off-axis, using column starts rather than centring.

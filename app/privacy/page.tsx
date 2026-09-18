@@ -5,7 +5,7 @@ export default function PrivacyPage() {
 	const email = process.env.DELETION_CONTACT_EMAIL ?? "adres pary młodej";
 	return (
 		<>
-			<main className="relative mx-auto w-full max-w-4xl grow px-5 py-16 sm:px-10 sm:py-24">
+			<main className="relative mx-auto w-full max-w-6xl grow px-5 py-16 sm:px-10 sm:py-24">
 				<article>
 					<h1 className="font-serif text-[clamp(2.75rem,9vw,5.5rem)] leading-[0.95] tracking-[-0.02em]">
 						Co się dzieje ze zdjęciami

@@ -24,14 +24,13 @@ version a contributor needs before touching a component.
 | ma-ink-deep | `#0A0A0A` | pressed state and the night stage |
 | ma-oxblood | `#8C2318` | error, and only error |
 | ma-bottle | `#1E4D2B` | success, and only success |
-| ma-amber | `#6B4A00` | warning |
 
 Every interface token is achromatic (R = G = B). The three semantic inks are the
 only tinted values in the system, and `test/contrast.test.ts` fails the build if
 a fourth appears in `app/globals.css`.
 
 Contrast: ink on plaster ~15.1:1, pine on plaster ~5.0:1, oxblood on plaster
-~7.7:1, bottle ~8.5:1, amber ~7.0:1, ash-deep on bronze ~6.9:1, plaster on the
+~7.7:1, bottle ~8.5:1, ash-deep on bronze ~6.9:1, plaster on the
 night ground ~17.2:1.
 
 ## Type

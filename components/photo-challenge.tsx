@@ -12,10 +12,10 @@ export function PhotoChallenge() {
 			aria-labelledby="challenge-title"
 			className="border-t border-ma-ink pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0"
 		>
-			<h2 id="challenge-title" className="font-serif text-3xl leading-tight">
+			<h2 id="challenge-title" className="ma-label">
 				Fotowyzwanie
 			</h2>
-			<ul className="mt-6 divide-y divide-ma-ash border-y border-ma-ash">
+			<ul className="mt-4 divide-y divide-ma-ash border-y border-ma-ash">
 				{tasks.map((task) => (
 					<li key={task} className="py-3 text-sm leading-relaxed text-ma-pine">
 						{task}

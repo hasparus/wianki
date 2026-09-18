@@ -17,7 +17,7 @@ function SlideText({ slide }: { slide: AdminSlide }) {
 		return slide.photoVisible ? (
 			<p className="ma-label">Zdjęcie z galerii</p>
 		) : (
-			<p className="text-sm font-medium text-ma-amber">
+			<p className="text-sm font-medium text-ma-ink">
 				Ukryte, więc pokaz je pominie
 			</p>
 		);

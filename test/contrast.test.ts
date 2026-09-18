@@ -24,7 +24,6 @@ const ASH_DEEP = "#B4B4B4";
 const BRONZE = "#2A2A2A";
 const OXBLOOD = "#8C2318";
 const BOTTLE = "#1E4D2B";
-const AMBER = "#6B4A00";
 
 describe("tokonoma palette", () => {
 	it("keeps canonical tokens in the global stylesheet", () => {
@@ -39,7 +38,6 @@ describe("tokonoma palette", () => {
 			BRONZE,
 			OXBLOOD,
 			BOTTLE,
-			AMBER,
 		]) {
 			expect(css).toContain(color.toLowerCase());
 		}
@@ -65,7 +63,7 @@ describe("tokonoma palette", () => {
 			);
 			expect({ color, r, g, b }).toEqual({ color, r, g: r, b: r });
 		}
-		// Only error, success and warning may carry a hue.
+		// Only error and success may carry a hue.
 		const hexes = [...css.matchAll(/#[0-9a-f]{6}/gi)].map((match) =>
 			match[0].toUpperCase(),
 		);
@@ -75,9 +73,7 @@ describe("tokonoma palette", () => {
 			);
 			return r !== g || g !== b;
 		});
-		expect([...new Set(tinted)].sort()).toEqual(
-			[OXBLOOD, BOTTLE, AMBER].sort(),
-		);
+		expect([...new Set(tinted)].sort()).toEqual([OXBLOOD, BOTTLE].sort());
 	});
 
 	it("uses AA-safe functional pairings", () => {
@@ -86,7 +82,6 @@ describe("tokonoma palette", () => {
 		expect(contrast(PLASTER_LIT, INK)).toBeGreaterThanOrEqual(4.5);
 		expect(contrast(OXBLOOD, PLASTER)).toBeGreaterThanOrEqual(4.5);
 		expect(contrast(BOTTLE, PLASTER)).toBeGreaterThanOrEqual(4.5);
-		expect(contrast(AMBER, PLASTER)).toBeGreaterThanOrEqual(4.5);
 		// The suiban base plane and the night stage.
 		expect(contrast(ASH_DEEP, BRONZE)).toBeGreaterThanOrEqual(4.5);
 		expect(contrast(PLASTER, INK_DEEP)).toBeGreaterThanOrEqual(4.5);
