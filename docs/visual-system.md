@@ -19,15 +19,16 @@ version a contributor needs before touching a component.
 | ma-ash-deep | `#B4B4B4` | earth ash: field borders, muted marks |
 | ma-pine | `#666666` | secondary text |
 | ma-disabled | `#767676` | inactive control text |
-| ma-bronze | `#2A2A2A` | the suiban: base planes, footer, vessel strip |
+| ma-bronze | `#2A2A2A` | the suiban: base planes, footer, the plane a placed photograph sits on |
 | ma-ink | `#1A1A1A` | primary text and reversed-ink fields |
 | ma-ink-deep | `#0A0A0A` | pressed state and the night stage |
 | ma-oxblood | `#8C2318` | error, and only error |
 | ma-bottle | `#1E4D2B` | success, and only success |
 
-Every interface token is achromatic (R = G = B). The three semantic inks are the
-only tinted values in the system, and `test/contrast.test.ts` fails the build if
-a fourth appears in `app/globals.css`.
+Every interface token is achromatic (R = G = B). Oxblood and bottle are the only
+tinted values in the system, and `test/contrast.test.ts` fails the build if a
+third appears in `app/globals.css`. Warning is not a colour here: it is full ink
+against the pine of an ordinary label, plus copy saying what will happen.
 
 Contrast: ink on plaster ~15.1:1, pine on plaster ~5.0:1, oxblood on plaster
 ~7.7:1, bottle ~8.5:1, ash-deep on bronze ~6.9:1, plaster on the
@@ -63,6 +64,14 @@ still override them.
 - `.ma-suiban` / `.ma-stage` — the dark base plane, and the night side that
   `/pokaz` runs on.
 
+## Layout
+
+Every surface has the same left edge. Gutters go on an outer full-width wrapper
+(`px-5 sm:px-10 lg:px-16`) around an inner `mx-auto w-full max-w-6xl` box —
+never on the measure box itself, which shifts that one surface inward (40px at
+1440) and puts it on an edge of its own. A surface wanting a narrower measure
+holds it on a child inside the shared box.
+
 ## Corners
 
 Nothing is rounded. The corner language is the **scoop**: a corner cut into the
@@ -87,7 +96,9 @@ Depth comes from the hairline and the dark ground, never from a shadow.
 One authored moment: **placement**. Choosing a photograph recedes the
 arrangement and places that photograph over the suiban plane — `ma-place`,
 420ms, `cubic-bezier(0.16, 1, 0.3, 1)`, from an already-visible default.
-Reduced motion replaces it with an instant cut.
+Reduced motion replaces it with an instant cut. The plate is seated on the
+plane, not floating above it: the plane is `18vh` with a `min-h-28` floor and
+the photograph's bottom edge meets its top edge.
 
 ## Interaction
 

@@ -125,176 +125,185 @@ export function AdminClient({
 
 	return (
 		<>
-			<main className="relative mx-auto w-full max-w-6xl grow px-5 py-16 sm:px-10">
-				<header className="grid gap-8 lg:grid-cols-12 lg:items-end">
-					<div className="lg:col-span-7">
-						<h1 className="font-serif text-[clamp(2.75rem,9vw,5.5rem)] leading-[0.95] tracking-[-0.02em]">
-							Wszystkie zdjęcia
-						</h1>
-						<hr className="ma-rule mt-6" />
-					</div>
-					<div className="lg:col-span-4 lg:col-start-9">
-						<p className="leading-relaxed text-ma-pine">
-							Ukrycie wycofuje zdjęcie z galerii bez usuwania jego kopii. Kod QR
-							administratora działa jak wspólne hasło. Nie udostępniaj go
-							gościom.
+			<main className="relative w-full grow px-5 sm:px-10 lg:px-16">
+				<div className="mx-auto w-full max-w-6xl py-16">
+					<header className="grid gap-8 lg:grid-cols-12 lg:items-end">
+						<div className="lg:col-span-7">
+							<h1 className="font-serif text-[clamp(2.75rem,9vw,5.5rem)] leading-[0.95] tracking-[-0.02em]">
+								Wszystkie zdjęcia
+							</h1>
+							<hr className="ma-rule mt-6" />
+						</div>
+						<div className="lg:col-span-4 lg:col-start-9">
+							<p className="leading-relaxed text-ma-pine">
+								Ukrycie wycofuje zdjęcie z galerii bez usuwania jego kopii. Kod
+								QR administratora działa jak wspólne hasło. Nie udostępniaj go
+								gościom.
+							</p>
+							<a
+								href="/admin/pokaz"
+								className="ma-action ma-action--ghost mt-6"
+							>
+								Ułóż pokaz slajdów
+								<ArrowRightIcon />
+							</a>
+						</div>
+					</header>
+
+					{message ? (
+						<p role="alert" className="mt-10 font-medium text-ma-oxblood">
+							{message}
 						</p>
-						<a href="/admin/pokaz" className="ma-action ma-action--ghost mt-6">
-							Ułóż pokaz slajdów
-							<ArrowRightIcon />
-						</a>
-					</div>
-				</header>
+					) : null}
 
-				{message ? (
-					<p role="alert" className="mt-10 font-medium text-ma-oxblood">
-						{message}
-					</p>
-				) : null}
-
-				{photos.length ? (
-					/*
-					 * A queue is read down, not scanned across: hairline-ruled rows in
-					 * one column, each photograph sitting at its own aspect against the
-					 * plaster rather than cropped into a matching tile.
-					 */
-					<ul className="mt-14 border-t border-ma-ash">
-						{photos.map((photo) => {
-							const visible =
-								photo.hotStatus === "uploaded" &&
-								photo.moderationStatus === "approved";
-							return (
-								<li
-									key={photo.id}
-									className="grid gap-5 border-b border-ma-ash py-6 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-8 lg:grid-cols-[14rem_minmax(0,1fr)_auto]"
-								>
-									{photo.imageUrl ? (
-										<Image
-											src={photo.imageUrl}
-											alt=""
-											width={800}
-											height={600}
-											unoptimized
-											className={`h-40 w-full object-cover sm:h-32 ${
-												visible ? "" : "opacity-45"
-											}`}
-										/>
-									) : (
-										<div className="grid h-40 w-full place-items-center border border-ma-ash px-3 text-center text-sm text-ma-pine sm:h-32">
-											Brak kopii galeryjnej
-										</div>
-									)}
-
-									<div className="min-w-0">
-										<p className="truncate font-serif text-xl leading-tight">
-											{photo.originalFilename}
-										</p>
-										<p className="ma-label mt-2 text-ma-ink">
-											{visible ? "Widoczne w galerii" : "Niewidoczne w galerii"}
-										</p>
-										<dl className="mt-4 flex flex-wrap gap-x-8 gap-y-1 text-sm">
-											<div className="flex gap-2">
-												<dt className="ma-label pt-1">Galeria</dt>
-												<dd className="tabular-nums">{photo.hotStatus}</dd>
-											</div>
-											<div className="flex gap-2">
-												<dt className="ma-label pt-1">Archiwum</dt>
-												<dd className="tabular-nums">{photo.archiveStatus}</dd>
-											</div>
-											<div className="flex gap-2">
-												<dt className="ma-label pt-1">Moderacja</dt>
-												<dd className="tabular-nums">
-													{photo.moderationStatus}
-												</dd>
-											</div>
-										</dl>
-										{photo.lastError ? (
-											<p className="mt-3 text-sm text-ma-oxblood">
-												{photo.lastError}
-											</p>
-										) : null}
-									</div>
-
-									<div className="flex flex-wrap gap-2 lg:flex-col lg:items-stretch">
-										{photo.hotStatus === "uploaded" ? (
-											<button
-												type="button"
-												disabled={pendingId === photo.id}
-												onClick={() =>
-													act(
-														photo.id,
-														photo.moderationStatus === "approved"
-															? "hide"
-															: "approve",
-													)
-												}
-												className="ma-action ma-action--ghost min-h-11 px-4 text-[0.6875rem]"
-											>
-												{photo.moderationStatus === "approved"
-													? labels.hide
-													: labels.approve}
-											</button>
-										) : null}
-										{["flagged", "review_required"].includes(
-											photo.moderationStatus,
-										) && photo.hotStatus === "uploaded" ? (
-											<button
-												type="button"
-												disabled={pendingId === photo.id}
-												onClick={() => act(photo.id, "retry_moderation")}
-												className="ma-action ma-action--ghost min-h-11 px-4 text-[0.6875rem]"
-											>
-												{labels.retry_moderation}
-											</button>
-										) : null}
-										{["pending", "failed"].includes(photo.archiveStatus) ? (
-											<button
-												type="button"
-												disabled={pendingId === photo.id}
-												onClick={() => act(photo.id, "reconcile_archive")}
-												className="ma-action ma-action--ghost min-h-11 px-4 text-[0.6875rem]"
-											>
-												{labels.reconcile_archive}
-											</button>
-										) : null}
-										{photo.hotStatus !== "deleted" ||
-										photo.archiveStatus !== "trashed" ? (
-											<button
-												type="button"
-												disabled={pendingId === photo.id}
-												onClick={() => remove(photo.id)}
-												className="ma-action ma-action--danger min-h-11 px-4 text-[0.6875rem]"
-											>
-												Usuń kopie
-											</button>
+					{photos.length ? (
+						/*
+						 * A queue is read down, not scanned across: hairline-ruled rows in
+						 * one column, each photograph sitting at its own aspect against the
+						 * plaster rather than cropped into a matching tile.
+						 */
+						<ul className="mt-14 border-t border-ma-ash">
+							{photos.map((photo) => {
+								const visible =
+									photo.hotStatus === "uploaded" &&
+									photo.moderationStatus === "approved";
+								return (
+									<li
+										key={photo.id}
+										className="grid gap-5 border-b border-ma-ash py-6 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-8 lg:grid-cols-[14rem_minmax(0,1fr)_auto]"
+									>
+										{photo.imageUrl ? (
+											<Image
+												src={photo.imageUrl}
+												alt=""
+												width={800}
+												height={600}
+												unoptimized
+												className={`h-40 w-full object-cover sm:h-32 ${
+													visible ? "" : "opacity-45"
+												}`}
+											/>
 										) : (
-											<p className="ma-label py-3">Usunięto kopie</p>
+											<div className="grid h-40 w-full place-items-center border border-ma-ash px-3 text-center text-sm text-ma-pine sm:h-32">
+												Brak kopii galeryjnej
+											</div>
 										)}
-									</div>
-								</li>
-							);
-						})}
-					</ul>
-				) : (
-					<div className="ma-empty mt-14">
-						<p className="max-w-md font-serif text-3xl leading-tight">
-							Nie ma jeszcze żadnych zdjęć.
-						</p>
-					</div>
-				)}
 
-				{nextCursor ? (
-					<div className="mt-12">
-						<button
-							type="button"
-							disabled={isLoadingMore}
-							onClick={loadMore}
-							className="ma-action ma-action--ghost"
-						>
-							{isLoadingMore ? "Pobieranie…" : "Pokaż starsze zdjęcia"}
-						</button>
-					</div>
-				) : null}
+										<div className="min-w-0">
+											<p className="truncate font-serif text-xl leading-tight">
+												{photo.originalFilename}
+											</p>
+											<p className="ma-label mt-2 text-ma-ink">
+												{visible
+													? "Widoczne w galerii"
+													: "Niewidoczne w galerii"}
+											</p>
+											<dl className="mt-4 flex flex-wrap gap-x-8 gap-y-1 text-sm">
+												<div className="flex gap-2">
+													<dt className="ma-label pt-1">Galeria</dt>
+													<dd className="tabular-nums">{photo.hotStatus}</dd>
+												</div>
+												<div className="flex gap-2">
+													<dt className="ma-label pt-1">Archiwum</dt>
+													<dd className="tabular-nums">
+														{photo.archiveStatus}
+													</dd>
+												</div>
+												<div className="flex gap-2">
+													<dt className="ma-label pt-1">Moderacja</dt>
+													<dd className="tabular-nums">
+														{photo.moderationStatus}
+													</dd>
+												</div>
+											</dl>
+											{photo.lastError ? (
+												<p className="mt-3 text-sm text-ma-oxblood">
+													{photo.lastError}
+												</p>
+											) : null}
+										</div>
+
+										<div className="flex flex-wrap gap-2 lg:flex-col lg:items-stretch">
+											{photo.hotStatus === "uploaded" ? (
+												<button
+													type="button"
+													disabled={pendingId === photo.id}
+													onClick={() =>
+														act(
+															photo.id,
+															photo.moderationStatus === "approved"
+																? "hide"
+																: "approve",
+														)
+													}
+													className="ma-action ma-action--ghost min-h-11 px-4 text-[0.6875rem]"
+												>
+													{photo.moderationStatus === "approved"
+														? labels.hide
+														: labels.approve}
+												</button>
+											) : null}
+											{["flagged", "review_required"].includes(
+												photo.moderationStatus,
+											) && photo.hotStatus === "uploaded" ? (
+												<button
+													type="button"
+													disabled={pendingId === photo.id}
+													onClick={() => act(photo.id, "retry_moderation")}
+													className="ma-action ma-action--ghost min-h-11 px-4 text-[0.6875rem]"
+												>
+													{labels.retry_moderation}
+												</button>
+											) : null}
+											{["pending", "failed"].includes(photo.archiveStatus) ? (
+												<button
+													type="button"
+													disabled={pendingId === photo.id}
+													onClick={() => act(photo.id, "reconcile_archive")}
+													className="ma-action ma-action--ghost min-h-11 px-4 text-[0.6875rem]"
+												>
+													{labels.reconcile_archive}
+												</button>
+											) : null}
+											{photo.hotStatus !== "deleted" ||
+											photo.archiveStatus !== "trashed" ? (
+												<button
+													type="button"
+													disabled={pendingId === photo.id}
+													onClick={() => remove(photo.id)}
+													className="ma-action ma-action--danger min-h-11 px-4 text-[0.6875rem]"
+												>
+													Usuń kopie
+												</button>
+											) : (
+												<p className="ma-label py-3">Usunięto kopie</p>
+											)}
+										</div>
+									</li>
+								);
+							})}
+						</ul>
+					) : (
+						<div className="ma-empty mt-14">
+							<p className="max-w-md font-serif text-3xl leading-tight">
+								Nie ma jeszcze żadnych zdjęć.
+							</p>
+						</div>
+					)}
+
+					{nextCursor ? (
+						<div className="mt-12">
+							<button
+								type="button"
+								disabled={isLoadingMore}
+								onClick={loadMore}
+								className="ma-action ma-action--ghost"
+							>
+								{isLoadingMore ? "Pobieranie…" : "Pokaż starsze zdjęcia"}
+							</button>
+						</div>
+					) : null}
+				</div>
 			</main>
 			<div className="ma-base" aria-hidden />
 		</>

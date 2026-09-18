@@ -172,7 +172,7 @@ An achromatic room with three tinted inks held in reserve; the guests' photograp
 ### Primary
 - **Ink** (`#1a1a1a`): The text colour of the whole light world, the hairline that ranks a heading, the focus outline, and — filled — the committed action block. This is the translated accent: ink is loud only when it becomes a field.
 - **Ink Deep** (`#0a0a0a`): The pressed state of a filled action, the scrim behind a placed photograph (at 92%), and the ground of the night side (`/pokaz`).
-- **Bronze** (`#2a2a2a`): The *suiban*. The dark base plane that anchors a light field — the footer, the lightbox vessel strip, and the 0.75rem base bar that closes every page.
+- **Bronze** (`#2a2a2a`): The *suiban*. The dark base plane that anchors a light field — the footer, the plane a placed photograph is seated on, and the 0.75rem base bar that closes every page.
 
 ### Neutral
 - **Plaster** (`#efefef`): The alcove wall. The page ground everywhere, carrying the plaster tile texture.
@@ -219,9 +219,11 @@ An achromatic room with three tinted inks held in reserve; the guests' photograp
 
 ## Layout
 
-Everything is an asymmetric three-line arrangement on a 12-column grid that only appears at `sm` and above; below that the lines simply stack and the composition reads top to bottom. Content lives in a centred container capped at 72rem (`max-w-6xl`; 56rem on the privacy read surface), with page gutters that step 1.25rem → 2.5rem → 4rem (mobile → `sm` → `lg`).
+Everything is an asymmetric three-line arrangement on a 12-column grid that only appears at `sm` and above; below that the lines simply stack and the composition reads top to bottom. Content lives in a centred container capped at 72rem (`max-w-6xl`), with page gutters that step 1.25rem → 2.5rem → 4rem (mobile → `sm` → `lg`).
 
-The first viewport is the room, not the grid. Vertical rhythm at the top of a page is set in viewport units (`pt-[5vh]` rising to `pt-[11vh]` at `sm`; `pt-[18vh]`/`pt-[22vh]` on the entry screen) so the arrangement breathes on tall phones and the feed starts below the fold. The lines are offset from one another by column start, not by centring: the supporting line takes `sm:col-span-5`, the struck counts sit at `sm:col-start-10`, and the upload well is pushed to `sm:col-start-5`. The void between them is composed and stays empty.
+**The One Left Edge Rule.** Every surface carries its gutters on an outer full-width wrapper (`px-5 sm:px-10 lg:px-16`) around an inner `mx-auto w-full max-w-6xl` box — never on the measure box itself. Padding inside the box shifts that surface's left edge inward and puts it on a different edge from every other surface; at 1440 the two patterns differ by 40px. A surface that wants a narrower measure holds it on a child inside the shared box, not by capping the box. Gallery, entry, privacy, admin and the slide editor all start at the same x.
+
+The first viewport is the room, not the grid. Vertical rhythm at the top of a page is set in viewport units (`pt-[5vh]` rising to `pt-[11vh]` at `sm`; `pt-[22vh]`/`pt-[26vh]` on the entry screen, which is `justify-end` so the void sits above the arrangement and the alcove rises from its base) so the arrangement breathes on tall phones and the feed starts below the fold. The lines are offset from one another by column start, not by centring: the supporting line and the struck counts share one band at `sm:col-span-2` and `sm:col-start-3`, and the upload well is pushed to `sm:col-start-5`. The void reopens to the right of the supporting line and stays empty.
 
 The photograph feed is a masonry column flow (`columns-2` → `sm:columns-3` → `lg:columns-4`), not an even grid of equal tiles, so photographs keep their own proportion. The main page below the fold is a two-track layout at `lg` (`minmax(0,1fr)` content plus an 18rem aside). Lists — upload queue, admin queue, challenge tasks — are hairline-divided rows, never cards.
 
@@ -276,10 +278,10 @@ Icons are line-drawn SVG at the ambient stroke weight; the app icon itself is tw
 - **Lists:** hairline-divided rows (`divide-ash` inside a top-and-bottom ash border), never boxed per item.
 
 ### Navigation
-There is no nav bar. Wayfinding is the wordmark, ghost actions placed in the section that owns them, and a footer on the bronze plane whose links are label-styled, underlined in ash-deep, brightening to plaster on hover. On frames 1280px and wider, a single vertical tracked word rides the right margin naming the room ("GALERIA", "WEJŚCIE", "PANEL", "PRYWATNOŚĆ") and closes on a short vertical hairline.
+There is no nav bar. Wayfinding is the wordmark, ghost actions placed in the section that owns them, and a footer on the bronze plane whose links are label-styled, underlined in ash-deep, brightening to plaster on hover. Nothing names the room it sits in: a marginal word riding the right edge was built and removed, because the wordmark and the heading already said where you were.
 
 ### Placement (signature)
-Choosing a photograph does not open a modal chrome. The arrangement recedes behind an ink-deep scrim at 92% (fading in over 220ms), and the chosen photograph is *placed*: 420ms on `cubic-bezier(0.16, 1, 0.3, 1)`, from `scale(0.94) translateY(1.25rem) blur(6px)` to rest, off-axis toward the right on wide frames. Its controls sit on the bronze vessel strip along the bottom, separated by a pine hairline. Escape returns it to its place. Under `prefers-reduced-motion`, the animation name is removed outright so the photograph is simply already there.
+Choosing a photograph does not open a modal chrome. The arrangement recedes behind an ink-deep scrim at 92% (fading in over 220ms), and the chosen photograph is *placed*: 420ms on `cubic-bezier(0.16, 1, 0.3, 1)`, from `scale(0.94) translateY(1.25rem) blur(6px)` to rest, off-axis toward the right on wide frames. The plate is *seated* on the bronze plane rather than floating above it: the plane is a readable `18vh` (floor `min-h-28`) carrying the one control at its lower right, separated by a pine hairline, and the photograph's bottom edge meets its top edge. A base that reads as a strip leaves a pinched sliver of the receded arrangement under the plate, which is the arrangement failing to meet its base. Escape returns it to its place. Under `prefers-reduced-motion`, the animation name is removed outright so the photograph is simply already there.
 
 ### Night side (`/pokaz`)
 The same world with the planes inverted: ink-deep ground, plaster type, ash-deep labels, plaster focus outlines and selection. Actions reverse too — `ma-stage-action` is a plaster fill with ink-deep type. Fields on the projection are a translucent ink-deep panel behind a 6px backdrop blur inside a 45% plaster hairline; the blur exists because they float over a photograph. Slides enter at 380ms from `blur(12px) scale(1.02)` and leave at 260ms into `blur(8px)`. Ephemeral guest reactions float up and sway; ephemeral comments drift across on plaster chips in serif. None of it persists, and none of it tints the room.

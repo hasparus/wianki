@@ -419,6 +419,11 @@
         "section": "typography"
       },
       {
+        "name": "The One Left Edge Rule",
+        "body": "Every surface carries its gutters on an outer full-width wrapper (px-5 sm:px-10 lg:px-16) around an inner mx-auto w-full max-w-6xl box — never on the measure box itself. Padding inside the box shifts that one surface's left edge inward and puts it on an edge of its own; at 1440 the two patterns differ by 40px. A surface that wants a narrower measure holds it on a child inside the shared box, not by capping the box.",
+        "section": "layout"
+      },
+      {
         "name": "The Anchored Base Rule",
         "body": "Every page closes on the bronze plane — either a full suiban footer or the 0.75rem base bar. A light field that ends without a dark plane beneath it is floating, and floating is wrong.",
         "section": "layout"
