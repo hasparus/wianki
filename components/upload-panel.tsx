@@ -52,7 +52,7 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 				Dodaj swoje zdjęcia
 			</h2>
 			<hr className="ma-rule mt-5" />
-			<p className="mt-5 max-w-md text-ma-pine">
+			<p className="mt-5 text-ma-pine">
 				Do 10 zdjęć naraz. Po weselu udostępnimy folder z oryginałami.
 			</p>
 			<UploadFilePicker

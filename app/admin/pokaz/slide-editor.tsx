@@ -293,7 +293,7 @@ export function SlideEditor({
 							</div>
 							{slides.length === 0 ? (
 								<div className="ma-empty mt-8">
-									<p className="max-w-md font-serif text-2xl leading-tight">
+									<p className="font-serif text-2xl leading-tight">
 										Lista jest pusta, więc pokaz gra automatycznie z galerii.
 									</p>
 								</div>

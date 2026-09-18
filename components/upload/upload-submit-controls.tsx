@@ -23,7 +23,7 @@ export function UploadSubmitControls({
 					{busy ? busyLabel : "Wyślij zdjęcia"}
 				</button>
 			) : null}
-			<p className="mt-6 max-w-md text-sm leading-relaxed text-ma-pine">
+			<p className="mt-6 text-sm leading-relaxed text-ma-pine">
 				Wysyłając zdjęcia, zgadzasz się na ich przechowanie i sprawdzenie
 				zgodnie z{" "}
 				<Link

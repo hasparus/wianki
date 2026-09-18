@@ -285,7 +285,7 @@ export function AdminClient({
 						</ul>
 					) : (
 						<div className="ma-empty mt-14">
-							<p className="max-w-md font-serif text-3xl leading-tight">
+							<p className="font-serif text-3xl leading-tight">
 								Nie ma jeszcze żadnych zdjęć.
 							</p>
 						</div>
