@@ -35,7 +35,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 					<hr className="ma-rule mt-7" />
 
 					<div className="mt-[4vh] grid gap-7 sm:grid-cols-12">
-						<div className="sm:col-span-8 sm:col-start-3">
+						<div className="sm:col-span-8">
 							<PhotoChallenge />
 						</div>
 					</div>
