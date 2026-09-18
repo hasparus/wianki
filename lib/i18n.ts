@@ -17,20 +17,6 @@ export function declinePolish(count: number, forms: PolishDeclension): string {
 	return forms.other;
 }
 
-const guestForms: PolishDeclension = {
-	one: "gość",
-	few: "gości",
-	many: "gości",
-	other: "gościa",
-};
-
-const addedForms: PolishDeclension = {
-	one: "dodał",
-	few: "dodało",
-	many: "dodało",
-	other: "dodało",
-};
-
 const photoForms: PolishDeclension = {
 	one: "zdjęcie",
 	few: "zdjęcia",
@@ -45,18 +31,4 @@ const photoForms: PolishDeclension = {
  */
 export function photoCountNoun(approvedPhotos: number): string {
 	return declinePolish(approvedPhotos, photoForms);
-}
-
-export function guestCountNoun(contributingGuests: number): string {
-	return declinePolish(contributingGuests, guestForms);
-}
-
-export function formatGalleryStats(
-	contributingGuests: number,
-	approvedPhotos: number,
-): string {
-	if (approvedPhotos === 0) return "";
-	const added = declinePolish(contributingGuests, addedForms);
-
-	return `${contributingGuests} ${guestCountNoun(contributingGuests)} ${added} już ${approvedPhotos} ${photoCountNoun(approvedPhotos)}`;
 }

@@ -11,7 +11,6 @@ import { PhotoLightbox } from "@/components/gallery/photo-lightbox";
 import { PhotoChallenge } from "@/components/photo-challenge";
 import { UploadPanel } from "@/components/upload-panel";
 import type { GalleryItem } from "@/lib/domain";
-import { formatGalleryStats, guestCountNoun, photoCountNoun } from "@/lib/i18n";
 
 export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 	const [selected, setSelected] = useState<GalleryItem | null>(null);
@@ -54,47 +53,16 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 			<div className="ma-base" aria-hidden />
 
 			<div className="w-full px-5 sm:px-10 lg:px-16">
-				<div className="mx-auto grid w-full max-w-6xl gap-14 py-16 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-20">
+				<div className="mx-auto w-full max-w-6xl py-16">
 					<GalleryGrid
 						items={items}
+						photoCount={stats.approvedPhotos}
 						hasMore={Boolean(cursor)}
 						pending={pending}
 						message={message}
-						onRefresh={refresh}
 						onLoadMore={loadMore}
 						onSelect={setSelected}
 					/>
-					{/*
-					 * Struck facts: the numeral leads, the declined noun labels it.
-					 * Screen readers get the whole sentence instead of two bare numbers.
-					 */}
-					<section className="border-t border-ma-ink pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-						<p className="text-lg text-ma-pine">Dzięki</p>
-						<dl className="mt-4 flex gap-10" aria-hidden>
-							<div>
-								<dd className="ma-numeral text-5xl sm:text-6xl">
-									{stats.approvedPhotos}
-								</dd>
-								<dt className="ma-label mt-3">
-									{photoCountNoun(stats.approvedPhotos)}
-								</dt>
-							</div>
-							<div>
-								<dd className="ma-numeral text-5xl sm:text-6xl">
-									{stats.contributingGuests}
-								</dd>
-								<dt className="ma-label mt-3">
-									{guestCountNoun(stats.contributingGuests)}
-								</dt>
-							</div>
-						</dl>
-						<p className="sr-only" aria-live="polite">
-							{formatGalleryStats(
-								stats.contributingGuests,
-								stats.approvedPhotos,
-							)}
-						</p>
-					</section>
 				</div>
 			</div>
 

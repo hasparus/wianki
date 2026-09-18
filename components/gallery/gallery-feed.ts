@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { GalleryItem, GalleryStats } from "@/lib/domain";
 
 export type GalleryResponse = {
@@ -16,6 +16,16 @@ async function fetchPage(cursor?: string | null) {
 	const body = (await response.json()) as GalleryResponse;
 	if (!response.ok) throw new Error(body.error ?? "Nie udało się odświeżyć.");
 	return body;
+}
+
+/** New photos arrive at the front; pages already loaded by hand stay put. */
+export function mergeFreshItems(
+	current: GalleryItem[],
+	incoming: GalleryItem[],
+): GalleryItem[] {
+	const known = new Set(current.map((item) => item.id));
+	const fresh = incoming.filter((item) => !known.has(item.id));
+	return fresh.length ? [...fresh, ...current] : current;
 }
 
 export function useGalleryFeed(initial: GalleryResponse) {
@@ -38,6 +48,26 @@ export function useGalleryFeed(initial: GalleryResponse) {
 		} finally {
 			setPending(false);
 		}
+	}, []);
+
+	/*
+	 * The gallery is semi-fresh on its own: every ten seconds the first page is
+	 * refetched and anything new is folded in above what is already on screen,
+	 * so pages the guest loaded by hand survive. A guest who wants it exact
+	 * reloads the page.
+	 */
+	useEffect(() => {
+		const id = setInterval(async () => {
+			if (document.hidden) return;
+			try {
+				const page = await fetchPage();
+				setItems((current) => mergeFreshItems(current, page.items));
+				setStats(page.stats);
+			} catch {
+				// A missed poll is not worth an alarm; the next one is ten seconds away.
+			}
+		}, 10_000);
+		return () => clearInterval(id);
 	}, []);
 
 	const loadMore = useCallback(async () => {

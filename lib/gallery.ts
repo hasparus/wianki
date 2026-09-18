@@ -90,17 +90,11 @@ export async function getGalleryPage(cursor?: string | null) {
 }
 
 export async function getGalleryStats(): Promise<GalleryStats> {
-	const { data, error, count } = await supabaseAdmin()
+	const { error, count } = await supabaseAdmin()
 		.from("photos")
-		.select("guest_id", { count: "exact" })
+		.select("id", { count: "exact", head: true })
 		.eq("hot_status", "uploaded")
-		.eq("moderation_status", "approved")
-		.limit(1000);
+		.eq("moderation_status", "approved");
 	if (error) throw error;
-	return {
-		approvedPhotos: count ?? 0,
-		contributingGuests: new Set(
-			(data ?? []).map((row) => (row as { guest_id: string }).guest_id),
-		).size,
-	};
+	return { approvedPhotos: count ?? 0 };
 }

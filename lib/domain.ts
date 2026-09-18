@@ -42,7 +42,6 @@ export type GalleryItem = {
 
 export type GalleryStats = {
 	approvedPhotos: number;
-	contributingGuests: number;
 };
 
 export type SafeSearchScores = {

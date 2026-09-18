@@ -25,8 +25,8 @@ Canonical production site of this fork: `https://wesele.monwid-olechnowicz.com`.
 at `https://wedding.pawel.space`. One deployment serves one wedding, so do not
 add production domains unless asked.
 
-V1 excludes video, comments, likes, face recognition, named accounts, Realtime,
-background polling. One addition on top: live slideshow (`/pokaz`, editor
+V1 excludes video, comments, likes, face recognition, named accounts, Realtime.
+The gallery polls its first page every ten seconds and folds in what is new. One addition on top: live slideshow (`/pokaz`, editor
 `/admin/pokaz`, worker `workers/slideshow-live` on PartyServer Durable
 Objects). Anonymous ephemeral reactions and comments, never persisted. Gallery
 still has no comments or likes. See `docs/slideshow.md`.
@@ -59,7 +59,7 @@ Not the Next.js in your training data. Read the matching guide in
   signed-receipt boundary.
 - `hot_status`, `archive_status`, `moderation_status` independent.
 - Gallery = `hot_status=uploaded` AND `moderation_status=approved`.
-- No Realtime, no background polling.
+- No Realtime. The gallery keeps itself semi-fresh with a ten-second poll.
 - Admin entry = bearer QR, not user accounts.
 - **No secret, OAuth output, generated QR, or real photo may enter Git.**
 

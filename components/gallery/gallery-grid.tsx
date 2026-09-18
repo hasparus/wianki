@@ -2,23 +2,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon } from "@/components/slideshow/icons";
 import type { GalleryItem } from "@/lib/domain";
+import { photoCountNoun } from "@/lib/i18n";
 
 type GalleryGridProps = {
 	items: GalleryItem[];
+	photoCount: number;
 	hasMore: boolean;
 	pending: boolean;
 	message: string;
-	onRefresh: () => void;
 	onLoadMore: () => void;
 	onSelect: (item: GalleryItem) => void;
 };
 
 export function GalleryGrid({
 	items,
+	photoCount,
 	hasMore,
 	pending,
 	message,
-	onRefresh,
 	onLoadMore,
 	onSelect,
 }: GalleryGridProps) {
@@ -27,19 +28,16 @@ export function GalleryGrid({
 			<h2 id="gallery-title" className="sr-only">
 				Galeria
 			</h2>
-			<div className="flex flex-wrap justify-end gap-3">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				{/* The count stands to the left of the way out of the page. */}
+				<p className="flex items-baseline gap-2" aria-live="polite">
+					<span className="ma-numeral text-3xl">{photoCount}</span>
+					<span className="ma-label">{photoCountNoun(photoCount)}</span>
+				</p>
 				<Link href="/pokaz" className="ma-action ma-action--ghost">
 					Pokaz slajdów
 					<ArrowRightIcon />
 				</Link>
-				<button
-					type="button"
-					onClick={onRefresh}
-					disabled={pending}
-					className="ma-action ma-action--ghost"
-				>
-					{pending ? "Odświeżamy…" : "Odśwież"}
-				</button>
 			</div>
 
 			{message ? (

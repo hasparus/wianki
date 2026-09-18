@@ -13,7 +13,7 @@ async function loadInitialGallery() {
 		return {
 			items: [],
 			nextCursor: null,
-			stats: { approvedPhotos: 0, contributingGuests: 0 },
+			stats: { approvedPhotos: 0 },
 			error: "Galeria jest chwilowo niedostępna. Spróbuj odświeżyć za moment.",
 		};
 	}
