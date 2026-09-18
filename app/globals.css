@@ -178,9 +178,6 @@
 		letter-spacing: 0.16em;
 		text-align: center;
 		text-transform: uppercase;
-		transition:
-			background-color 160ms var(--ma-ease),
-			color 160ms var(--ma-ease);
 	}
 
 	.ma-action:hover:not(:disabled) {
@@ -269,7 +266,6 @@
 		color: var(--ma-ink);
 		font-family: var(--font-sans);
 		font-size: 1rem;
-		transition: border-color 160ms var(--ma-ease);
 	}
 
 	.ma-field:hover:not(:disabled) {

@@ -64,7 +64,7 @@ export function GalleryGrid({
 									width={item.width ?? 1200}
 									height={item.height ?? 900}
 									unoptimized
-									className="h-auto w-full transition-opacity duration-300 group-hover:opacity-85"
+									className="h-auto w-full group-hover:opacity-85"
 								/>
 							</button>
 						</li>
@@ -72,7 +72,7 @@ export function GalleryGrid({
 				</ul>
 			) : (
 				<div className="ma-empty mt-12">
-					<p className="max-w-md font-serif text-3xl leading-tight">
+					<p className="font-serif text-3xl leading-tight">
 						Jeszcze nikt nic nie wrzucił.
 					</p>
 				</div>
