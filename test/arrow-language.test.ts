@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 function sourceFiles(dir: string): string[] {
@@ -10,16 +11,43 @@ function sourceFiles(dir: string): string[] {
 	});
 }
 
-/** Every element that carries a long arrow, with the tag it was opened as. */
+function tagName(node: ts.JsxElement) {
+	return node.openingElement.tagName.getText(node.getSourceFile());
+}
+
+function isArrow(node: ts.Node) {
+	return (
+		ts.isJsxSelfClosingElement(node) &&
+		/^Arrow(Left|Right)Icon$/.test(node.tagName.getText(node.getSourceFile()))
+	);
+}
+
+/**
+ * Every element that carries a long arrow, with the tag it was opened as.
+ *
+ * Parsed with the compiler rather than matched with a regex: the arrow sits at
+ * an arbitrary depth inside its action, and a pattern that tries to read JSX
+ * nesting by hand silently stops seeing a carrier the moment someone wraps the
+ * label in a span — which is exactly when the test still has to fire.
+ */
 function arrowCarriers() {
 	const carriers: { file: string; tag: string }[] = [];
 	for (const file of [...sourceFiles("app"), ...sourceFiles("components")]) {
-		const source = readFileSync(file, "utf8");
-		for (const match of source.matchAll(
-			/<(\w+)[^>]*>(?:(?!<\/?\w)[\s\S])*?<Arrow(?:Left|Right)Icon\s*\/>/g,
-		)) {
-			carriers.push({ file, tag: match[1] });
-		}
+		const source = ts.createSourceFile(
+			file,
+			readFileSync(file, "utf8"),
+			ts.ScriptTarget.Latest,
+			// Positions are needed so tagName can read its own text back.
+			true,
+			ts.ScriptKind.TSX,
+		);
+		const visit = (node: ts.Node) => {
+			if (ts.isJsxElement(node) && node.children.some(isArrow)) {
+				carriers.push({ file, tag: tagName(node) });
+			}
+			ts.forEachChild(node, visit);
+		};
+		visit(source);
 	}
 	return carriers;
 }
@@ -45,5 +73,24 @@ describe("the arrow marks travel", () => {
 	it("never marks a button", () => {
 		const buttons = arrowCarriers().filter(({ tag }) => tag === "button");
 		expect(buttons).toEqual([]);
+	});
+
+	it("sees a carrier whose label is wrapped, which a regex scan would miss", () => {
+		const source = ts.createSourceFile(
+			"fixture.tsx",
+			'<button type="button" onClick={go}><span>Dalej</span><ArrowRightIcon /></button>',
+			ts.ScriptTarget.Latest,
+			true,
+			ts.ScriptKind.TSX,
+		);
+		const found: string[] = [];
+		const visit = (node: ts.Node) => {
+			if (ts.isJsxElement(node) && node.children.some(isArrow)) {
+				found.push(tagName(node));
+			}
+			ts.forEachChild(node, visit);
+		};
+		visit(source);
+		expect(found).toEqual(["button"]);
 	});
 });

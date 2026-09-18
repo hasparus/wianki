@@ -206,12 +206,6 @@
 		color: var(--ma-plaster-lit);
 	}
 
-	.ma-action--ghost:disabled {
-		border-color: var(--ma-ash);
-		background: transparent;
-		color: var(--ma-disabled);
-	}
-
 	.ma-action--quiet {
 		min-height: 2.75rem;
 		padding-inline: 1rem;
