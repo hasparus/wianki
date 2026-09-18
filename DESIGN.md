@@ -211,7 +211,6 @@ An achromatic room with three tinted inks held in reserve; the guests' photograp
 - **Body** (400, 1rem, 1.65): All running prose. Long-form reading is capped at a 65ch measure; short supporting prose is capped nearer 28rem.
 - **Label** (400, 0.6875rem, 0.24em, uppercase, pine): The supporting line — the marginal annotation. It labels a value, a field, or a status. On bronze and night grounds it shifts to ash-deep.
 - **Action** (500, 0.8125rem, 0.16em, uppercase): Control type only.
-- **Marginalia** (400, 0.6875rem, 0.5em, uppercase, vertical-rl): A single tracked word riding the right margin, shown at 1280px and above only, closing on a 2rem vertical hairline.
 
 ### Named Rules
 **The Never An Eyebrow Rule.** The label style is a marginal annotation, never a kicker above a heading. It names a value, a field, or a status. A small tracked caps line sitting directly above a display heading is a violation of this system, not an instance of it.
@@ -248,7 +247,7 @@ One cast shadow exists and it is not decoration. On the night side, controls sit
 
 ## Shapes
 
-Cut, never rounded. The corner language is the **scoop**: `corner-shape: scoop` at `--ma-scoop` (0.5rem) on controls and fields, and `--ma-scoop-plane` (0.875rem) on lifted planes and empty states. The corner bites into the plane the way the alcove's edges are carved out of it, rather than bulging away from it.
+Cut, never rounded. The corner language is the **scoop**: `corner-shape: scoop` at `--ma-scoop` (0.5rem) on controls and fields, `--ma-scoop-plane` (0.875rem) on lifted planes and empty states, and `--ma-scoop-tight` (0.25rem) on icon-only controls, where the full scoop would eat a 44px square. The corner bites into the plane the way the alcove's edges are carved out of it, rather than bulging away from it.
 
 `corner-shape` needs a radius to bite into, so `border-radius` is declared **only** inside `@supports (corner-shape: scoop)` — it exists nowhere else in the system. A browser without the property never sees a radius and keeps the square edge; the fallback is the plain corner, never a rounded one, and `test/corner-shape.test.ts` fails the build if a radius escapes that query. Photographs, thumbnails and the placed plate take no corner treatment at all: the guests' images are not cut into.
 
@@ -303,10 +302,12 @@ The same world with the planes inverted: ink-deep ground, plaster type, ash-deep
 - **Do** set counts, totals, and positions in the serif with tabular figures.
 - **Do** give every interactive element a visible focus treatment that clears AA — the ink (or plaster, on the night side) outline at 3px offset, and the doubled hairline on fields.
 - **Do** author new texture as a deterministic seeded tile through `scripts/make-textures.mjs` so a clean checkout can regenerate it.
+- **Do** mark an action that leaves the page with the long arrow, pointing the way, and leave it off anything that acts where it stands.
 
 ### Don't:
 - **Don't** add a rounded corner anywhere. The only radius in the system lives inside `@supports (corner-shape: scoop)`, where it is what the scoop cuts into; a radius outside that query is a round corner, and the build fails on it.
 - **Don't** scoop a photograph, a thumbnail or the placed plate. The corner treatment belongs to the interface, and the interface does not cut into a guest's image.
+- **Don't** add an element whose only job is to name the screen it sits on. A label that repeats the heading, a heading that repeats the page, a wordmark in the footer of the page it already titles: all of it went, and it goes again.
 - **Don't** introduce a shadow for elevation. Use the lit plane plus an ash hairline, or the bronze ground. The only shadow in the system is the night-side legibility drop-shadow on chrome sitting over a photograph.
 - **Don't** set a small tracked-caps line above a heading. The label is a marginal annotation for a value, a field, or a status — never a kicker or eyebrow.
 - **Don't** centre a display heading or a page's primary line; the arrangement is asymmetric and flush left.

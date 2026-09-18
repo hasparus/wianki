@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowRightIcon } from "@/components/slideshow/icons";
 import type { GalleryItem } from "@/lib/domain";
 
 type GalleryGridProps = {
@@ -23,29 +24,22 @@ export function GalleryGrid({
 }: GalleryGridProps) {
 	return (
 		<section aria-labelledby="gallery-title">
-			<div className="flex flex-wrap items-end justify-between gap-6">
-				<div>
-					<h2
-						id="gallery-title"
-						className="font-serif text-[clamp(2.25rem,6vw,3.75rem)] leading-[0.95]"
-					>
-						Galeria
-					</h2>
-					<hr className="ma-rule mt-5" />
-				</div>
-				<div className="flex flex-wrap gap-3">
-					<Link href="/pokaz" className="ma-action ma-action--ghost">
-						Pokaz slajdów
-					</Link>
-					<button
-						type="button"
-						onClick={onRefresh}
-						disabled={pending}
-						className="ma-action ma-action--ghost"
-					>
-						{pending ? "Odświeżamy…" : "Odśwież"}
-					</button>
-				</div>
+			<h2 id="gallery-title" className="sr-only">
+				Galeria
+			</h2>
+			<div className="flex flex-wrap justify-end gap-3">
+				<Link href="/pokaz" className="ma-action ma-action--ghost">
+					Pokaz slajdów
+					<ArrowRightIcon />
+				</Link>
+				<button
+					type="button"
+					onClick={onRefresh}
+					disabled={pending}
+					className="ma-action ma-action--ghost"
+				>
+					{pending ? "Odświeżamy…" : "Odśwież"}
+				</button>
 			</div>
 
 			{message ? (

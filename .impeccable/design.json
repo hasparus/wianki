@@ -240,6 +240,11 @@
         "name": "ma-scoop-plane",
         "value": "0.875rem",
         "purpose": "The plane-scale scoop. Applied the same guarded way to .ma-plane and .ma-empty. Photographs, thumbnails and the placed plate take no corner treatment at all."
+      },
+      {
+        "name": "ma-scoop-tight",
+        "value": "0.25rem",
+        "purpose": "The icon-scale scoop. Applied the same guarded way to .ma-action--icon, a single drawn icon at the 44px touch minimum, where the control scoop would eat the corner. Every rule that declares a radius repeats corner-shape beside it rather than inheriting it from a selector further up."
       }
     ],
     "shadows": [
@@ -289,10 +294,6 @@
       {
         "name": "lg",
         "value": "1024px"
-      },
-      {
-        "name": "marginalia",
-        "value": "1280px"
       }
     ],
     "textures": [

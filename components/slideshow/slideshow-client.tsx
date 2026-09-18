@@ -12,6 +12,7 @@ import {
 } from "react";
 import { BubbleLayer } from "@/components/slideshow/bubble-layer";
 import {
+	ArrowLeftIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
 	EyeIcon,
@@ -226,6 +227,7 @@ export function SlideshowClient({
 						Ułoży się sam z zatwierdzonych zdjęć galerii.
 					</p>
 					<Link href="/" className="ma-stage-action mt-10">
+						<ArrowLeftIcon />
 						Wróć do galerii
 					</Link>
 				</div>
@@ -282,7 +284,7 @@ export function SlideshowClient({
 						href="/"
 						className="ma-stage-control ma-label flex min-h-11 items-center gap-1.5 text-ma-plaster hover:text-ma-ash-deep"
 					>
-						<ChevronLeftIcon />
+						<ArrowLeftIcon />
 						Galeria
 					</Link>
 					{live.isLive ? (

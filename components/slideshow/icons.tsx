@@ -67,6 +67,27 @@ export function EyeIcon(props: SVGProps<SVGSVGElement>) {
 	);
 }
 
+/**
+ * The long arrow marks travel: it appears on an action that takes you to
+ * another page, and points the way. An action that works in place never
+ * carries one.
+ */
+export function ArrowRightIcon(props: SVGProps<SVGSVGElement>) {
+	return (
+		<Icon {...props}>
+			<path d="M4 12h16M13.5 5.5 20 12l-6.5 6.5" />
+		</Icon>
+	);
+}
+
+export function ArrowLeftIcon(props: SVGProps<SVGSVGElement>) {
+	return (
+		<Icon {...props}>
+			<path d="M20 12H4M10.5 5.5 4 12l6.5 6.5" />
+		</Icon>
+	);
+}
+
 export function ArrowUpIcon(props: SVGProps<SVGSVGElement>) {
 	return (
 		<Icon {...props}>

@@ -51,12 +51,15 @@ still override them.
   It takes the ground it sits on inside `.ma-suiban` and `.ma-stage`.
 - `.ma-action` — the active accent, translated from the alcove's iris blue into
   reversed ink: a filled ink block. `--ghost` is the hairline outline at rest,
-  `--danger` is oxblood, and disabled is always a hairline, never a grey slab.
+  `--danger` is oxblood, `--icon` is a single drawn icon at the touch minimum,
+  and disabled is always a hairline, never a grey slab.
+- The long arrow inside an action means travel: it appears on a `Link` or `a`
+  that leaves the page and points the way, never on a `button` that acts where
+  it stands. `test/arrow-language.test.ts` fails the build if a button takes
+  one.
 - `.ma-field` — a text input drawn in one hairline stroke.
 - `.ma-empty` — an empty state as a composed invitation: it keeps the full field
   of the thing it is waiting for.
-- `.ma-marginalia` — a tracked word set vertically up the right margin, from
-  1280px.
 - `.ma-numeral` — struck facts: real tabular numerals in the display face.
 - `.ma-suiban` / `.ma-stage` — the dark base plane, and the night side that
   `/pokaz` runs on.
@@ -65,8 +68,12 @@ still override them.
 
 Nothing is rounded. The corner language is the **scoop**: a corner cut into the
 plane, the way the alcove's edges are carved rather than filled. It is set with
-`corner-shape: scoop` at `--ma-scoop` (0.5rem, controls and fields) or
-`--ma-scoop-plane` (0.875rem, lifted planes and empty states).
+`corner-shape: scoop` at `--ma-scoop` (0.5rem, controls and fields),
+`--ma-scoop-plane` (0.875rem, lifted planes and empty states) or
+`--ma-scoop-tight` (0.25rem, icon-only controls, where the full scoop would eat
+a 44px square). Every rule that declares a radius repeats the scoop beside it,
+so the pairing is visible in one line rather than inherited from a selector
+further up.
 
 `corner-shape` needs a radius to bite into, so the radius is declared **only**
 inside `@supports (corner-shape: scoop)`. A browser without the property never

@@ -30,8 +30,6 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 				 * is the line that reaches the viewer, inside the first viewport.
 				 */}
 				<header className="relative mx-auto w-full max-w-6xl pb-[6vh] pt-[5vh] sm:pb-[7vh] sm:pt-[11vh]">
-					<span className="ma-marginalia">Galeria</span>
-
 					<h1 className="font-serif text-[clamp(3.25rem,13vw,7.5rem)] leading-[0.92] tracking-[-0.02em]">
 						Rosia <span className="text-ma-pine">&amp;</span> Piotrek
 					</h1>
@@ -99,9 +97,8 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 				</div>
 			</div>
 
-			<footer className="ma-suiban px-5 py-10 sm:px-10 lg:px-16">
-				<div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4">
-					<p className="font-serif text-2xl">Rosia &amp; Piotrek</p>
+			<footer className="ma-suiban px-5 py-8 sm:px-10 lg:px-16">
+				<div className="mx-auto w-full max-w-6xl">
 					<nav className="flex flex-wrap gap-x-8 gap-y-2">
 						<Link
 							href="/pokaz"

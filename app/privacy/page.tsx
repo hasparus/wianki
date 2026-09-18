@@ -1,11 +1,11 @@
 import Link from "next/link";
+import { ArrowLeftIcon } from "@/components/slideshow/icons";
 
 export default function PrivacyPage() {
 	const email = process.env.DELETION_CONTACT_EMAIL ?? "adres pary młodej";
 	return (
 		<>
 			<main className="relative mx-auto w-full max-w-4xl grow px-5 py-16 sm:px-10 sm:py-24">
-				<span className="ma-marginalia">Prywatność</span>
 				<article>
 					<h1 className="font-serif text-[clamp(2.75rem,9vw,5.5rem)] leading-[0.95] tracking-[-0.02em]">
 						Co się dzieje ze zdjęciami
@@ -43,6 +43,7 @@ export default function PrivacyPage() {
 						</p>
 					</div>
 					<Link href="/" className="ma-action ma-action--ghost mt-16">
+						<ArrowLeftIcon />
 						Wróć do galerii
 					</Link>
 				</article>

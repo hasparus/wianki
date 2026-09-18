@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { type FormEvent, useCallback, useMemo, useState } from "react";
-import { ChevronLeftIcon } from "@/components/slideshow/icons";
+import { ArrowLeftIcon, ArrowRightIcon } from "@/components/slideshow/icons";
 import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
 import { readError } from "@/lib/http-client";
 import type { AdminSlide } from "@/lib/slideshow";
@@ -194,7 +194,6 @@ export function SlideEditor({
 	return (
 		<>
 			<main className="relative mx-auto w-full max-w-5xl grow px-5 py-16 sm:px-10">
-				<span className="ma-marginalia">Pokaz</span>
 				<header className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
 					<div>
 						<h1 className="font-serif text-[clamp(2.75rem,9vw,5.5rem)] leading-[0.95] tracking-[-0.02em]">
@@ -207,12 +206,13 @@ export function SlideEditor({
 						</p>
 					</div>
 					<div className="flex flex-wrap gap-3">
-						<Link href="/admin" className="ma-action ma-action--ghost gap-1.5">
-							<ChevronLeftIcon />
+						<Link href="/admin" className="ma-action ma-action--ghost">
+							<ArrowLeftIcon />
 							Zdjęcia
 						</Link>
 						<Link href="/pokaz" className="ma-action">
 							Zobacz pokaz
+							<ArrowRightIcon />
 						</Link>
 					</div>
 				</header>

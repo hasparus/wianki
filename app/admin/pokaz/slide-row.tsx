@@ -186,7 +186,7 @@ export function SlideRow({
 					onClick={() => onMove(index, index - 1)}
 					disabled={pending || index === 0}
 					aria-label="Przesuń wyżej"
-					className="ma-action ma-action--ghost grid min-h-11 min-w-11 place-items-center px-0"
+					className="ma-action ma-action--ghost ma-action--icon min-h-11"
 				>
 					<ArrowUpIcon />
 				</button>
@@ -195,7 +195,7 @@ export function SlideRow({
 					onClick={() => onMove(index, index + 1)}
 					disabled={pending || index === total - 1}
 					aria-label="Przesuń niżej"
-					className="ma-action ma-action--ghost grid min-h-11 min-w-11 place-items-center px-0"
+					className="ma-action ma-action--ghost ma-action--icon min-h-11"
 				>
 					<ArrowDownIcon />
 				</button>
@@ -204,7 +204,7 @@ export function SlideRow({
 					onClick={() => onRemove(slide.id)}
 					disabled={pending}
 					aria-label="Usuń slajd"
-					className="ma-action ma-action--danger grid min-h-11 min-w-11 place-items-center px-0"
+					className="ma-action ma-action--danger ma-action--icon min-h-11"
 				>
 					<XIcon />
 				</button>

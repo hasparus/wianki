@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { ArrowRightIcon } from "@/components/slideshow/icons";
 import type { AdminPhotoPage } from "@/lib/admin";
 
 type AdminAction =
@@ -125,7 +126,6 @@ export function AdminClient({
 	return (
 		<>
 			<main className="relative mx-auto w-full max-w-6xl grow px-5 py-16 sm:px-10">
-				<span className="ma-marginalia">Panel</span>
 				<header className="grid gap-8 lg:grid-cols-12 lg:items-end">
 					<div className="lg:col-span-7">
 						<h1 className="font-serif text-[clamp(2.75rem,9vw,5.5rem)] leading-[0.95] tracking-[-0.02em]">
@@ -141,6 +141,7 @@ export function AdminClient({
 						</p>
 						<a href="/admin/pokaz" className="ma-action ma-action--ghost mt-6">
 							Ułóż pokaz slajdów
+							<ArrowRightIcon />
 						</a>
 					</div>
 				</header>

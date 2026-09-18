@@ -45,6 +45,7 @@
 	 * plane, so the corner bites inward instead of bulging. Two depths: the
 	 * control scale and the plane scale.
 	 */
+	--ma-scoop-tight: 0.25rem;
 	--ma-scoop: 0.5rem;
 	--ma-scoop-plane: 0.875rem;
 
@@ -233,6 +234,13 @@
 		color: var(--ma-disabled);
 	}
 
+	/* An icon alone, at the touch minimum. The corner scales with the control:
+	 * the full scoop would eat a 44px square. */
+	.ma-action--icon {
+		min-width: 2.75rem;
+		padding-inline: 0;
+	}
+
 	/*
 	 * Destruction is available, never loud. In a queue it repeats on every row,
 	 * so at rest it is not a box at all — an underlined word in oxblood, which
@@ -310,35 +318,6 @@
 		text-align: left;
 	}
 
-	/* The marginal vertical mark, in Latin script: tracked caps up the right edge. */
-	.ma-marginalia {
-		position: absolute;
-		top: 4.5rem;
-		right: 0;
-		display: none;
-		color: var(--ma-pine);
-		font-size: 0.6875rem;
-		letter-spacing: 0.5em;
-		text-transform: uppercase;
-		writing-mode: vertical-rl;
-	}
-
-	/* The column closes on a rule, the way the alcove's does. */
-	.ma-marginalia::after {
-		display: block;
-		width: 1px;
-		height: 2rem;
-		margin: 0.75rem auto 0;
-		background: var(--ma-ash-deep);
-		content: "";
-	}
-
-	@media (min-width: 1280px) {
-		.ma-marginalia {
-			display: block;
-		}
-	}
-
 	/* Struck facts: real numerals, registered rather than decorated. */
 	.ma-numeral {
 		font-family: var(--font-serif);
@@ -362,6 +341,13 @@
 		.ma-stage-action,
 		.ma-stage-field {
 			border-radius: var(--ma-scoop);
+			corner-shape: scoop;
+		}
+
+		/* Inherits the scoop from .ma-action and only resizes it, but repeats the
+		 * declaration so every radius in this file sits beside its own scoop. */
+		.ma-action--icon {
+			border-radius: var(--ma-scoop-tight);
 			corner-shape: scoop;
 		}
 
