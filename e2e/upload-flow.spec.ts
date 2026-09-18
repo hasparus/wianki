@@ -28,13 +28,13 @@ test("guest can keep uploading after a batch completes and sees previews of sent
 
 	// Completion is not a dead end: no "close the page" copy, sent photos stay
 	// visible with previews, and the picker invites another batch.
-	await expect(page.getByRole("status")).toContainText("pojawią się w galerii");
+	await expect(page.getByRole("status")).toContainText("W galerii");
 	await expect(page.getByRole("status")).not.toContainText("zamknąć tę stronę");
 	const sentSection = page.getByRole("region", {
 		name: "Twoje wysłane zdjęcia",
 	});
 	await expect(sentSection.locator("img")).toHaveCount(2);
-	const addMore = page.getByRole("button", { name: "Dodaj zdjęcia" });
+	const addMore = page.getByRole("button", { name: "Wybierz zdjęcia" });
 	await expect(addMore).toBeEnabled();
 	// Zero gallery stats stay hidden instead of bragging about "0 zdjęć".
 	await expect(page.getByText(/0 gości/)).toHaveCount(0);
@@ -56,7 +56,7 @@ test("guest can keep uploading after a batch completes and sees previews of sent
 
 	await page.getByRole("button", { name: "Wyślij zdjęcia" }).click();
 	await expect(sentSection.locator("img")).toHaveCount(3);
-	await expect(page.getByRole("status")).toContainText("pojawią się w galerii");
+	await expect(page.getByRole("status")).toContainText("W galerii");
 	await page.screenshot({
 		path: testInfo.outputPath("after-second-batch.png"),
 		fullPage: true,
