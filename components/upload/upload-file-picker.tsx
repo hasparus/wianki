@@ -3,10 +3,12 @@ import type { RefObject } from "react";
 export function UploadFilePicker({
 	inputRef,
 	busy,
+	hasQueue,
 	onSelect,
 }: {
 	inputRef: RefObject<HTMLInputElement | null>;
 	busy: boolean;
+	hasQueue: boolean;
 	onSelect: (files: FileList | null) => void;
 }) {
 	return (
@@ -19,13 +21,18 @@ export function UploadFilePicker({
 				onChange={(event) => onSelect(event.target.files)}
 				className="sr-only"
 			/>
+			{/*
+			 * The reversed ink marks whatever is next, and only that: picking is the
+			 * next thing until something is queued, and then sending is. The well
+			 * never shows two filled blocks at once.
+			 */}
 			<button
 				type="button"
 				onClick={() => inputRef.current?.click()}
 				disabled={busy}
-				className="mt-5 min-h-12 rounded-full border-2 border-wedding-green px-6 font-bold hover:bg-wedding-rose/40 disabled:opacity-60"
+				className={`ma-action mt-7 w-full ${hasQueue ? "ma-action--ghost" : ""}`}
 			>
-				Dodaj zdjęcia
+				{hasQueue ? "Dodaj kolejne" : "Wybierz zdjęcia"}
 			</button>
 		</>
 	);

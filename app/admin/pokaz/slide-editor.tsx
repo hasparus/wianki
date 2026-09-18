@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { type FormEvent, useCallback, useMemo, useState } from "react";
-import { ChevronLeftIcon } from "@/components/slideshow/icons";
+import { ArrowLeftIcon, ArrowRightIcon } from "@/components/slideshow/icons";
 import { useSlideshowLive } from "@/components/slideshow/use-slideshow-live";
 import { readError } from "@/lib/http-client";
 import type { AdminSlide } from "@/lib/slideshow";
@@ -68,7 +68,9 @@ export function SlideEditor({
 			await work();
 		} catch (error) {
 			setMessage(
-				error instanceof Error ? error.message : "Coś poszło nie tak.",
+				error instanceof Error
+					? error.message
+					: "Nie udało się. Odśwież stronę i spróbuj ponownie.",
 			);
 		} finally {
 			setPending(false);
@@ -190,169 +192,190 @@ export function SlideEditor({
 	}
 
 	return (
-		<main className="mx-auto min-h-screen w-full max-w-5xl px-5 py-10">
-			<header className="flex flex-wrap items-end justify-between gap-4">
-				<div>
-					<p className="text-sm font-bold uppercase tracking-[0.25em]">
-						Panel pary młodej
-					</p>
-					<h1 className="mt-2 font-serif text-5xl font-bold">Pokaz slajdów</h1>
-					<p className="mt-3 max-w-2xl">
-						Ułóż wieczorny pokaz ze zdjęć galerii i slajdów z tekstem. Bez
-						własnej listy pokaz gra wszystkie zatwierdzone zdjęcia
-						chronologicznie. Kolejność zmienisz przeciągając slajdy lub
-						strzałkami.
-					</p>
+		<>
+			<main className="relative w-full grow px-5 sm:px-10 lg:px-16">
+				<div className="mx-auto w-full max-w-6xl py-16">
+					<div className="max-w-5xl">
+						<header className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+							<div>
+								<h1 className="font-serif text-[clamp(2.75rem,9vw,5.5rem)] leading-[0.95] tracking-[-0.02em]">
+									Pokaz slajdów
+								</h1>
+								<hr className="ma-rule mt-6" />
+								<p className="mt-8 max-w-xl leading-relaxed text-ma-pine">
+									Bez własnej listy pokaz gra wszystkie zatwierdzone zdjęcia
+									chronologicznie.
+								</p>
+							</div>
+							<div className="flex flex-wrap gap-3">
+								<Link href="/admin" className="ma-action ma-action--ghost">
+									<ArrowLeftIcon />
+									Zdjęcia
+								</Link>
+								<Link href="/pokaz" className="ma-action">
+									Zobacz pokaz
+									<ArrowRightIcon />
+								</Link>
+							</div>
+						</header>
+
+						{message ? (
+							<p role="alert" className="mt-10 font-medium text-ma-oxblood">
+								{message}
+							</p>
+						) : null}
+						{notice ? (
+							<p
+								aria-live="polite"
+								className="mt-10 font-medium text-ma-bottle"
+							>
+								{notice}
+							</p>
+						) : null}
+
+						<section aria-labelledby="timing-title" className="mt-16">
+							<h2
+								id="timing-title"
+								className="font-serif text-3xl leading-tight"
+							>
+								Tempo pokazu
+							</h2>
+							<hr className="ma-rule mt-4" />
+							<div className="mt-6 flex flex-wrap items-center gap-4 border-y border-ma-ash py-5">
+								<label htmlFor="slide-seconds" className="ma-label">
+									Każdy slajd trwa
+								</label>
+								<input
+									id="slide-seconds"
+									type="number"
+									inputMode="numeric"
+									min={SLIDESHOW_MIN_SECONDS}
+									max={SLIDESHOW_MAX_SECONDS}
+									value={slideSeconds}
+									disabled={pending}
+									onChange={(event) => {
+										setSecondsSaved(false);
+										setSlideSeconds(Number(event.target.value));
+									}}
+									onBlur={(event) => saveSeconds(Number(event.target.value))}
+									className="ma-field w-24 text-center text-lg tabular-nums"
+								/>
+								<span className="ma-label">sekund</span>
+								{secondsSaved ? (
+									<span
+										aria-live="polite"
+										className="text-sm font-medium text-ma-bottle"
+									>
+										Zapisano
+									</span>
+								) : null}
+								<p className="w-full text-sm text-ma-pine">
+									Od {SLIDESHOW_MIN_SECONDS} do {SLIDESHOW_MAX_SECONDS} sekund.
+									{live.status === "on"
+										? " Zmiana działa od razu na wszystkich otwartych ekranach."
+										: " Zapisane tempo włączy się przy otwarciu pokazu."}
+								</p>
+							</div>
+						</section>
+
+						<section aria-labelledby="slides-title" className="mt-16">
+							<div className="flex items-end justify-between gap-4">
+								<div>
+									<h2
+										id="slides-title"
+										className="font-serif text-3xl leading-tight"
+									>
+										Slajdy
+									</h2>
+									<hr className="ma-rule mt-4" />
+								</div>
+								<span className="ma-numeral text-4xl">{slides.length}</span>
+							</div>
+							{slides.length === 0 ? (
+								<div className="ma-empty mt-8">
+									<p className="max-w-md font-serif text-2xl leading-tight">
+										Lista jest pusta, więc pokaz gra automatycznie z galerii.
+									</p>
+								</div>
+							) : (
+								<ol className="mt-8 border-t border-ma-ash">
+									{slides.map((slide, index) => (
+										<SlideRow
+											key={slide.id}
+											slide={slide}
+											index={index}
+											total={slides.length}
+											dragging={dragId === slide.id}
+											editing={editingId === slide.id}
+											pending={pending}
+											registerRow={registerRow}
+											onDragStart={onDragStart}
+											onMove={move}
+											onRemove={removeSlide}
+											onStartEdit={setEditingId}
+											onSaveEdit={saveEditing}
+											onCancelEdit={() => setEditingId(null)}
+										/>
+									))}
+								</ol>
+							)}
+						</section>
+
+						<PhotoPicker
+							usedPhotoIds={usedPhotoIds}
+							pending={pending}
+							run={run}
+							onAdded={announceAdded}
+						/>
+
+						<section aria-labelledby="add-text-title" className="mt-16">
+							<h2
+								id="add-text-title"
+								className="font-serif text-3xl leading-tight"
+							>
+								Dodaj slajd z tekstem
+							</h2>
+							<hr className="ma-rule mt-4" />
+							<form
+								onSubmit={addTextSlide}
+								className="mt-6 grid max-w-xl gap-3"
+							>
+								<label htmlFor="text-slide-title" className="ma-label">
+									Tytuł
+								</label>
+								<input
+									id="text-slide-title"
+									value={textTitle}
+									onChange={(event) => setTextTitle(event.target.value)}
+									required
+									maxLength={SLIDESHOW_MAX_TITLE}
+									placeholder="Pierwszy taniec"
+									className="ma-field"
+								/>
+								<label htmlFor="text-slide-subtitle" className="ma-label mt-2">
+									Podtytuł (opcjonalnie)
+								</label>
+								<input
+									id="text-slide-subtitle"
+									value={textSubtitle}
+									onChange={(event) => setTextSubtitle(event.target.value)}
+									maxLength={SLIDESHOW_MAX_SUBTITLE}
+									placeholder="Rosia i Piotrek"
+									className="ma-field"
+								/>
+								<button
+									type="submit"
+									disabled={pending || !textTitle.trim()}
+									className="ma-action mt-3"
+								>
+									Dodaj slajd
+								</button>
+							</form>
+						</section>
+					</div>
 				</div>
-				<div className="flex gap-2">
-					<Link
-						href="/admin"
-						className="flex min-h-11 items-center gap-1.5 rounded-full border border-wedding-green px-5 py-2.5 font-bold hover:bg-wedding-rose/40"
-					>
-						<ChevronLeftIcon />
-						Zdjęcia
-					</Link>
-					<Link
-						href="/pokaz"
-						className="min-h-11 rounded-full bg-wedding-green px-5 py-2.5 font-bold text-wedding-rose hover:bg-wedding-green-soft"
-					>
-						Zobacz pokaz
-					</Link>
-				</div>
-			</header>
-
-			{message ? (
-				<p role="alert" className="mt-6 font-bold text-wedding-error">
-					{message}
-				</p>
-			) : null}
-			{notice ? (
-				<p aria-live="polite" className="mt-6 font-bold text-wedding-success">
-					{notice}
-				</p>
-			) : null}
-
-			<section aria-labelledby="timing-title" className="mt-10">
-				<h2 id="timing-title" className="font-serif text-3xl font-bold">
-					Tempo pokazu
-				</h2>
-				<div className="mt-4 flex flex-wrap items-center gap-3 rounded-3xl bg-wedding-cream p-5">
-					<label htmlFor="slide-seconds" className="font-semibold">
-						Każdy slajd trwa
-					</label>
-					<input
-						id="slide-seconds"
-						type="number"
-						inputMode="numeric"
-						min={SLIDESHOW_MIN_SECONDS}
-						max={SLIDESHOW_MAX_SECONDS}
-						value={slideSeconds}
-						disabled={pending}
-						onChange={(event) => {
-							setSecondsSaved(false);
-							setSlideSeconds(Number(event.target.value));
-						}}
-						onBlur={(event) => saveSeconds(Number(event.target.value))}
-						className="min-h-12 w-24 rounded-2xl border-2 border-wedding-green bg-white px-4 text-center text-lg font-bold tabular-nums"
-					/>
-					<span className="font-semibold">sekund</span>
-					{secondsSaved ? (
-						<span
-							aria-live="polite"
-							className="text-sm font-bold text-wedding-success"
-						>
-							Zapisano
-						</span>
-					) : null}
-					<p className="w-full text-sm">
-						Od {SLIDESHOW_MIN_SECONDS} do {SLIDESHOW_MAX_SECONDS} sekund.
-						{live.status === "on"
-							? " Zmiana działa od razu na wszystkich otwartych ekranach."
-							: " Zapisane tempo włączy się przy otwarciu pokazu."}
-					</p>
-				</div>
-			</section>
-
-			<section aria-labelledby="slides-title" className="mt-10">
-				<h2 id="slides-title" className="font-serif text-3xl font-bold">
-					Slajdy ({slides.length})
-				</h2>
-				{slides.length === 0 ? (
-					<p className="mt-4 rounded-[2rem] border border-dashed border-wedding-green/50 p-8 text-center">
-						Lista jest pusta — pokaz gra teraz automatycznie z galerii. Dodaj
-						pierwszy slajd, aby ułożyć własną historię.
-					</p>
-				) : (
-					<ol className="mt-5 grid gap-3">
-						{slides.map((slide, index) => (
-							<SlideRow
-								key={slide.id}
-								slide={slide}
-								index={index}
-								total={slides.length}
-								dragging={dragId === slide.id}
-								editing={editingId === slide.id}
-								pending={pending}
-								registerRow={registerRow}
-								onDragStart={onDragStart}
-								onMove={move}
-								onRemove={removeSlide}
-								onStartEdit={setEditingId}
-								onSaveEdit={saveEditing}
-								onCancelEdit={() => setEditingId(null)}
-							/>
-						))}
-					</ol>
-				)}
-			</section>
-
-			<PhotoPicker
-				usedPhotoIds={usedPhotoIds}
-				pending={pending}
-				run={run}
-				onAdded={announceAdded}
-			/>
-
-			<section aria-labelledby="add-text-title" className="mt-12">
-				<h2 id="add-text-title" className="font-serif text-3xl font-bold">
-					Dodaj slajd z tekstem
-				</h2>
-				<form
-					onSubmit={addTextSlide}
-					className="mt-5 grid max-w-xl gap-3 rounded-3xl bg-wedding-cream p-5"
-				>
-					<label htmlFor="text-slide-title" className="font-semibold">
-						Tytuł
-					</label>
-					<input
-						id="text-slide-title"
-						value={textTitle}
-						onChange={(event) => setTextTitle(event.target.value)}
-						required
-						maxLength={SLIDESHOW_MAX_TITLE}
-						placeholder="Dziękujemy, że jesteście z nami!"
-						className="min-h-12 rounded-2xl border-2 border-wedding-green bg-white px-4"
-					/>
-					<label htmlFor="text-slide-subtitle" className="font-semibold">
-						Podtytuł (opcjonalnie)
-					</label>
-					<input
-						id="text-slide-subtitle"
-						value={textSubtitle}
-						onChange={(event) => setTextSubtitle(event.target.value)}
-						maxLength={SLIDESHOW_MAX_SUBTITLE}
-						placeholder="Rosia i Piotrek"
-						className="min-h-12 rounded-2xl border-2 border-wedding-green/50 bg-white px-4"
-					/>
-					<button
-						type="submit"
-						disabled={pending || !textTitle.trim()}
-						className="min-h-12 rounded-full bg-wedding-green px-6 font-bold text-wedding-rose hover:bg-wedding-green-soft disabled:opacity-50"
-					>
-						Dodaj slajd
-					</button>
-				</form>
-			</section>
-		</main>
+			</main>
+			<div className="ma-base" aria-hidden />
+		</>
 	);
 }

@@ -66,9 +66,17 @@ Not the Next.js in your training data. Read the matching guide in
 ## Visual invariants
 
 Tokens live in `app/globals.css`. Never repeat palette hex in components.
-Forest green on ivory = normal text. Rose = decorative, never body text on
-ivory. No automatic dark mode. Every interactive state keeps WCAG AA contrast
-and a visible focus ring.
+The world is a tokonoma alcove: the interface is achromatic (R=G=B) — ink on
+plaster, anchored by a bronze suiban base plane — and the guests' photographs
+are the only colour on screen. Muted oxblood and bottle carry error and
+success; nothing else is ever tinted. Nothing is rounded — the corner language
+is the scoop, a corner cut into the plane rather than bulging out of it, and
+`border-radius` is only ever declared inside `@supports (corner-shape: scoop)`
+so a browser without it keeps the square edge. Hairline rules and charged
+emptiness instead of filled containers. Display
+type is Instrument Serif, self-hosted under `public/fonts` so a clean checkout
+builds offline. No automatic dark mode; `/pokaz` runs the same world inverted.
+Every interactive state keeps WCAG AA contrast and a visible focus ring.
 
 ## Boundaries
 

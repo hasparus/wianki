@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatGalleryStats } from "@/lib/i18n";
+import { formatGalleryStats, guestCountNoun, photoCountNoun } from "@/lib/i18n";
 
 describe("Polish gallery statistics", () => {
 	it.each([
@@ -13,5 +13,27 @@ describe("Polish gallery statistics", () => {
 		[25, 25, "25 gości dodało już 25 zdjęć"],
 	])("declines %i guests and %i photos", (guests, photos, expected) => {
 		expect(formatGalleryStats(guests, photos)).toBe(expected);
+	});
+});
+
+describe("Polish count nouns", () => {
+	it.each([
+		[0, "zdjęć"],
+		[1, "zdjęcie"],
+		[2, "zdjęcia"],
+		[5, "zdjęć"],
+		[22, "zdjęcia"],
+		[25, "zdjęć"],
+	])("declines the photo noun for %i", (count, expected) => {
+		expect(photoCountNoun(count)).toBe(expected);
+	});
+
+	it.each([
+		[0, "gości"],
+		[1, "gość"],
+		[2, "gości"],
+		[5, "gości"],
+	])("declines the guest noun for %i", (count, expected) => {
+		expect(guestCountNoun(count)).toBe(expected);
 	});
 });

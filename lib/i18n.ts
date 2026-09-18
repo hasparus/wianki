@@ -17,29 +17,46 @@ export function declinePolish(count: number, forms: PolishDeclension): string {
 	return forms.other;
 }
 
+const guestForms: PolishDeclension = {
+	one: "gość",
+	few: "gości",
+	many: "gości",
+	other: "gościa",
+};
+
+const addedForms: PolishDeclension = {
+	one: "dodał",
+	few: "dodało",
+	many: "dodało",
+	other: "dodało",
+};
+
+const photoForms: PolishDeclension = {
+	one: "zdjęcie",
+	few: "zdjęcia",
+	many: "zdjęć",
+	other: "zdjęcia",
+};
+
+/**
+ * The gallery prints its counts as struck numerals with a noun beneath them, so
+ * the noun has to decline on its own as well as inside the sentence. Both read
+ * from the same forms, so the label and the sentence cannot drift apart.
+ */
+export function photoCountNoun(approvedPhotos: number): string {
+	return declinePolish(approvedPhotos, photoForms);
+}
+
+export function guestCountNoun(contributingGuests: number): string {
+	return declinePolish(contributingGuests, guestForms);
+}
+
 export function formatGalleryStats(
 	contributingGuests: number,
 	approvedPhotos: number,
 ): string {
 	if (approvedPhotos === 0) return "";
-	const guests = declinePolish(contributingGuests, {
-		one: "gość",
-		few: "gości",
-		many: "gości",
-		other: "gościa",
-	});
-	const added = declinePolish(contributingGuests, {
-		one: "dodał",
-		few: "dodało",
-		many: "dodało",
-		other: "dodało",
-	});
-	const photos = declinePolish(approvedPhotos, {
-		one: "zdjęcie",
-		few: "zdjęcia",
-		many: "zdjęć",
-		other: "zdjęcia",
-	});
+	const added = declinePolish(contributingGuests, addedForms);
 
-	return `${contributingGuests} ${guests} ${added} już ${approvedPhotos} ${photos}`;
+	return `${contributingGuests} ${guestCountNoun(contributingGuests)} ${added} już ${approvedPhotos} ${photoCountNoun(approvedPhotos)}`;
 }

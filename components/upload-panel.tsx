@@ -1,6 +1,5 @@
 "use client";
 
-import { SuccessCelebration } from "@/components/upload/success-celebration";
 import { UploadFilePicker } from "@/components/upload/upload-file-picker";
 import { UploadItemList } from "@/components/upload/upload-item-list";
 import { UploadSubmitControls } from "@/components/upload/upload-submit-controls";
@@ -14,9 +13,7 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 		activeBatchIds,
 		busy,
 		summary,
-		celebrationMessage,
 		chooseFiles,
-		clearCelebration,
 		upload,
 	} = useUploadBatch(onComplete);
 	// Items keep their place in the list while a batch is in flight and move to
@@ -36,46 +33,47 @@ export function UploadPanel({ onComplete }: { onComplete: () => void }) {
 			item.phase !== "uploading" &&
 			item.phase !== "queued",
 	).length;
+	// The submit line only exists once there is something to send: an empty well
+	// is a composed invitation, not a disabled bar.
+	const sendable = pendingItems.some((item) =>
+		["queued", "failed", "archive_failed"].includes(item.phase),
+	);
 
 	return (
-		<>
-			<section
-				aria-labelledby="upload-title"
-				className="rounded-[2rem] border border-wedding-rose bg-wedding-cream p-5 shadow-lg shadow-wedding-rose/15 sm:p-7"
+		<section
+			id="dodaj"
+			aria-labelledby="upload-title"
+			className="ma-plane scroll-mt-8 p-5 sm:p-8 lg:p-10"
+		>
+			<h2
+				id="upload-title"
+				className="font-serif text-[clamp(2rem,5vw,3.25rem)] leading-[0.95]"
 			>
-				<h2 id="upload-title" className="font-serif text-3xl font-bold">
-					Dodaj swoje zdjęcia
-				</h2>
-				<p className="mt-2 leading-7">
-					Możesz wysłać do 10 zdjęć naraz. Po weselu udostępnimy wszystkim
-					folder z oryginałami.
-				</p>
-				<UploadFilePicker
-					inputRef={inputRef}
-					busy={busy}
-					onSelect={chooseFiles}
-				/>
-				<UploadItemList items={pendingItems} />
-				<UploadSubmitControls
-					busy={busy}
-					busyLabel={`Wysyłamy zdjęcia… (${finishedInBatch} z ${activeBatchIds.length})`}
-					hasItems={pendingItems.some((item) =>
-						["queued", "failed", "archive_failed"].includes(item.phase),
-					)}
-					onUpload={upload}
-				/>
-				<p role="status" className="mt-4 min-h-12 font-bold">
+				Dodaj swoje zdjęcia
+			</h2>
+			<hr className="ma-rule mt-5" />
+			<p className="mt-5 max-w-md text-ma-pine">
+				Do 10 zdjęć naraz. Po weselu udostępnimy folder z oryginałami.
+			</p>
+			<UploadFilePicker
+				inputRef={inputRef}
+				busy={busy}
+				hasQueue={pendingItems.length > 0}
+				onSelect={chooseFiles}
+			/>
+			<UploadItemList items={pendingItems} />
+			<UploadSubmitControls
+				busy={busy}
+				busyLabel={`Wysyłamy… (${finishedInBatch} z ${activeBatchIds.length})`}
+				sendable={sendable}
+				onUpload={upload}
+			/>
+			{summary ? (
+				<p role="status" className="mt-5 text-sm font-medium">
 					{summary}
 				</p>
-				<UploadedPhotos items={deliveredItems} />
-			</section>
-
-			{celebrationMessage ? (
-				<SuccessCelebration
-					message={celebrationMessage}
-					onFinished={clearCelebration}
-				/>
 			) : null}
-		</>
+			<UploadedPhotos items={deliveredItems} />
+		</section>
 	);
 }

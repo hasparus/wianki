@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+import { ArrowRightIcon } from "@/components/slideshow/icons";
 import type { GalleryItem } from "@/lib/domain";
 
 type GalleryGridProps = {
@@ -22,32 +24,38 @@ export function GalleryGrid({
 }: GalleryGridProps) {
 	return (
 		<section aria-labelledby="gallery-title">
-			<div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-				<h2 id="gallery-title" className="font-serif text-3xl font-bold">
-					Galeria
-				</h2>
+			<h2 id="gallery-title" className="sr-only">
+				Galeria
+			</h2>
+			<div className="flex flex-wrap justify-end gap-3">
+				<Link href="/pokaz" className="ma-action ma-action--ghost">
+					Pokaz slajdów
+					<ArrowRightIcon />
+				</Link>
 				<button
 					type="button"
 					onClick={onRefresh}
 					disabled={pending}
-					className="min-h-11 rounded-full border-2 border-wedding-green px-5 font-bold hover:bg-wedding-rose/40 disabled:opacity-60"
+					className="ma-action ma-action--ghost"
 				>
-					{pending ? "Odświeżamy…" : "Odśwież galerię"}
+					{pending ? "Odświeżamy…" : "Odśwież"}
 				</button>
 			</div>
+
 			{message ? (
-				<p role="alert" className="mb-4 font-semibold text-wedding-error">
+				<p role="alert" className="mt-8 font-medium text-ma-oxblood">
 					{message}
 				</p>
 			) : null}
+
 			{items.length ? (
-				<ul className="columns-2 gap-3 sm:columns-3 lg:columns-4">
+				<ul className="mt-12 columns-2 gap-4 sm:columns-3 lg:columns-4 lg:gap-6">
 					{items.map((item) => (
-						<li key={item.id} className="mb-3 break-inside-avoid">
+						<li key={item.id} className="mb-4 break-inside-avoid lg:mb-6">
 							<button
 								type="button"
 								onClick={() => onSelect(item)}
-								className="group block w-full overflow-hidden rounded-2xl bg-wedding-rose/30 shadow-sm focus-visible:outline-4"
+								className="group block w-full bg-ma-ash/40 focus-visible:outline-2 focus-visible:outline-ma-ink"
 								aria-label="Powiększ zdjęcie"
 							>
 								<Image
@@ -56,27 +64,27 @@ export function GalleryGrid({
 									width={item.width ?? 1200}
 									height={item.height ?? 900}
 									unoptimized
-									className="h-auto w-full transition duration-300 group-hover:scale-[1.02]"
+									className="h-auto w-full transition-opacity duration-300 group-hover:opacity-85"
 								/>
 							</button>
 						</li>
 					))}
 				</ul>
 			) : (
-				<div className="rounded-[2rem] border border-dashed border-wedding-green/50 p-10 text-center">
-					<p className="font-serif text-2xl font-bold">
-						Pierwsze zdjęcia pojawią się tutaj.
+				<div className="ma-empty mt-12">
+					<p className="max-w-md font-serif text-3xl leading-tight">
+						Jeszcze nikt nic nie wrzucił.
 					</p>
-					<p className="mt-2">Może zaczniesz nasz wspólny album?</p>
 				</div>
 			)}
+
 			{hasMore ? (
-				<div className="mt-8 text-center">
+				<div className="mt-14">
 					<button
 						type="button"
 						onClick={onLoadMore}
 						disabled={pending}
-						className="min-h-12 rounded-full bg-wedding-green px-7 font-bold text-wedding-rose disabled:opacity-60"
+						className="ma-action"
 					>
 						Pokaż więcej
 					</button>

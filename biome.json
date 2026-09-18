@@ -21,6 +21,7 @@
 			"!!**/.wrangler",
 			"!!.agents",
 			"!!.claude",
+			"!!.impeccable",
 			"!!.codex",
 			"!!.uv-cache",
 			"!!.vercel",

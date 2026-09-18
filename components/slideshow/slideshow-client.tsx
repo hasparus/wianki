@@ -12,6 +12,7 @@ import {
 } from "react";
 import { BubbleLayer } from "@/components/slideshow/bubble-layer";
 import {
+	ArrowLeftIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
 	EyeIcon,
@@ -52,15 +53,18 @@ function SlideView({
 	if (slide.kind === "text") {
 		return (
 			<div className={`absolute inset-0 ${className}`}>
-				<div className="grid h-full place-items-center px-8 text-center">
-					<div>
-						<p className="font-serif text-4xl font-bold text-balance sm:text-6xl">
+				<div className="grid h-full place-items-center px-8">
+					<div className="max-w-4xl">
+						<p className="font-serif text-[clamp(2.5rem,8vw,6rem)] leading-[0.95] text-balance">
 							{slide.title}
 						</p>
 						{slide.subtitle ? (
-							<p className="mt-5 text-lg text-wedding-rose sm:text-2xl">
-								{slide.subtitle}
-							</p>
+							<>
+								<hr className="ma-rule mt-8" />
+								<p className="mt-8 text-lg text-ma-ash-deep sm:text-2xl">
+									{slide.subtitle}
+								</p>
+							</>
 						) : null}
 					</div>
 				</div>
@@ -82,11 +86,11 @@ function SlideView({
 				/>
 			) : null}
 			{slide.title ? (
-				<figcaption className="absolute inset-x-0 bottom-28 px-6 text-center sm:bottom-32">
-					<span className="inline-block max-w-2xl rounded-2xl bg-wedding-green-deep/70 px-5 py-2 font-serif text-xl text-balance sm:text-2xl">
+				<figcaption className="absolute inset-x-0 bottom-28 px-6 sm:bottom-32">
+					<span className="ma-stage-control mx-auto block max-w-3xl text-center font-serif text-2xl text-balance sm:text-3xl">
 						{slide.title}
 						{slide.subtitle ? (
-							<span className="mt-1 block text-base text-wedding-rose sm:text-lg">
+							<span className="mt-1 block text-base text-ma-ash-deep sm:text-lg">
 								{slide.subtitle}
 							</span>
 						) : null}
@@ -213,29 +217,29 @@ export function SlideshowClient({
 
 	if (slides.length === 0) {
 		return (
-			<main className="slideshow-stage relative grid min-h-dvh place-items-center px-6 text-center text-wedding-ivory">
-				<div>
-					<h1 className="font-serif text-4xl font-bold">Pokaz slajdów</h1>
-					<p className="mt-4 max-w-md text-lg">
-						Jeszcze nie ma czego wyświetlić. Pokaz ułoży się sam z
-						zatwierdzonych zdjęć galerii.
+			<main className="ma-stage relative grid min-h-dvh place-items-center px-6">
+				<div className="max-w-xl">
+					<h1 className="font-serif text-[clamp(2.5rem,8vw,5rem)] leading-[0.95]">
+						Pokaz slajdów
+					</h1>
+					<hr className="ma-rule mt-8" />
+					<p className="mt-8 text-lg text-ma-ash-deep">
+						Ułoży się sam z zatwierdzonych zdjęć galerii.
 					</p>
-					<Link
-						href="/"
-						className="mt-8 inline-block min-h-12 rounded-full border-2 border-wedding-ivory px-6 py-2.5 font-bold hover:bg-wedding-ivory/10"
-					>
+					<Link href="/" className="ma-stage-action mt-10">
+						<ArrowLeftIcon />
 						Wróć do galerii
 					</Link>
 				</div>
 				{join ? (
-					<aside className="absolute bottom-4 left-4 hidden rounded-2xl bg-wedding-ivory p-2.5 shadow-lg xl:block">
+					<aside className="absolute bottom-6 left-6 hidden bg-ma-plaster p-2 xl:block">
 						<Image
 							src={join.qrDataUrl}
 							alt="Kod QR dołączenia do pokazu"
 							width={112}
 							height={112}
 							unoptimized
-							className="size-28 rounded-lg"
+							className="size-28"
 						/>
 					</aside>
 				) : null}
@@ -248,7 +252,7 @@ export function SlideshowClient({
 
 	return (
 		<main
-			className="slideshow-stage relative h-dvh w-full touch-pan-y select-none overflow-hidden text-wedding-ivory"
+			className="ma-stage relative h-dvh w-full touch-pan-y select-none overflow-hidden"
 			onPointerDown={onPointerDown}
 			onPointerUp={onPointerUp}
 			onPointerCancel={() => {
@@ -259,13 +263,13 @@ export function SlideshowClient({
 				<SlideView
 					key={`prev-${previousIndex}`}
 					slide={previousSlide}
-					className="slideshow-slide-exit z-0"
+					className="ma-slide-exit z-0"
 				/>
 			) : null}
 			<SlideView
 				key={`slide-${index}`}
 				slide={currentSlide}
-				className="slideshow-slide-enter z-10"
+				className="ma-slide-enter z-10"
 			/>
 
 			<BubbleLayer bubbles={live.bubbles} onDone={live.dismissBubble} />
@@ -275,42 +279,42 @@ export function SlideshowClient({
 			</p>
 
 			<header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 p-4">
-				<div className="flex items-center gap-3">
+				<div className="flex items-center gap-4">
 					<Link
 						href="/"
-						className="slideshow-control flex min-h-11 items-center gap-1 px-1 text-sm font-bold transition hover:text-wedding-rose"
+						className="ma-stage-control ma-label flex min-h-11 items-center gap-1.5 text-ma-plaster hover:text-ma-ash-deep"
 					>
-						<ChevronLeftIcon />
+						<ArrowLeftIcon />
 						Galeria
 					</Link>
 					{live.isLive ? (
-						<span className="slideshow-control flex min-h-11 items-center gap-2 whitespace-nowrap px-1 text-sm font-bold">
+						<span className="ma-stage-control ma-label flex min-h-11 items-center gap-2 whitespace-nowrap text-ma-plaster">
 							<span
 								aria-hidden
-								className="size-2.5 animate-pulse rounded-full bg-wedding-rose"
+								className="size-1.5 animate-pulse bg-ma-plaster"
 							/>
 							{live.isPresenter ? "Prowadzisz" : "Na żywo"}
 						</span>
 					) : null}
 				</div>
-				<div className="flex items-center gap-3">
+				<div className="flex items-center gap-4">
 					{live.status === "on" ? (
 						<span
-							className="slideshow-control flex min-h-11 items-center gap-1.5 whitespace-nowrap px-1 text-sm font-bold tabular-nums"
+							className="ma-stage-control flex min-h-11 items-center gap-1.5 whitespace-nowrap text-sm tabular-nums"
 							title="Liczba oglądających"
 						>
 							<EyeIcon />
 							{live.viewers}
 						</span>
 					) : null}
-					<span className="slideshow-control flex min-h-11 items-center whitespace-nowrap px-1 text-sm font-bold tabular-nums">
+					<span className="ma-stage-control ma-numeral flex min-h-11 items-center whitespace-nowrap text-sm">
 						{index + 1} / {slides.length}
 					</span>
 					{sync.canTakeOver ? (
 						<button
 							type="button"
 							onClick={sync.takeBack}
-							className="min-h-11 whitespace-nowrap rounded-full bg-wedding-rose px-4 text-sm font-bold text-wedding-green"
+							className="ma-stage-action whitespace-nowrap"
 						>
 							Przejmij pokaz
 						</button>
@@ -320,7 +324,7 @@ export function SlideshowClient({
 							type="button"
 							onClick={() => setPlaying((value) => !value)}
 							aria-label={playing ? "Zatrzymaj pokaz" : "Wznów pokaz"}
-							className="slideshow-control grid min-h-11 min-w-11 place-items-center text-base transition hover:text-wedding-rose"
+							className="ma-stage-control grid min-h-11 min-w-11 place-items-center text-lg hover:text-ma-ash-deep"
 						>
 							{playing ? <PauseIcon /> : <PlayIcon />}
 						</button>
@@ -332,7 +336,7 @@ export function SlideshowClient({
 				{sync.notice ? (
 					<p
 						aria-live="polite"
-						className="rounded-full bg-wedding-ivory/95 px-5 py-2 text-center text-sm font-bold text-wedding-green shadow-lg"
+						className="bg-ma-plaster px-5 py-2 text-center text-sm font-medium text-ma-ink"
 					>
 						{sync.notice}
 					</p>
@@ -341,11 +345,11 @@ export function SlideshowClient({
 					<button
 						type="button"
 						onClick={sync.reattach}
-						className="flex min-h-11 items-center gap-2 rounded-full bg-wedding-ivory/95 px-5 text-sm font-bold text-wedding-green shadow-lg hover:bg-wedding-cream"
+						className="ma-stage-action gap-2"
 					>
 						<span
 							aria-hidden
-							className="size-2.5 animate-pulse rounded-full bg-wedding-error"
+							className="size-1.5 animate-pulse bg-ma-oxblood"
 						/>
 						Wróć do pokazu na żywo
 					</button>
@@ -358,7 +362,7 @@ export function SlideshowClient({
 						type="button"
 						onClick={() => navigate(index - 1)}
 						aria-label="Poprzedni slajd"
-						className="slideshow-control absolute left-1 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 place-items-center text-xl pointer-coarse:grid"
+						className="ma-stage-control absolute left-1 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 place-items-center text-xl pointer-coarse:grid"
 					>
 						<ChevronLeftIcon />
 					</button>
@@ -366,7 +370,7 @@ export function SlideshowClient({
 						type="button"
 						onClick={() => navigate(index + 1)}
 						aria-label="Następny slajd"
-						className="slideshow-control absolute right-1 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 place-items-center text-xl pointer-coarse:grid"
+						className="ma-stage-control absolute right-1 top-1/2 z-30 hidden min-h-12 min-w-12 -translate-y-1/2 place-items-center text-xl pointer-coarse:grid"
 					>
 						<ChevronRightIcon />
 					</button>
@@ -374,14 +378,14 @@ export function SlideshowClient({
 			) : null}
 
 			{join ? (
-				<aside className="absolute bottom-4 left-4 z-30 hidden rounded-2xl bg-wedding-ivory p-2.5 shadow-lg xl:block">
+				<aside className="absolute bottom-6 left-6 z-30 hidden bg-ma-plaster p-2 xl:block">
 					<Image
 						src={join.qrDataUrl}
 						alt="Kod QR dołączenia do pokazu"
 						width={112}
 						height={112}
 						unoptimized
-						className="size-28 rounded-lg"
+						className="size-28"
 					/>
 				</aside>
 			) : null}
@@ -396,7 +400,7 @@ export function SlideshowClient({
 									type="button"
 									onClick={() => live.sendReaction(emoji)}
 									aria-label={`Wyślij reakcję: ${reactionLabels[emoji] ?? emoji}`}
-									className="min-h-12 min-w-12 rounded-full border border-wedding-ivory/25 bg-wedding-green-deep/50 text-2xl backdrop-blur transition hover:bg-wedding-green-deep/80 active:scale-90"
+									className="ma-stage-field grid min-h-12 min-w-12 place-items-center px-0 text-2xl transition active:scale-90"
 								>
 									{emoji}
 								</button>
@@ -409,12 +413,12 @@ export function SlideshowClient({
 								maxLength={MAX_COMMENT_LENGTH}
 								placeholder="Napisz życzenia…"
 								aria-label="Komentarz do pokazu"
-								className="min-h-12 w-full rounded-full border border-wedding-ivory/25 bg-wedding-green-deep/50 px-5 text-wedding-ivory placeholder:text-wedding-ivory/75 backdrop-blur"
+								className="ma-stage-field"
 							/>
 							<button
 								type="submit"
 								disabled={!comment.trim()}
-								className="min-h-12 shrink-0 rounded-full bg-wedding-ivory px-5 font-bold text-wedding-green transition hover:bg-wedding-cream disabled:opacity-50"
+								className="ma-stage-action shrink-0"
 							>
 								Wyślij
 							</button>

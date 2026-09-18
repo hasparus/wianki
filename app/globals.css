@@ -1,253 +1,534 @@
-@import "tailwindcss";
+/*
+ * Scanning is scoped to the two directories that actually hold class names.
+ * Left to itself Tailwind reads the markdown too, and prose about the design
+ * system was generating utilities the system forbids — `.rounded` shipped in
+ * the bundle because DESIGN.md says not to use one.
+ */
+@import "tailwindcss" source(none);
+@source "../app";
+@source "../components";
 
+/*
+ * Tokonoma. The alcove wall is plaster, the base plane is a dark bronze
+ * suiban, and the arrangement is three lines — primary, secondary, supporting
+ * — with the emptiness between them left charged. The world's one live colour
+ * is translated: where the alcove used iris blue, this interface reverses the
+ * ink. Guests' photographs are the only colour on screen; muted oxblood and
+ * bottle carry error and success, and nothing else is tinted.
+ */
 :root {
-	--wedding-rose: #f3b0b7;
-	--wedding-rose-soft: #f2aebd;
-	--wedding-green: #2a482f;
-	--wedding-green-soft: #36533a;
-	--wedding-ivory: #fbf6ef;
-	--wedding-cream: #fcf8f2;
-	--wedding-error: #9f2d2d;
-	--wedding-warning: #7a4b00;
-	--wedding-success: #21653a;
-	--wedding-disabled: #74746f;
-	--wedding-overlay: rgb(20 34 23 / 82%);
-	--wedding-green-deep: #1d3322;
+	--ma-plaster: #efefef;
+	--ma-plaster-lit: #f7f7f7;
+	--ma-paper: #ffffff;
+	--ma-ash: #d8d8d8;
+	--ma-ash-deep: #b4b4b4;
+	--ma-pine: #666666;
+	--ma-disabled: #767676;
+	--ma-bronze: #2a2a2a;
+	--ma-ink: #1a1a1a;
+	--ma-ink-deep: #0a0a0a;
+	--ma-oxblood: #8c2318;
+	--ma-bottle: #1e4d2b;
+
+	/*
+	 * The two material surfaces of the alcove, authored as exact tiles by
+	 * scripts/make-textures.mjs. They carry their own tone, so they are set as
+	 * the surface rather than screened over a flat field.
+	 */
+	--ma-plaster-surface: url("/textures/plaster.png");
+	--ma-bronze-surface: url("/textures/bronze.png");
+	--ma-tile: 256px 256px;
+
+	/*
+	 * The cut corner. Not a radius — the alcove's edges are carved out of the
+	 * plane, so the corner bites inward instead of bulging. Two depths: the
+	 * control scale and the plane scale.
+	 */
+	--ma-scoop-tight: 0.25rem;
+	--ma-scoop: 0.5rem;
+	--ma-scoop-plane: 0.875rem;
+
+	/* One authored moment, one easing. */
+	--ma-ease: cubic-bezier(0.16, 1, 0.3, 1);
+	--ma-place-ms: 420ms;
 }
 
 @theme inline {
-	--color-wedding-rose: var(--wedding-rose);
-	--color-wedding-rose-soft: var(--wedding-rose-soft);
-	--color-wedding-green: var(--wedding-green);
-	--color-wedding-green-soft: var(--wedding-green-soft);
-	--color-wedding-ivory: var(--wedding-ivory);
-	--color-wedding-cream: var(--wedding-cream);
-	--color-wedding-error: var(--wedding-error);
-	--color-wedding-warning: var(--wedding-warning);
-	--color-wedding-success: var(--wedding-success);
-	--color-wedding-disabled: var(--wedding-disabled);
-	--color-wedding-green-deep: var(--wedding-green-deep);
-	--font-sans: "Aptos", "Segoe UI", system-ui, -apple-system, sans-serif;
-	--font-serif:
-		"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+	--color-ma-plaster: var(--ma-plaster);
+	--color-ma-plaster-lit: var(--ma-plaster-lit);
+	--color-ma-paper: var(--ma-paper);
+	--color-ma-ash: var(--ma-ash);
+	--color-ma-ash-deep: var(--ma-ash-deep);
+	--color-ma-pine: var(--ma-pine);
+	--color-ma-disabled: var(--ma-disabled);
+	--color-ma-bronze: var(--ma-bronze);
+	--color-ma-ink: var(--ma-ink);
+	--color-ma-ink-deep: var(--ma-ink-deep);
+	--color-ma-oxblood: var(--ma-oxblood);
+	--color-ma-bottle: var(--ma-bottle);
+	--font-sans:
+		ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+		Arial, sans-serif;
+	--font-serif: var(--font-instrument-serif), "Iowan Old Style", Georgia, serif;
 }
 
-* {
-	box-sizing: border-box;
-}
-
-html {
-	background: var(--wedding-ivory);
-	color: var(--wedding-green);
-	scrollbar-color: var(--wedding-green-soft) transparent;
-	scrollbar-width: thin;
-}
-
-body {
-	background:
-		radial-gradient(circle at 8% 2%, rgb(243 176 183 / 30%), transparent 28rem),
-		linear-gradient(180deg, var(--wedding-ivory), var(--wedding-cream));
-	color: var(--wedding-green);
-	font-family: var(--font-sans);
-}
-
-button,
-a,
-input {
-	outline-color: var(--wedding-green);
-	outline-offset: 3px;
-}
-
-button:not(:disabled),
-a {
-	cursor: pointer;
-}
-
-::selection {
-	background: var(--wedding-rose);
-	color: var(--wedding-green);
-}
-
-.celebration-splash {
-	position: fixed;
-	z-index: 80;
-	inset: 0;
-	display: grid;
-	place-items: center;
-	overflow: hidden;
-	padding: 1.5rem;
-	pointer-events: none;
-	background: var(--wedding-overlay);
-	animation: celebration-splash 4.4s ease-in-out both;
-}
-
-.celebration-card {
-	position: relative;
-	z-index: 1;
-	width: min(100%, 36rem);
-	padding: 2rem 1.5rem;
-	border: 2px solid var(--wedding-rose);
-	border-radius: 2rem;
-	background: var(--wedding-cream);
-	box-shadow: 0 1.5rem 4rem
-		color-mix(in srgb, var(--wedding-green) 35%, transparent);
-	color: var(--wedding-green);
-	text-align: center;
-	animation: celebration-card 700ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
-}
-
-.celebration-card__icon {
-	display: grid;
-	width: 3rem;
-	height: 3rem;
-	margin: 0 auto 1rem;
-	place-items: center;
-	border-radius: 999px;
-	background: var(--wedding-rose);
-	color: var(--wedding-green);
-	font-family: var(--font-serif);
-	font-size: 1.5rem;
-	animation: celebration-heart 900ms 500ms ease-in-out both;
-}
-
-.celebration-firework {
-	position: absolute;
-	width: 0;
-	height: 0;
-}
-
-.celebration-firework--left {
-	top: 24%;
-	left: 17%;
-}
-
-.celebration-firework--right {
-	top: 23%;
-	right: 17%;
-}
-
-.celebration-firework--top {
-	top: 13%;
-	left: 50%;
-}
-
-.celebration-spark {
-	--spark-angle: calc(var(--spark-index) * 30deg);
-
-	position: absolute;
-	top: -0.55rem;
-	left: -0.15rem;
-	width: 0.3rem;
-	height: 1.1rem;
-	border-radius: 999px;
-	background: var(--wedding-rose);
-	transform-origin: 50% 0.55rem;
-	animation: celebration-spark 1.15s var(--firework-delay) ease-out both;
-}
-
-.celebration-spark:nth-child(3n + 2) {
-	background: var(--wedding-ivory);
-}
-
-.celebration-spark:nth-child(3n) {
-	background: var(--wedding-green-soft);
-}
-
-@keyframes celebration-splash {
-	0% {
-		opacity: 0;
+@layer base {
+	* {
+		box-sizing: border-box;
 	}
-	8%,
-	82% {
+
+	html {
+		background: var(--ma-plaster);
+		color: var(--ma-ink);
+		scrollbar-color: var(--ma-ash-deep) var(--ma-plaster);
+		scrollbar-width: thin;
+	}
+
+	body {
+		background-color: var(--ma-plaster);
+		background-image: var(--ma-plaster-surface);
+		background-repeat: repeat;
+		background-size: var(--ma-tile);
+		color: var(--ma-ink);
+		font-family: var(--font-sans);
+		font-size: 1rem;
+		line-height: 1.65;
+		text-underline-offset: 0.25em;
+	}
+
+	button,
+	a,
+	input,
+	summary,
+	[tabindex] {
+		outline-color: var(--ma-ink);
+		outline-offset: 3px;
+	}
+
+	button:not(:disabled),
+	a {
+		cursor: pointer;
+	}
+
+	::selection {
+		background: var(--ma-ink);
+		color: var(--ma-plaster-lit);
+	}
+
+	input,
+	textarea {
+		caret-color: var(--ma-ink);
+	}
+
+	::placeholder {
+		color: var(--ma-pine);
 		opacity: 1;
 	}
-	100% {
-		opacity: 0;
+}
+
+@layer components {
+	/* ---------------------------------------------------------------------------
+	 * The arrangement. Three lines and the rules that relate them.
+	 * ------------------------------------------------------------------------ */
+
+	/*
+	 * Supporting line. Small, light, wide-tracked caps — the alcove's marginal
+	 * annotation. Never an eyebrow above a heading; it labels a value or a field.
+	 */
+	.ma-label {
+		display: block;
+		color: var(--ma-pine);
+		font-size: 0.6875rem;
+		font-weight: 400;
+		letter-spacing: 0.24em;
+		line-height: 1.4;
+		text-transform: uppercase;
+	}
+
+	/* The short rule that ranks a heading. Structural, never a divider. */
+	.ma-rule {
+		display: block;
+		width: 2rem;
+		height: 1px;
+		border: 0;
+		background: var(--ma-ink);
+	}
+
+	.ma-rule--wide {
+		width: 100%;
+		background: var(--ma-ash);
+	}
+
+	/*
+	 * The active accent, translated from iris blue: a reversed ink field.
+	 * Rest is the hairline outline; commitment is the filled block.
+	 */
+	.ma-action {
+		display: inline-flex;
+		min-height: 3rem;
+		align-items: center;
+		justify-content: center;
+		gap: 0.625rem;
+		padding-inline: 1.75rem;
+		border: 1px solid var(--ma-ink);
+		background: var(--ma-ink);
+		color: var(--ma-plaster-lit);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		letter-spacing: 0.16em;
+		text-align: center;
+		text-transform: uppercase;
+		transition:
+			background-color 160ms var(--ma-ease),
+			color 160ms var(--ma-ease);
+	}
+
+	.ma-action:hover:not(:disabled) {
+		background: var(--ma-ink-deep);
+		border-color: var(--ma-ink-deep);
+	}
+
+	.ma-action:disabled {
+		border-color: var(--ma-ash);
+		background: transparent;
+		color: var(--ma-disabled);
+		cursor: not-allowed;
+	}
+
+	.ma-action--ghost {
+		background: transparent;
+		color: var(--ma-ink);
+	}
+
+	.ma-action--ghost:hover:not(:disabled) {
+		background: var(--ma-ink);
+		border-color: var(--ma-ink);
+		color: var(--ma-plaster-lit);
+	}
+
+	.ma-action--quiet {
+		min-height: 2.75rem;
+		padding-inline: 1rem;
+		border-color: transparent;
+		background: transparent;
+		color: var(--ma-ink);
+	}
+
+	.ma-action--quiet:hover:not(:disabled) {
+		background: transparent;
+		border-color: var(--ma-ink);
+		color: var(--ma-ink);
+	}
+
+	.ma-action--quiet:disabled {
+		border-color: transparent;
+		background: transparent;
+		color: var(--ma-disabled);
+	}
+
+	/* An icon alone, at the touch minimum. The corner scales with the control:
+	 * the full scoop would eat a 44px square. */
+	.ma-action--icon {
+		min-width: 2.75rem;
+		padding-inline: 0;
+	}
+
+	/*
+	 * Destruction is available, never loud. In a queue it repeats on every row,
+	 * so at rest it is not a box at all — an underlined word in oxblood, which
+	 * takes its border and its fill only once the pointer commits to it.
+	 */
+	.ma-action--danger {
+		border-color: transparent;
+		background: transparent;
+		color: var(--ma-oxblood);
+		text-decoration: underline;
+		text-decoration-color: color-mix(
+			in srgb,
+			var(--ma-oxblood) 40%,
+			transparent
+		);
+		text-underline-offset: 0.35em;
+	}
+
+	.ma-action--danger:hover:not(:disabled),
+	.ma-action--danger:focus-visible {
+		background: var(--ma-oxblood);
+		border-color: var(--ma-oxblood);
+		color: var(--ma-plaster-lit);
+		text-decoration-color: transparent;
+	}
+
+	/* Hairline field. The alcove's text input: a box drawn in one stroke. */
+	.ma-field {
+		min-height: 3rem;
+		width: 100%;
+		padding-inline: 1rem;
+		border: 1px solid var(--ma-ash-deep);
+		background: var(--ma-paper);
+		color: var(--ma-ink);
+		font-family: var(--font-sans);
+		font-size: 1rem;
+		transition: border-color 160ms var(--ma-ease);
+	}
+
+	.ma-field:hover:not(:disabled) {
+		border-color: var(--ma-pine);
+	}
+
+	.ma-field:focus-visible {
+		border-color: var(--ma-ink);
+		outline: 1px solid var(--ma-ink);
+		outline-offset: 2px;
+	}
+
+	.ma-field:disabled {
+		border-color: var(--ma-ash);
+		color: var(--ma-disabled);
+	}
+
+	/* A plane lifted off the wall. Depth is the rule and the ground, not a shadow. */
+	.ma-plane {
+		border: 1px solid var(--ma-ash);
+		background: var(--ma-plaster-lit);
+	}
+
+	.ma-plane--paper {
+		background: var(--ma-paper);
+	}
+
+	/*
+	 * Charged emptiness. An empty state is a composed invitation, so it keeps the
+	 * full field of the thing it is waiting for instead of collapsing to a line.
+	 */
+	.ma-empty {
+		display: grid;
+		place-items: center;
+		padding: clamp(2.5rem, 9vw, 5rem) 1.5rem;
+		border: 1px solid var(--ma-ash);
+		background: transparent;
+		text-align: left;
+	}
+
+	/* Struck facts: real numerals, registered rather than decorated. */
+	.ma-numeral {
+		font-family: var(--font-serif);
+		font-feature-settings: "tnum" 1;
+		font-variant-numeric: tabular-nums;
+		line-height: 1;
+	}
+
+	/* ---------------------------------------------------------------------------
+	 * The cut corner.
+	 *
+	 * `corner-shape: scoop` needs a radius to bite into, so the radius is only
+	 * ever declared inside the feature query. A browser without corner-shape
+	 * never sees a border-radius and keeps the square edge — the fallback is the
+	 * plain corner, never a rounded one.
+	 * ------------------------------------------------------------------------ */
+
+	@supports (corner-shape: scoop) {
+		.ma-action,
+		.ma-field,
+		.ma-stage-action,
+		.ma-stage-field {
+			border-radius: var(--ma-scoop);
+			corner-shape: scoop;
+		}
+
+		/* Inherits the scoop from .ma-action and only resizes it, but repeats the
+		 * declaration so every radius in this file sits beside its own scoop. */
+		.ma-action--icon {
+			border-radius: var(--ma-scoop-tight);
+			corner-shape: scoop;
+		}
+
+		.ma-plane,
+		.ma-empty {
+			border-radius: var(--ma-scoop-plane);
+			corner-shape: scoop;
+		}
+	}
+
+	/* ---------------------------------------------------------------------------
+	 * Placement. The one authored moment: choosing a photograph recedes the
+	 * arrangement and places that photograph over the bronze suiban plane.
+	 * ------------------------------------------------------------------------ */
+
+	.ma-alcove {
+		background: color-mix(in srgb, var(--ma-ink-deep) 92%, transparent);
+		animation: ma-alcove-in 220ms var(--ma-ease) both;
+	}
+
+	.ma-placed {
+		animation: ma-place var(--ma-place-ms) var(--ma-ease) both;
+	}
+
+	/* The suiban: the dark base plane that anchors a light field. */
+	.ma-suiban {
+		background-color: var(--ma-bronze);
+		background-image: var(--ma-bronze-surface);
+		background-repeat: repeat;
+		background-size: var(--ma-tile);
+		color: var(--ma-plaster);
+	}
+
+	/*
+	 * The base a light field rests on. The suiban is not a footer: every
+	 * arrangement is anchored by the dark plane beneath it, so a page that ends
+	 * without one is floating.
+	 */
+	.ma-base {
+		height: 0.75rem;
+		background-color: var(--ma-bronze);
+		background-image: var(--ma-bronze-surface);
+		background-repeat: repeat;
+		background-size: var(--ma-tile);
+	}
+
+	.ma-suiban .ma-label {
+		color: var(--ma-ash-deep);
+	}
+
+	.ma-suiban .ma-rule,
+	.ma-stage .ma-rule {
+		background: var(--ma-plaster);
+	}
+
+	.ma-suiban a,
+	.ma-suiban button {
+		outline-color: var(--ma-plaster);
+	}
+
+	/* ---------------------------------------------------------------------------
+	 * Night side. The projected show runs on the same achromatic world with the
+	 * planes inverted: ink ground, plaster type, the photograph still the only
+	 * colour in the room.
+	 * ------------------------------------------------------------------------ */
+
+	.ma-stage {
+		background-color: var(--ma-ink-deep);
+		color: var(--ma-plaster);
+	}
+
+	.ma-stage button,
+	.ma-stage a,
+	.ma-stage input {
+		outline-color: var(--ma-plaster);
+	}
+
+	.ma-stage input {
+		caret-color: var(--ma-plaster);
+	}
+
+	.ma-stage ::selection {
+		background: var(--ma-plaster);
+		color: var(--ma-ink-deep);
+	}
+
+	.ma-stage .ma-label {
+		color: var(--ma-ash-deep);
+	}
+
+	/* Chrome without chrome: controls sit on the photograph, held legible by a
+	 * cast shadow rather than a pill background. */
+	.ma-stage-control {
+		filter: drop-shadow(0 1px 3px rgb(0 0 0 / 90%))
+			drop-shadow(0 2px 12px rgb(0 0 0 / 55%));
+	}
+
+	.ma-stage-action {
+		display: inline-flex;
+		min-height: 3rem;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding-inline: 1.25rem;
+		border: 1px solid var(--ma-plaster);
+		background: var(--ma-plaster);
+		color: var(--ma-ink-deep);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		transition: opacity 160ms var(--ma-ease);
+	}
+
+	.ma-stage-action:disabled {
+		cursor: not-allowed;
+		opacity: 0.45;
+	}
+
+	.ma-stage-field {
+		min-height: 3rem;
+		width: 100%;
+		padding-inline: 1.125rem;
+		border: 1px solid color-mix(in srgb, var(--ma-plaster) 45%, transparent);
+		background: color-mix(in srgb, var(--ma-ink-deep) 55%, transparent);
+		color: var(--ma-plaster);
+		backdrop-filter: blur(6px);
+	}
+
+	.ma-stage-field::placeholder {
+		color: color-mix(in srgb, var(--ma-plaster) 70%, transparent);
+	}
+
+	.ma-slide-enter {
+		animation: ma-slide-in 380ms var(--ma-ease) both;
+	}
+
+	.ma-slide-exit {
+		animation: ma-slide-out 260ms var(--ma-ease) both;
+	}
+
+	.ma-reaction {
+		position: absolute;
+		bottom: -1.6em;
+		animation: ma-float-up linear both;
+		will-change: transform, opacity;
+	}
+
+	.ma-reaction > span {
+		display: inline-block;
+		animation: ma-sway 1.8s ease-in-out infinite alternate;
+	}
+
+	.ma-comment {
+		position: absolute;
+		left: 0;
+		white-space: nowrap;
+		animation: ma-drift linear both;
+		will-change: transform;
 	}
 }
 
-@keyframes celebration-card {
+@keyframes ma-alcove-in {
 	from {
 		opacity: 0;
-		transform: translateY(1.5rem) scale(0.88);
 	}
 	to {
 		opacity: 1;
-		transform: translateY(0) scale(1);
 	}
 }
 
-@keyframes celebration-heart {
-	0% {
-		transform: scale(0.7);
-	}
-	45% {
-		transform: scale(1.25) rotate(-8deg);
-	}
-	100% {
-		transform: scale(1) rotate(0);
-	}
-}
-
-@keyframes celebration-spark {
-	0% {
+@keyframes ma-place {
+	from {
 		opacity: 0;
-		transform: rotate(var(--spark-angle)) translateY(0) scaleY(0.2);
+		transform: scale(0.94) translateY(1.25rem);
+		filter: blur(6px);
 	}
-	18% {
+	to {
 		opacity: 1;
-	}
-	100% {
-		opacity: 0;
-		transform: rotate(var(--spark-angle)) translateY(-5.5rem) scaleY(1);
+		transform: scale(1) translateY(0);
+		filter: blur(0);
 	}
 }
 
-/*
- * Evening slideshow stage. The gallery stays ivory; the projected show plays
- * on the deep-forest night variant of the palette, with rose used only as a
- * decorative glow and for accents on green.
- */
-.slideshow-stage {
-	background:
-		radial-gradient(
-			circle at 88% 112%,
-			rgb(243 176 183 / 16%),
-			transparent 34rem
-		),
-		radial-gradient(circle at 8% -12%, rgb(243 176 183 / 9%), transparent 26rem),
-		linear-gradient(180deg, var(--wedding-green), var(--wedding-green-deep));
-}
-
-/* On the night stage the light-page browser surfaces would disappear:
- * retint focus rings, the caret, and text selection from the stage palette. */
-.slideshow-stage button,
-.slideshow-stage a,
-.slideshow-stage input {
-	outline-color: var(--wedding-ivory);
-}
-
-.slideshow-stage input {
-	caret-color: var(--wedding-rose);
-}
-
-/* Chrome without chrome: header controls sit directly on the photos, kept
- * legible by a soft cast shadow instead of pill backgrounds. */
-.slideshow-control {
-	filter: drop-shadow(0 1px 3px rgb(20 34 23 / 85%))
-		drop-shadow(0 2px 10px rgb(20 34 23 / 45%));
-}
-
-.slideshow-stage ::selection {
-	background: var(--wedding-rose);
-	color: var(--wedding-green-deep);
-}
-
-@keyframes slideshow-slide-in {
+@keyframes ma-slide-in {
 	from {
 		opacity: 0;
 		filter: blur(12px);
-		transform: scale(1.03);
+		transform: scale(1.02);
 	}
 	to {
 		opacity: 1;
@@ -256,28 +537,18 @@ a {
 	}
 }
 
-@keyframes slideshow-slide-out {
+@keyframes ma-slide-out {
 	from {
 		opacity: 1;
 		filter: blur(0);
-		transform: scale(1);
 	}
 	to {
 		opacity: 0;
 		filter: blur(8px);
-		transform: scale(0.995);
 	}
 }
 
-.slideshow-slide-enter {
-	animation: slideshow-slide-in 380ms cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-.slideshow-slide-exit {
-	animation: slideshow-slide-out 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-@keyframes slideshow-float-up {
+@keyframes ma-float-up {
 	0% {
 		transform: translateY(0) scale(0.5);
 		opacity: 0;
@@ -295,14 +566,7 @@ a {
 	}
 }
 
-.slideshow-reaction {
-	position: absolute;
-	bottom: -1.6em;
-	animation: slideshow-float-up linear both;
-	will-change: transform, opacity;
-}
-
-@keyframes slideshow-sway {
+@keyframes ma-sway {
 	from {
 		transform: translateX(-0.4em) rotate(-7deg);
 	}
@@ -311,12 +575,7 @@ a {
 	}
 }
 
-.slideshow-reaction > span {
-	display: inline-block;
-	animation: slideshow-sway 1.8s ease-in-out infinite alternate;
-}
-
-@keyframes slideshow-drift {
+@keyframes ma-drift {
 	from {
 		transform: translateX(100vw);
 	}
@@ -325,23 +584,14 @@ a {
 	}
 }
 
-.slideshow-comment {
-	position: absolute;
-	left: 0;
-	white-space: nowrap;
-	animation: slideshow-drift linear both;
-	will-change: transform;
-}
-
 @media (prefers-reduced-motion: reduce) {
-	.celebration-splash,
-	.celebration-card,
-	.celebration-card__icon {
+	.ma-placed,
+	.ma-alcove {
 		animation-name: none;
 	}
 
-	.celebration-spark {
-		display: none;
+	.ma-reaction > span {
+		animation-name: none;
 	}
 
 	*,

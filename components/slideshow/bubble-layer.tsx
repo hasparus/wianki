@@ -19,7 +19,7 @@ export function BubbleLayer({
 					<span
 						key={bubble.id}
 						onAnimationEnd={() => onDone(bubble.id)}
-						className="slideshow-reaction"
+						className="ma-reaction"
 						style={{
 							left: `${bubble.leftPercent}%`,
 							animationDuration: `${bubble.durationMs}ms`,
@@ -32,7 +32,7 @@ export function BubbleLayer({
 					<span
 						key={bubble.id}
 						onAnimationEnd={() => onDone(bubble.id)}
-						className="slideshow-comment rounded-full bg-wedding-ivory/95 px-[1.1em] py-[0.45em] font-serif text-[clamp(1rem,3.4vmin,2.5rem)] font-semibold text-wedding-green shadow-lg"
+						className="ma-comment bg-ma-plaster px-[1em] py-[0.35em] font-serif text-[clamp(1rem,3.4vmin,2.5rem)] text-ma-ink"
 						style={{
 							top: `${bubble.topPercent}%`,
 							animationDuration: `${bubble.durationMs}ms`,

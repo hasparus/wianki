@@ -26,7 +26,7 @@ await Promise.all([
 		{
 			width: 1600,
 			margin: 3,
-			color: { dark: "#2A482F", light: "#FBF6EF" },
+			color: { dark: "#1A1A1A", light: "#F7F7F7" },
 			errorCorrectionLevel: "H",
 		},
 	),
@@ -36,7 +36,7 @@ await Promise.all([
 		{
 			width: 1600,
 			margin: 3,
-			color: { dark: "#2A482F", light: "#FBF6EF" },
+			color: { dark: "#1A1A1A", light: "#F7F7F7" },
 			errorCorrectionLevel: "H",
 		},
 	),

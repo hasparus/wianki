@@ -30,8 +30,8 @@ export function LoginForm() {
 	}
 
 	return (
-		<form onSubmit={submit} className="mt-8 grid gap-4">
-			<label htmlFor="passphrase" className="font-semibold">
+		<form onSubmit={submit} className="grid gap-4">
+			<label htmlFor="passphrase" className="ma-label">
 				Hasło
 			</label>
 			<input
@@ -40,18 +40,14 @@ export function LoginForm() {
 				type="password"
 				required
 				autoComplete="current-password"
-				className="min-h-12 rounded-2xl border-2 border-wedding-green bg-white px-4"
+				className="ma-field"
 			/>
 			{error ? (
-				<p role="alert" className="text-sm font-semibold text-wedding-error">
+				<p role="alert" className="text-sm font-medium text-ma-oxblood">
 					{error}
 				</p>
 			) : null}
-			<button
-				type="submit"
-				disabled={pending}
-				className="min-h-12 rounded-full bg-wedding-green px-6 font-bold text-wedding-rose transition hover:bg-wedding-green-soft disabled:cursor-wait disabled:opacity-60"
-			>
+			<button type="submit" disabled={pending} className="ma-action">
 				{pending ? "Sprawdzamy…" : "Wejdź do galerii"}
 			</button>
 		</form>

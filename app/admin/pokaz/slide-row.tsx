@@ -15,20 +15,18 @@ import {
 function SlideText({ slide }: { slide: AdminSlide }) {
 	if (slide.kind === "photo") {
 		return slide.photoVisible ? (
-			<p className="truncate text-sm text-wedding-green-soft">
-				Zdjęcie z galerii
-			</p>
+			<p className="ma-label">Zdjęcie z galerii</p>
 		) : (
-			<p className="text-sm font-bold text-wedding-warning">
-				Zdjęcie niewidoczne — pominięte w pokazie
+			<p className="text-sm font-medium text-ma-ink">
+				Ukryte, więc pokaz je pominie
 			</p>
 		);
 	}
 	return (
 		<>
-			<p className="truncate font-bold">{slide.title}</p>
+			<p className="truncate font-serif text-xl leading-tight">{slide.title}</p>
 			{slide.subtitle ? (
-				<p className="truncate text-sm">{slide.subtitle}</p>
+				<p className="truncate text-sm text-ma-pine">{slide.subtitle}</p>
 			) : null}
 		</>
 	);
@@ -62,7 +60,7 @@ function EditForm({
 				required
 				maxLength={SLIDESHOW_MAX_TITLE}
 				aria-label="Tytuł slajdu"
-				className="min-h-10 w-full rounded-xl border border-wedding-green bg-white px-3"
+				className="ma-field min-h-11"
 			/>
 			<input
 				value={subtitle}
@@ -70,20 +68,20 @@ function EditForm({
 				maxLength={SLIDESHOW_MAX_SUBTITLE}
 				aria-label="Podtytuł slajdu"
 				placeholder="Podtytuł (opcjonalnie)"
-				className="min-h-10 w-full rounded-xl border border-wedding-green/50 bg-white px-3"
+				className="ma-field min-h-11"
 			/>
 			<div className="flex gap-2">
 				<button
 					type="submit"
 					disabled={pending}
-					className="min-h-10 rounded-full bg-wedding-green px-4 text-sm font-bold text-wedding-rose disabled:opacity-50"
+					className="ma-action min-h-11 px-4 text-[0.6875rem]"
 				>
 					Zapisz
 				</button>
 				<button
 					type="button"
 					onClick={onCancel}
-					className="min-h-10 rounded-full border border-wedding-green px-4 text-sm font-bold"
+					className="ma-action ma-action--ghost min-h-11 px-4 text-[0.6875rem]"
 				>
 					Anuluj
 				</button>
@@ -124,20 +122,18 @@ export function SlideRow({
 	return (
 		<li
 			ref={(element) => registerRow(slide.id, element)}
-			className={`flex items-center gap-3 rounded-3xl border bg-wedding-cream p-3 shadow-sm ${
-				dragging
-					? "relative z-10 scale-[1.01] border-wedding-green shadow-lg"
-					: "border-wedding-rose"
+			className={`flex items-center gap-4 border-b border-ma-ash py-3 ${
+				dragging ? "relative z-10 bg-ma-plaster-lit outline outline-ma-ink" : ""
 			}`}
 		>
 			<span
 				aria-hidden
 				onPointerDown={(event) => onDragStart(event, slide.id)}
-				className="shrink-0 cursor-grab touch-none select-none px-1.5 py-3 text-xl leading-none text-wedding-green/60 active:cursor-grabbing"
+				className="shrink-0 cursor-grab touch-none select-none px-1 py-3 leading-none text-ma-ash-deep hover:text-ma-ink active:cursor-grabbing"
 			>
 				<GripIcon />
 			</span>
-			<span className="w-6 shrink-0 text-center font-serif text-xl font-bold">
+			<span className="ma-numeral w-7 shrink-0 text-center text-lg text-ma-pine">
 				{index + 1}
 			</span>
 			{slide.kind === "photo" ? (
@@ -149,18 +145,16 @@ export function SlideRow({
 						height={120}
 						unoptimized
 						draggable={false}
-						className="h-16 w-20 shrink-0 rounded-2xl object-cover sm:h-20 sm:w-28"
+						className="h-16 w-20 shrink-0 object-cover sm:h-18 sm:w-28"
 					/>
 				) : (
-					<div className="grid h-16 w-20 shrink-0 place-items-center rounded-2xl bg-wedding-rose/30 px-2 text-center text-xs font-bold sm:h-20 sm:w-28">
+					<div className="grid h-16 w-20 shrink-0 place-items-center bg-ma-ash px-2 text-center text-xs text-ma-pine sm:h-18 sm:w-28">
 						Zdjęcie ukryte
 					</div>
 				)
 			) : (
-				<div className="grid h-16 w-20 shrink-0 place-items-center rounded-2xl bg-wedding-green px-2 text-center sm:h-20 sm:w-28">
-					<span className="font-serif text-xs font-bold text-wedding-ivory">
-						Aa
-					</span>
+				<div className="ma-suiban grid h-16 w-20 shrink-0 place-items-center px-2 text-center sm:h-18 sm:w-28">
+					<span className="font-serif text-xl">Aa</span>
 				</div>
 			)}
 			<div className="min-w-0 flex-1">
@@ -178,7 +172,7 @@ export function SlideRow({
 							<button
 								type="button"
 								onClick={() => onStartEdit(slide.id)}
-								className="mt-1 text-sm font-bold underline underline-offset-4 hover:text-wedding-green-soft"
+								className="mt-1 text-sm underline decoration-ma-ash-deep hover:decoration-ma-ink"
 							>
 								Edytuj treść
 							</button>
@@ -186,13 +180,13 @@ export function SlideRow({
 					</>
 				)}
 			</div>
-			<div className="flex shrink-0 flex-col items-center gap-1.5 sm:flex-row">
+			<div className="flex shrink-0 flex-col items-center gap-1 sm:flex-row sm:gap-2">
 				<button
 					type="button"
 					onClick={() => onMove(index, index - 1)}
 					disabled={pending || index === 0}
 					aria-label="Przesuń wyżej"
-					className="grid min-h-10 min-w-10 place-items-center rounded-full border border-wedding-green hover:bg-wedding-rose/40 disabled:opacity-40"
+					className="ma-action ma-action--ghost ma-action--icon min-h-11"
 				>
 					<ArrowUpIcon />
 				</button>
@@ -201,7 +195,7 @@ export function SlideRow({
 					onClick={() => onMove(index, index + 1)}
 					disabled={pending || index === total - 1}
 					aria-label="Przesuń niżej"
-					className="grid min-h-10 min-w-10 place-items-center rounded-full border border-wedding-green hover:bg-wedding-rose/40 disabled:opacity-40"
+					className="ma-action ma-action--ghost ma-action--icon min-h-11"
 				>
 					<ArrowDownIcon />
 				</button>
@@ -210,7 +204,7 @@ export function SlideRow({
 					onClick={() => onRemove(slide.id)}
 					disabled={pending}
 					aria-label="Usuń slajd"
-					className="grid min-h-10 min-w-10 place-items-center rounded-full bg-wedding-error text-white disabled:opacity-40"
+					className="ma-action ma-action--danger ma-action--icon min-h-11"
 				>
 					<XIcon />
 				</button>
