@@ -8,10 +8,7 @@ const tasks = [
 
 export function PhotoChallenge() {
 	return (
-		<section
-			aria-labelledby="challenge-title"
-			className="border-t border-ma-ink pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0"
-		>
+		<section aria-labelledby="challenge-title">
 			<h2 id="challenge-title" className="ma-label">
 				Fotowyzwanie
 			</h2>
