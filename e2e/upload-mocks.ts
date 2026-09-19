@@ -67,7 +67,7 @@ export async function installUploadBackendMocks(page: Page) {
 			json: {
 				items: [],
 				nextCursor: null,
-				stats: { approvedPhotos: 0, contributingGuests: 0 },
+				stats: { approvedPhotos: 0 },
 			},
 		});
 	});
