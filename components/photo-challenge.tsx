@@ -12,13 +12,14 @@ export function PhotoChallenge() {
 			<h2 id="challenge-title" className="ma-label">
 				Fotowyzwanie
 			</h2>
-			<ul className="mt-4 divide-y divide-ma-ash border-y border-ma-ash">
+			{/* The hanja numeral ranks the task without competing with it. */}
+			<ol className="mt-4 list-[korean-hanja-informal] list-inside divide-y divide-ma-ash border-y border-ma-ash marker:text-ma-ash-deep">
 				{tasks.map((task) => (
-					<li key={task} className="py-3 text-sm leading-relaxed text-ma-pine">
+					<li key={task} className="py-3 text-sm leading-relaxed text-ma-black">
 						{task}
 					</li>
 				))}
-			</ul>
+			</ol>
 		</section>
 	);
 }

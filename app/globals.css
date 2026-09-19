@@ -27,6 +27,7 @@
 	--ma-bronze: #2a2a2a;
 	--ma-ink: #1a1a1a;
 	--ma-ink-deep: #0a0a0a;
+	--ma-black: #000000;
 	--ma-oxblood: #8c2318;
 	--ma-bottle: #1e4d2b;
 
@@ -64,6 +65,7 @@
 	--color-ma-bronze: var(--ma-bronze);
 	--color-ma-ink: var(--ma-ink);
 	--color-ma-ink-deep: var(--ma-ink-deep);
+	--color-ma-black: var(--ma-black);
 	--color-ma-oxblood: var(--ma-oxblood);
 	--color-ma-bottle: var(--ma-bottle);
 	--font-sans:
