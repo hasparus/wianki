@@ -15,7 +15,7 @@ export function PhotoChallenge() {
 			{/* The hanja numeral ranks the task without competing with it. */}
 			<ol className="mt-4 list-[korean-hanja-informal] list-inside divide-y divide-ma-ash border-y border-ma-ash marker:text-ma-ash-deep">
 				{tasks.map((task) => (
-					<li key={task} className="py-3 text-sm leading-relaxed text-ma-black">
+					<li key={task} className="py-3 text-sm leading-relaxed text-ma-ink">
 						{task}
 					</li>
 				))}
