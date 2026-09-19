@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	type GalleryResponse,
 	useGalleryFeed,
@@ -12,11 +12,56 @@ import { PhotoChallenge } from "@/components/photo-challenge";
 import { UploadPanel } from "@/components/upload-panel";
 import type { GalleryItem } from "@/lib/domain";
 
+/**
+ * Every photograph has an address. Opening one writes `?p=<id>`, so the link a
+ * guest sends opens on the same plate, and the phone's back gesture closes it.
+ */
+function usePhotoParam() {
+	const [photoId, setPhotoId] = useState<string | null>(null);
+	const pushedByUs = useRef(false);
+
+	useEffect(() => {
+		const read = () => {
+			const id = new URLSearchParams(window.location.search).get("p");
+			if (!id) pushedByUs.current = false;
+			setPhotoId(id);
+		};
+		read();
+		window.addEventListener("popstate", read);
+		return () => window.removeEventListener("popstate", read);
+	}, []);
+
+	const open = useCallback((id: string) => {
+		window.history.pushState(null, "", `?p=${id}`);
+		pushedByUs.current = true;
+		setPhotoId(id);
+	}, []);
+
+	const close = useCallback(() => {
+		if (pushedByUs.current) {
+			// Walking back is what the guest expects, and popstate clears the id.
+			window.history.back();
+			return;
+		}
+		window.history.replaceState(null, "", window.location.pathname);
+		setPhotoId(null);
+	}, []);
+
+	return { photoId, open, close };
+}
+
 export function GalleryClient({ initial }: { initial: GalleryResponse }) {
-	const [selected, setSelected] = useState<GalleryItem | null>(null);
 	const { items, stats, cursor, pending, message, refresh, loadMore } =
 		useGalleryFeed(initial);
-	const closeLightbox = useCallback(() => setSelected(null), []);
+	const { photoId, open, close } = usePhotoParam();
+	const selected = items.find((item) => item.id === photoId) ?? null;
+	const selectPhoto = useCallback((item: GalleryItem) => open(item.id), [open]);
+
+	// An addressed photograph may sit past the loaded pages, so walk towards it.
+	useEffect(() => {
+		if (!photoId || selected || pending || !cursor) return;
+		loadMore();
+	}, [photoId, selected, pending, cursor, loadMore]);
 
 	return (
 		<>
@@ -61,7 +106,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 						pending={pending}
 						message={message}
 						onLoadMore={loadMore}
-						onSelect={setSelected}
+						onSelect={selectPhoto}
 					/>
 				</div>
 			</div>
@@ -85,7 +130,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 				</div>
 			</footer>
 
-			<PhotoLightbox item={selected} onClose={closeLightbox} />
+			<PhotoLightbox item={selected} onClose={close} />
 		</>
 	);
 }
