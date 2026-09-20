@@ -32,8 +32,8 @@ Apple Photos-like: square plates at pinchable zoom levels, one column showing
 each photo's own aspect, virtualised, animated between levels with FLIP
 transforms (`components/gallery/use-zoomable-grid.ts`, geometry in
 `grid-layout.ts`). Every plate blurs up from a stored 8px placeholder. It is
-DOM, not WebGL, on purpose: see `docs/gallery-zoom-benchmark.md` before
-proposing a canvas. One addition on top: live slideshow (`/pokaz`, editor
+DOM, not WebGL, on purpose: a WebGL grid was measured and lost on time to
+first plates, texture stalls and memory. One addition on top: live slideshow (`/pokaz`, editor
 `/admin/pokaz`, worker `workers/slideshow-live` on PartyServer Durable
 Objects). Anonymous ephemeral reactions and comments, never persisted. Gallery
 still has no comments or likes. See `docs/slideshow.md`.

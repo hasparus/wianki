@@ -57,16 +57,6 @@
 			"tailwindDirectives": true
 		}
 	},
-	"overrides": [
-		{
-			"includes": ["scripts/bench/**"],
-			"linter": {
-				"rules": {
-					"style": { "noNonNullAssertion": "off" }
-				}
-			}
-		}
-	],
 	"assist": {
 		"enabled": true,
 		"actions": {
