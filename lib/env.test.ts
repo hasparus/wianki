@@ -43,7 +43,24 @@ describe("server env schema", () => {
 	});
 
 	it("requires Vision credentials when moderation is enabled", async () => {
-		await expect(loadServerEnv(baseEnv)).rejects.toThrow();
+		await expect(loadServerEnv(baseEnv)).rejects.toThrow(
+			/GOOGLE_VISION_PRIVATE_KEY: Wymagane, gdy MODERATION_ENABLED/,
+		);
+	});
+
+	it("names every missing or invalid variable in one readable error", async () => {
+		const { NEXT_PUBLIC_SUPABASE_URL: _url, ...withoutUrl } = baseEnv;
+		const promise = loadServerEnv({
+			...withoutUrl,
+			...visionEnv,
+			ADMIN_SESSION_SECRET: "short",
+		});
+		await expect(promise).rejects.toThrow(
+			/NEXT_PUBLIC_SUPABASE_URL: brak wartości/,
+		);
+		await expect(promise).rejects.toThrow(/ADMIN_SESSION_SECRET: /);
+		await expect(promise).rejects.toThrow(/^Środowisko serwera/);
+		await expect(promise).rejects.not.toThrow(/ZodError|"code"|expected:/);
 	});
 
 	it("accepts Vision credentials with moderation enabled by default", async () => {

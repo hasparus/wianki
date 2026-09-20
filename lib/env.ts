@@ -66,8 +66,35 @@ export type ServerEnv = z.infer<typeof serverSchema>;
 
 let cachedServerEnv: ServerEnv | undefined;
 
+/**
+ * One line per variable, readable in a deploy log: which name, and whether it
+ * is missing or what is wrong with it. Never the raw Zod issue list.
+ */
+export function describeEnvIssues(
+	issues: z.core.$ZodIssue[],
+	env: Record<string, string | undefined>,
+) {
+	const lines = issues.map((issue) => {
+		const key = issue.path.map(String).join(".") || "(env)";
+		const reason =
+			env[key] === undefined && issue.code !== "custom"
+				? "brak wartości"
+				: issue.message;
+		return `- ${key}: ${reason}`;
+	});
+	return [
+		"Środowisko serwera jest źle skonfigurowane. Ustaw brakujące zmienne w Vercel (właściwe środowisko: Production lub Preview) albo w .env.local:",
+		...lines,
+	].join("\n");
+}
+
 export function serverEnv(): ServerEnv {
-	cachedServerEnv ??= serverSchema.parse(process.env);
+	if (cachedServerEnv) return cachedServerEnv;
+	const result = serverSchema.safeParse(process.env);
+	if (!result.success) {
+		throw new Error(describeEnvIssues(result.error.issues, process.env));
+	}
+	cachedServerEnv = result.data;
 	return cachedServerEnv;
 }
 
