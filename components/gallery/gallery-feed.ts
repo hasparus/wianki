@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GalleryItem, GalleryStats } from "@/lib/domain";
 
 export type GalleryResponse = {
@@ -18,7 +18,7 @@ async function fetchPage(cursor?: string | null) {
 	return body;
 }
 
-/** New photos arrive at the front; pages already loaded by hand stay put. */
+/** New photos arrive at the front; pages already loaded by scrolling stay put. */
 export function mergeFreshItems(
 	current: GalleryItem[],
 	incoming: GalleryItem[],
@@ -26,6 +26,24 @@ export function mergeFreshItems(
 	const known = new Set(current.map((item) => item.id));
 	const fresh = incoming.filter((item) => !known.has(item.id));
 	return fresh.length ? [...fresh, ...current] : current;
+}
+
+/**
+ * What a poll does to the feed. An empty gallery takes the first page whole,
+ * cursor included, so scrolling can continue from it; a gallery with photos
+ * only gains the new ones at the front and keeps its own cursor.
+ */
+export function foldPolledPage(
+	current: { items: GalleryItem[]; cursor: string | null },
+	page: Pick<GalleryResponse, "items" | "nextCursor">,
+) {
+	if (!current.items.length) {
+		return { items: page.items, cursor: page.nextCursor };
+	}
+	return {
+		items: mergeFreshItems(current.items, page.items),
+		cursor: current.cursor,
+	};
 }
 
 export function useGalleryFeed(initial: GalleryResponse) {
@@ -56,12 +74,16 @@ export function useGalleryFeed(initial: GalleryResponse) {
 	 * so pages the guest loaded by hand survive. A guest who wants it exact
 	 * reloads the page.
 	 */
+	const feedRef = useRef({ items, cursor });
+	feedRef.current = { items, cursor };
 	useEffect(() => {
 		const id = setInterval(async () => {
 			if (document.hidden) return;
 			try {
 				const page = await fetchPage();
-				setItems((current) => mergeFreshItems(current, page.items));
+				const folded = foldPolledPage(feedRef.current, page);
+				setItems(folded.items);
+				setCursor(folded.cursor);
 				setStats(page.stats);
 			} catch {
 				// A missed poll is not worth an alarm; the next one is ten seconds away.
@@ -73,6 +95,7 @@ export function useGalleryFeed(initial: GalleryResponse) {
 	const loadMore = useCallback(async () => {
 		if (!cursor) return;
 		setPending(true);
+		setMessage("");
 		try {
 			const page = await fetchPage(cursor);
 			setItems((current) => [...current, ...page.items]);

@@ -2,10 +2,12 @@ import { after } from "next/server";
 import { z } from "zod";
 import { verifyArchiveReceipt } from "@/lib/archive-token";
 import { readGuestSession } from "@/lib/auth/session";
+import { parseBlurDataUrl } from "@/lib/blur-placeholder";
 import {
 	type ArchiveStatus,
 	acceptedDerivativeTypes,
 	GALLERY_BUCKET,
+	MAX_BLUR_DATA_URL_LENGTH,
 	MAX_DERIVATIVE_BYTES,
 	type ModerationStatus,
 } from "@/lib/domain";
@@ -21,6 +23,7 @@ const bodySchema = z.object({
 	derivativeType: z.enum(acceptedDerivativeTypes),
 	width: z.number().int().positive().max(20_000),
 	height: z.number().int().positive().max(20_000),
+	blurDataUrl: z.string().max(MAX_BLUR_DATA_URL_LENGTH).nullable().optional(),
 });
 
 async function moderateFinalizedPhoto(
@@ -162,6 +165,7 @@ export async function POST(
 			derivative_content_type: parsed.data.derivativeType,
 			width: parsed.data.width,
 			height: parsed.data.height,
+			blur_data_url: parseBlurDataUrl(parsed.data.blurDataUrl),
 			moderation_scores: null,
 			last_error: archiveError,
 		})

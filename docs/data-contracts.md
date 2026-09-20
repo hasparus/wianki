@@ -16,9 +16,13 @@ approved`.
 photo UUID, Storage path, signed upload token, archive-operation token.
 
 **`POST /api/uploads/:photoId/finalize`** — in: derivative dimensions, type,
-size, optional archive receipt, optional archive error. Checks ownership,
-downloads the derivative, verifies size + receipt, saves both outcomes, returns
-`moderation_status=pending`. SafeSearch continues after the response ->
+size, optional archive receipt, optional archive error, optional blur
+placeholder (`blurDataUrl`: a JPEG data URL of at most 4096 characters, built
+in the browser the way `next/image` builds one for a static import, 8px long
+edge at quality 70). Checks ownership, downloads the derivative, verifies size
++ receipt, saves both outcomes, returns `moderation_status=pending`. A
+placeholder that is not a small JPEG data URL is dropped, never a reason to
+reject the photo. SafeSearch continues after the response ->
 `approved | flagged | review_required`. `MODERATION_ENABLED=false` -> returns
 `approved` at once, skips SafeSearch, logs an `approved` event with actor
 `system`. New clients send JPEG; WebP and PNG still accepted.
@@ -29,8 +33,9 @@ verifies the new receipt, updates archive state only. Lets the same open
 browser retry without duplicating the hot row.
 
 **`GET /api/gallery`** — optional opaque cursor (last timestamp + UUID). Up to
-25 approved items, one-hour signed read URLs, next cursor, approved-photo and
-approximate-guest stats.
+25 approved items, each with a one-hour signed read URL, stored dimensions
+and its blur placeholder (`blurDataUrl`, null for photos uploaded before
+placeholders existed), next cursor, approved-photo stats.
 
 ## Worker API
 

@@ -45,6 +45,11 @@ test.describe("a photograph has an address", () => {
 		await expect(
 			page.getByRole("button", { name: "Wybierz zdjęcia" }),
 		).toBeVisible();
+		// The grid is virtualised: plates exist only near the viewport, and the
+		// gallery sits below the upload well, so bring it into view first.
+		await page.evaluate(() =>
+			window.scrollTo(0, document.documentElement.scrollHeight),
+		);
 		const plates = page.getByRole("button", { name: "Powiększ zdjęcie" });
 		await expect
 			.poll(async () => {

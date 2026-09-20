@@ -2,7 +2,11 @@ import "client-only";
 
 import imageCompression from "browser-image-compression";
 import type { FinalizeResult, InitUpload } from "@/components/upload/types";
-import { MAX_DERIVATIVE_BYTES } from "@/lib/domain";
+import {
+	BLUR_IMAGE_QUALITY,
+	BLUR_IMAGE_SIZE,
+	MAX_DERIVATIVE_BYTES,
+} from "@/lib/domain";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type ArchiveUploadResult = {
@@ -13,6 +17,58 @@ type ArchiveUploadResult = {
 type GalleryUploadResult = {
 	error: Error | null;
 };
+
+async function encodeTinyJpeg(
+	bitmap: ImageBitmap,
+	width: number,
+	height: number,
+): Promise<Blob> {
+	if (typeof OffscreenCanvas !== "undefined") {
+		const canvas = new OffscreenCanvas(width, height);
+		const context = canvas.getContext("2d");
+		if (!context) throw new Error("no 2d context");
+		context.drawImage(bitmap, 0, 0, width, height);
+		return canvas.convertToBlob({
+			type: "image/jpeg",
+			quality: BLUR_IMAGE_QUALITY / 100,
+		});
+	}
+	const canvas = document.createElement("canvas");
+	canvas.width = width;
+	canvas.height = height;
+	const context = canvas.getContext("2d");
+	if (!context) throw new Error("no 2d context");
+	context.drawImage(bitmap, 0, 0, width, height);
+	return new Promise((resolve, reject) => {
+		canvas.toBlob(
+			(blob) => (blob ? resolve(blob) : reject(new Error("toBlob failed"))),
+			"image/jpeg",
+			BLUR_IMAGE_QUALITY / 100,
+		);
+	});
+}
+
+/**
+ * The blur-up placeholder, made the way next/image makes one for a static
+ * import: the long edge shrunk to 8px, JPEG at quality 70, as a data URL.
+ * Never fatal — a photo without a blur is still a photo.
+ */
+export async function makeBlurDataUrl(
+	bitmap: ImageBitmap,
+): Promise<string | null> {
+	try {
+		const scale = BLUR_IMAGE_SIZE / Math.max(bitmap.width, bitmap.height);
+		const width = Math.max(1, Math.round(bitmap.width * scale));
+		const height = Math.max(1, Math.round(bitmap.height * scale));
+		const blob = await encodeTinyJpeg(bitmap, width, height);
+		const bytes = new Uint8Array(await blob.arrayBuffer());
+		let binary = "";
+		for (const byte of bytes) binary += String.fromCharCode(byte);
+		return `data:image/jpeg;base64,${btoa(binary)}`;
+	} catch {
+		return null;
+	}
+}
 
 export async function prepareDerivative(file: File) {
 	let derivative: File;
@@ -38,15 +94,20 @@ export async function prepareDerivative(file: File) {
 		throw new Error("Nie udało się przygotować zdjęcia mniejszego niż 500 KB.");
 	}
 
+	let bitmap: ImageBitmap;
 	try {
-		const bitmap = await createImageBitmap(derivative);
-		const dimensions = { width: bitmap.width, height: bitmap.height };
-		bitmap.close();
-		return { derivative, ...dimensions };
+		bitmap = await createImageBitmap(derivative);
 	} catch {
 		throw new Error(
 			"Nie udało się odczytać przygotowanego zdjęcia. Spróbuj wybrać plik JPEG.",
 		);
+	}
+	try {
+		const dimensions = { width: bitmap.width, height: bitmap.height };
+		const blurDataUrl = await makeBlurDataUrl(bitmap);
+		return { derivative, ...dimensions, blurDataUrl };
+	} finally {
+		bitmap.close();
 	}
 }
 
@@ -134,6 +195,7 @@ export async function finalizeUpload(
 		derivativeType: string;
 		width: number;
 		height: number;
+		blurDataUrl: string | null;
 	},
 ): Promise<FinalizeResult> {
 	const response = await fetch(`/api/uploads/${photoId}/finalize`, {

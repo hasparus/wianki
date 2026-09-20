@@ -49,6 +49,8 @@ export function PhotoLightbox({
 					width={item.width ?? 1600}
 					height={item.height ?? 1200}
 					unoptimized
+					placeholder={item.blurDataUrl ? "blur" : "empty"}
+					blurDataURL={item.blurDataUrl ?? undefined}
 					className="ma-placed max-h-full w-auto max-w-full object-contain"
 				/>
 			</div>
