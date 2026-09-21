@@ -40,7 +40,7 @@ const Plate = memo(function Plate({ item, rows, onSelect }: PlateProps) {
 	return (
 		<li
 			data-photo-id={item.id}
-			className="relative h-full shrink-0 [contain:layout_paint]"
+			className="relative h-full w-full shrink-0 [contain:layout_paint]"
 			style={{ aspectRatio: rows === 1 ? closestRatio : "1 / 1" }}
 		>
 			<button
