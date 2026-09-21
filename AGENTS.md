@@ -27,13 +27,12 @@ add production domains unless asked.
 
 V1 excludes video, comments, likes, face recognition, named accounts, Realtime.
 The gallery polls its first page every ten seconds and folds in what is new.
-Older pages arrive as the guest scrolls, never by button. The grid is
-Apple Photos-like: square plates at pinchable zoom levels, one column showing
-each photo's own aspect, virtualised, animated between levels with FLIP
-transforms (`components/gallery/use-zoomable-grid.ts`, geometry in
-`grid-layout.ts`). Every plate blurs up from a stored 8px placeholder. It is
-DOM, not WebGL, on purpose: a WebGL grid was measured and lost on time to
-first plates, texture stalls and memory. One addition on top: live slideshow (`/pokaz`, editor
+Older pages arrive as the guest scrolls, never by button. The gallery is a
+fixed-height horizontal rail: guests swipe sideways, and plain minus/plus icons
+change how many rows share the same height without moving the page around.
+Every plate blurs up from a stored 8px placeholder. It is DOM, not WebGL, on
+purpose: a WebGL grid was measured and lost on time to first plates, texture
+stalls and memory. One addition on top: live slideshow (`/pokaz`, editor
 `/admin/pokaz`, worker `workers/slideshow-live` on PartyServer Durable
 Objects). Anonymous ephemeral reactions and comments, never persisted. Gallery
 still has no comments or likes. See `docs/slideshow.md`.

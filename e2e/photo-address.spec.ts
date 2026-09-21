@@ -19,6 +19,13 @@ const photos = [
 		height: 1,
 		createdAt: "2026-09-19T09:00:00.000Z",
 	},
+	...Array.from({ length: 10 }, (_, index) => ({
+		id: `photo-${index + 3}`,
+		imageUrl: pixel,
+		width: index % 2 ? 4 : 3,
+		height: index % 2 ? 3 : 4,
+		createdAt: `2026-09-19T08:${String(index).padStart(2, "0")}:00.000Z`,
+	})),
 ];
 
 test.describe("a photograph has an address", () => {
@@ -45,8 +52,6 @@ test.describe("a photograph has an address", () => {
 		await expect(
 			page.getByRole("button", { name: "Wybierz zdjęcia" }),
 		).toBeVisible();
-		// The grid is virtualised: plates exist only near the viewport, and the
-		// gallery sits below the upload well, so bring it into view first.
 		await page.evaluate(() =>
 			window.scrollTo(0, document.documentElement.scrollHeight),
 		);
@@ -58,6 +63,48 @@ test.describe("a photograph has an address", () => {
 			})
 			.toBeGreaterThan(0);
 	}
+
+	test("scrolls sideways at a constant height with plain zoom icons", async ({
+		page,
+	}) => {
+		await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
+		await pollGallery(page);
+
+		const rail = page.getByRole("region", { name: "Zdjęcia", exact: true });
+		await rail.scrollIntoViewIfNeeded();
+		const before = await rail.evaluate((element) => ({
+			height: element.clientHeight,
+			clientWidth: element.clientWidth,
+			scrollWidth: element.scrollWidth,
+		}));
+		expect(before.scrollWidth).toBeGreaterThan(before.clientWidth);
+
+		await page.getByRole("button", { name: "Większe zdjęcia" }).click();
+		await expect
+			.poll(() => rail.evaluate((element) => element.clientHeight))
+			.toBe(before.height);
+
+		const iconStyle = await page
+			.getByRole("button", { name: "Mniejsze zdjęcia" })
+			.evaluate((element) => {
+				const style = getComputedStyle(element);
+				return {
+					background: style.backgroundColor,
+					border: style.borderTopWidth,
+				};
+			});
+		expect(iconStyle).toEqual({
+			background: "rgba(0, 0, 0, 0)",
+			border: "0px",
+		});
+
+		await rail.evaluate((element) => {
+			element.scrollLeft = 200;
+		});
+		await expect
+			.poll(() => rail.evaluate((element) => element.scrollLeft))
+			.toBe(200);
+	});
 
 	test("opening a photo writes it into the URL and closing takes it back out", async ({
 		page,
