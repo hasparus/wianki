@@ -31,6 +31,8 @@ Older pages arrive as the guest scrolls, never by button. The gallery is a
 full-viewport-width, fixed-height horizontal rail: guests swipe sideways and
 pinch to change how many rows share the same height without moving the page
 around; plain minus/plus icons provide the same zoom for non-touch input.
+Density changes use Motion layout springs on the individual plates, never a
+scale transform on the whole rail.
 Every plate blurs up from a stored 8px placeholder. It is DOM, not WebGL, on
 purpose: a WebGL grid was measured and lost on time to first plates, texture
 stalls and memory. One addition on top: live slideshow (`/pokaz`, editor

@@ -1,3 +1,9 @@
+import {
+	LayoutGroup,
+	motion,
+	type Transition,
+	useReducedMotion,
+} from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { type CSSProperties, memo } from "react";
@@ -24,10 +30,24 @@ type GalleryGridProps = {
 type PlateProps = {
 	item: GalleryItem;
 	rows: GalleryRows;
+	transition: Transition;
 	onSelect: (item: GalleryItem) => void;
 };
 
-const Plate = memo(function Plate({ item, rows, onSelect }: PlateProps) {
+const GALLERY_LAYOUT_TRANSITION = {
+	layout: { type: "spring", stiffness: 520, damping: 48, mass: 0.72 },
+} satisfies Transition;
+
+const REDUCED_LAYOUT_TRANSITION = {
+	layout: { duration: 0 },
+} satisfies Transition;
+
+const Plate = memo(function Plate({
+	item,
+	rows,
+	transition,
+	onSelect,
+}: PlateProps) {
 	const closestRatio =
 		item.width && item.height ? `${item.width} / ${item.height}` : "4 / 3";
 	const sizes =
@@ -38,30 +58,43 @@ const Plate = memo(function Plate({ item, rows, onSelect }: PlateProps) {
 				: "(max-width: 640px) 32vw, 11rem";
 
 	return (
-		<li
+		<motion.li
+			layout
+			layoutDependency={rows}
+			transition={transition}
 			data-photo-id={item.id}
 			className="relative h-full w-full shrink-0 [contain:layout_paint]"
 			style={{ aspectRatio: rows === 1 ? closestRatio : "1 / 1" }}
 		>
-			<button
+			<motion.button
+				layout
+				layoutDependency={rows}
+				transition={transition}
 				type="button"
 				onClick={() => onSelect(item)}
 				className="group relative block h-full w-full overflow-hidden bg-ma-ash/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink"
 				aria-label="Powiększ zdjęcie"
 			>
-				<Image
-					src={item.imageUrl}
-					alt=""
-					fill
-					sizes={sizes}
-					unoptimized
-					draggable={false}
-					placeholder={item.blurDataUrl ? "blur" : "empty"}
-					blurDataURL={item.blurDataUrl ?? undefined}
-					className="object-cover group-hover:opacity-85"
-				/>
-			</button>
-		</li>
+				<motion.span
+					layout
+					layoutDependency={rows}
+					transition={transition}
+					className="absolute inset-0 block"
+				>
+					<Image
+						src={item.imageUrl}
+						alt=""
+						fill
+						sizes={sizes}
+						unoptimized
+						draggable={false}
+						placeholder={item.blurDataUrl ? "blur" : "empty"}
+						blurDataURL={item.blurDataUrl ?? undefined}
+						className="object-cover group-hover:opacity-85"
+					/>
+				</motion.span>
+			</motion.button>
+		</motion.li>
 	);
 });
 
@@ -77,6 +110,10 @@ export function GalleryGrid({
 	onLoadMore,
 	onSelect,
 }: GalleryGridProps) {
+	const reduceMotion = useReducedMotion();
+	const transition = reduceMotion
+		? REDUCED_LAYOUT_TRANSITION
+		: GALLERY_LAYOUT_TRANSITION;
 	const gallery = useHorizontalGallery({
 		itemCount: items.length,
 		hasMore,
@@ -136,22 +173,21 @@ export function GalleryGrid({
 			) : null}
 
 			{items.length ? (
-				<>
+				<LayoutGroup id="gallery-rail">
 					<p id="gallery-scroll-help" className="sr-only">
 						Przewiń poziomo, aby zobaczyć kolejne zdjęcia. Uszczypnij ekran, aby
 						zmienić ich wielkość.
 					</p>
-					<section
+					<motion.section
+						layoutScroll
 						ref={gallery.viewportRef}
 						onScroll={gallery.onScroll}
-						// biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll the photo rail.
 						tabIndex={0}
 						aria-label="Zdjęcia"
 						aria-describedby="gallery-scroll-help"
 						className="relative left-1/2 mt-12 h-[22rem] w-[100dvw] -translate-x-1/2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-gutter:stable] [touch-action:pan-x] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink sm:h-[30rem] lg:h-[34rem]"
 					>
 						<ul
-							ref={gallery.contentRef}
 							className="grid h-full min-w-full w-max grid-flow-col gap-0.5"
 							style={gridStyle}
 						>
@@ -160,12 +196,13 @@ export function GalleryGrid({
 									key={item.id}
 									item={item}
 									rows={gallery.rows}
+									transition={transition}
 									onSelect={onSelect}
 								/>
 							))}
 						</ul>
-					</section>
-				</>
+					</motion.section>
+				</LayoutGroup>
 			) : (
 				<div className="ma-empty mt-12">
 					<p className="font-serif text-3xl leading-tight">

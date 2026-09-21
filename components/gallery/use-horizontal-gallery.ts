@@ -7,7 +7,6 @@ import {
 } from "react";
 import {
 	type GalleryRows,
-	galleryRowsAfterPinch,
 	galleryRowsAfterZoom,
 } from "@/components/gallery/horizontal-gallery";
 
@@ -17,13 +16,13 @@ type ScrollAnchor = {
 	viewportOffset: number;
 };
 
-type PinchGesture = {
-	anchor: ScrollAnchor | null;
-	distance: number;
-	scale: number;
+type FocalPoint = {
 	x: number;
 	y: number;
 };
+
+const PINCH_IN_THRESHOLD = 1.18;
+const PINCH_OUT_THRESHOLD = 0.82;
 
 function plates(viewport: HTMLElement) {
 	return Array.from(viewport.querySelectorAll<HTMLElement>("[data-photo-id]"));
@@ -78,7 +77,7 @@ function touchDistance(touches: TouchList) {
 	);
 }
 
-function touchCenter(touches: TouchList) {
+function touchCenter(touches: TouchList): FocalPoint {
 	return {
 		x: (touches[0].clientX + touches[1].clientX) / 2,
 		y: (touches[0].clientY + touches[1].clientY) / 2,
@@ -97,7 +96,6 @@ export function useHorizontalGallery({
 	onLoadMore: () => void;
 }) {
 	const viewportRef = useRef<HTMLElement>(null);
-	const contentRef = useRef<HTMLUListElement>(null);
 	const anchorRef = useRef<ScrollAnchor | null>(null);
 	const [rows, setRows] = useState<GalleryRows>(2);
 	const contentSize = `${itemCount}:${rows}`;
@@ -135,98 +133,95 @@ export function useHorizontalGallery({
 		return () => viewport.removeEventListener("wheel", onWheel);
 	}, [itemCount]);
 
+	const changeRows = useCallback(
+		(direction: "in" | "out", focalPoint?: FocalPoint) => {
+			const next = galleryRowsAfterZoom(rows, direction);
+			if (next === rows) return;
+			const viewport = viewportRef.current;
+			if (viewport) {
+				anchorRef.current = focalPoint
+					? focalAnchor(viewport, focalPoint.x, focalPoint.y)
+					: firstVisibleAnchor(viewport);
+			}
+			setRows(next);
+		},
+		[rows],
+	);
+
 	useEffect(() => {
 		if (itemCount === 0) return;
 		const viewport = viewportRef.current;
-		const content = contentRef.current;
-		if (!viewport || !content) return;
-		let gesture: PinchGesture | null = null;
+		if (!viewport) return;
+		let startDistance = 0;
+		let touchTracking = false;
+		let wheelScale = 1;
+		let wheelLocked = false;
 		let wheelTimer = 0;
-		let resetTimer = 0;
 
-		const begin = (x: number, y: number, distance: number) => {
-			window.clearTimeout(resetTimer);
-			const viewportRect = viewport.getBoundingClientRect();
-			gesture = {
-				anchor: focalAnchor(viewport, x, y),
-				distance,
-				scale: 1,
-				x,
-				y,
-			};
-			content.style.transition = "";
-			content.style.transformOrigin = `${viewport.scrollLeft + x - viewportRect.left}px ${y - viewportRect.top}px`;
-			content.style.willChange = "transform";
+		const resetWheel = () => {
+			wheelScale = 1;
+			wheelLocked = false;
 		};
-
-		const apply = (scale: number) => {
-			if (!gesture) return;
-			gesture.scale = Math.max(0.55, Math.min(1.8, scale));
-			content.style.transform = `scale(${gesture.scale})`;
-		};
-
-		const clearTransform = () => {
-			content.style.transition = "";
-			content.style.transform = "";
-			content.style.transformOrigin = "";
-			content.style.willChange = "";
-		};
-
-		const commit = () => {
-			if (!gesture) return;
-			const finished = gesture;
-			gesture = null;
-			const target = galleryRowsAfterPinch(rows, finished.scale);
-			if (target !== rows) {
-				clearTransform();
-				anchorRef.current = finished.anchor;
-				setRows(target);
-				return;
-			}
-			content.style.transition = "transform 140ms ease-out";
-			content.style.transform = "scale(1)";
-			resetTimer = window.setTimeout(clearTransform, 160);
-		};
-
 		const onTouchStart = (event: TouchEvent) => {
 			if (event.touches.length !== 2) return;
-			const center = touchCenter(event.touches);
-			begin(center.x, center.y, touchDistance(event.touches));
+			event.preventDefault();
+			startDistance = touchDistance(event.touches);
+			touchTracking = true;
 		};
 		const onTouchMove = (event: TouchEvent) => {
-			if (!gesture || event.touches.length !== 2) return;
+			if (event.touches.length !== 2) return;
 			event.preventDefault();
-			apply(touchDistance(event.touches) / gesture.distance);
+			if (!touchTracking || startDistance === 0) return;
+			const scale = touchDistance(event.touches) / startDistance;
+			if (scale >= PINCH_IN_THRESHOLD) {
+				changeRows("in", touchCenter(event.touches));
+				touchTracking = false;
+			} else if (scale <= PINCH_OUT_THRESHOLD) {
+				changeRows("out", touchCenter(event.touches));
+				touchTracking = false;
+			}
 		};
-		const onTouchEnd = (event: TouchEvent) => {
-			if (gesture && event.touches.length < 2) commit();
+		const onTouchEnd = () => {
+			touchTracking = false;
+			startDistance = 0;
 		};
 		const onWheel = (event: WheelEvent) => {
 			if (!event.ctrlKey) return;
 			event.preventDefault();
-			if (!gesture) begin(event.clientX, event.clientY, 1);
-			if (!gesture) return;
-			apply(gesture.scale * Math.exp(-event.deltaY * 0.01));
 			window.clearTimeout(wheelTimer);
-			wheelTimer = window.setTimeout(commit, 160);
+			if (!wheelLocked) {
+				wheelScale *= Math.exp(-event.deltaY * 0.01);
+				const focalPoint = { x: event.clientX, y: event.clientY };
+				if (wheelScale >= PINCH_IN_THRESHOLD) {
+					changeRows("in", focalPoint);
+					wheelLocked = true;
+				} else if (wheelScale <= PINCH_OUT_THRESHOLD) {
+					changeRows("out", focalPoint);
+					wheelLocked = true;
+				}
+			}
+			wheelTimer = window.setTimeout(resetWheel, 180);
 		};
+		const preventGesture = (event: Event) => event.preventDefault();
 
-		viewport.addEventListener("touchstart", onTouchStart, { passive: true });
+		viewport.addEventListener("touchstart", onTouchStart, { passive: false });
 		viewport.addEventListener("touchmove", onTouchMove, { passive: false });
 		viewport.addEventListener("touchend", onTouchEnd);
 		viewport.addEventListener("touchcancel", onTouchEnd);
 		viewport.addEventListener("wheel", onWheel, { passive: false });
+		viewport.addEventListener("gesturestart", preventGesture);
+		viewport.addEventListener("gesturechange", preventGesture);
 		return () => {
 			viewport.removeEventListener("touchstart", onTouchStart);
 			viewport.removeEventListener("touchmove", onTouchMove);
 			viewport.removeEventListener("touchend", onTouchEnd);
 			viewport.removeEventListener("touchcancel", onTouchEnd);
 			viewport.removeEventListener("wheel", onWheel);
+			viewport.removeEventListener("gesturestart", preventGesture);
+			viewport.removeEventListener("gesturechange", preventGesture);
 			window.clearTimeout(wheelTimer);
-			window.clearTimeout(resetTimer);
-			clearTransform();
 		};
-	}, [rows, itemCount]);
+	}, [changeRows, itemCount]);
 
 	useLayoutEffect(() => {
 		const anchor = anchorRef.current;
@@ -243,24 +238,12 @@ export function useHorizontalGallery({
 			anchor.viewportOffset;
 	});
 
-	const zoom = useCallback(
-		(direction: "in" | "out") => {
-			const next = galleryRowsAfterZoom(rows, direction);
-			if (next === rows) return;
-			const viewport = viewportRef.current;
-			if (viewport) anchorRef.current = firstVisibleAnchor(viewport);
-			setRows(next);
-		},
-		[rows],
-	);
-
 	return {
 		viewportRef,
-		contentRef,
 		rows,
 		onScroll: loadNearEnd,
-		zoomIn: () => zoom("in"),
-		zoomOut: () => zoom("out"),
+		zoomIn: () => changeRows("in"),
+		zoomOut: () => changeRows("out"),
 		canZoomIn: rows > 1,
 		canZoomOut: rows < 3,
 	};

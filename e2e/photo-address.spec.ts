@@ -116,7 +116,6 @@ test.describe("a photograph has an address", () => {
 					};
 					dispatch("touchstart", radii.start);
 					dispatch("touchmove", radii.end);
-					const transform = element.querySelector("ul")?.style.transform;
 					element.dispatchEvent(
 						new TouchEvent("touchend", {
 							touches: [],
@@ -125,8 +124,8 @@ test.describe("a photograph has an address", () => {
 							cancelable: true,
 						}),
 					);
-					return transform;
 				},
+
 				{ start: startRadius, end: endRadius },
 			);
 
@@ -134,7 +133,19 @@ test.describe("a photograph has an address", () => {
 		const plateHeight = await firstPlate.evaluate(
 			(element) => element.clientHeight,
 		);
-		expect(await pinch(60, 90)).toBe("scale(1.5)");
+		await pinch(60, 90);
+		await expect
+			.poll(() =>
+				firstPlate.evaluate(
+					(element) =>
+						element.style.transform !== "" &&
+						element.style.transform !== "none",
+				),
+			)
+			.toBe(true);
+		expect(
+			await rail.locator("ul").evaluate((element) => element.style.transform),
+		).toBe("");
 		await expect
 			.poll(() => firstPlate.evaluate((element) => element.clientHeight))
 			.toBeGreaterThan(plateHeight);
@@ -142,10 +153,22 @@ test.describe("a photograph has an address", () => {
 			before.height,
 		);
 
-		expect(await pinch(90, 45)).toBe("scale(0.55)");
+		await expect
+			.poll(() => firstPlate.evaluate((element) => element.style.transform))
+			.toBe("none");
+		await pinch(90, 45);
+		await expect
+			.poll(() =>
+				firstPlate.evaluate(
+					(element) =>
+						element.style.transform !== "" &&
+						element.style.transform !== "none",
+				),
+			)
+			.toBe(true);
 		await expect
 			.poll(() => firstPlate.evaluate((element) => element.clientHeight))
-			.toBeLessThan(plateHeight);
+			.toBe(plateHeight);
 		expect(await rail.evaluate((element) => element.clientHeight)).toBe(
 			before.height,
 		);
