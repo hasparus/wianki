@@ -85,7 +85,7 @@ export function GalleryGrid({
 	});
 	const gridStyle = {
 		gridTemplateRows: `repeat(${gallery.rows}, minmax(0, 1fr))`,
-		gridAutoColumns: "max-content",
+		gridAutoColumns: "auto",
 	} satisfies CSSProperties;
 
 	return (
@@ -152,7 +152,7 @@ export function GalleryGrid({
 					>
 						<ul
 							ref={gallery.contentRef}
-							className="grid h-full w-max grid-flow-col gap-0.5"
+							className="grid h-full min-w-full w-max grid-flow-col gap-0.5"
 							style={gridStyle}
 						>
 							{items.map((item) => (
