@@ -225,7 +225,7 @@ Everything is an asymmetric three-line arrangement on a 12-column grid that only
 
 The first viewport is the room, not the grid. Vertical rhythm at the top of a page is set in viewport units (`pt-[5vh]` rising to `pt-[11vh]` at `sm`; `pt-[22vh]`/`pt-[26vh]` on the entry screen, which is `justify-end` so the void sits above the arrangement and the alcove rises from its base) so the arrangement breathes on tall phones and the feed starts below the fold. The lines are offset from one another by column start, not by centring: the supporting line and the struck counts share one band at `sm:col-span-2` and `sm:col-start-3`, and the upload well is pushed to `sm:col-start-5`. The void reopens to the right of the supporting line and stays empty.
 
-The photograph feed is a fixed-height horizontal rail, not a page-length grid. Guests swipe sideways through it; a mouse wheel follows the same axis while the rail can still move. Plain minus/plus icons change whether one, two, or three rows share the rail without changing its outer height. One row preserves each photograph's proportion; denser views use square plates. The first visible photograph stays anchored when density changes, and no layout transition is animated. Lists — upload queue, admin queue, challenge tasks — are hairline-divided rows, never cards.
+The photograph feed is a full-viewport-width, fixed-height horizontal rail, not a page-length grid. Guests swipe sideways through it; a mouse wheel follows the same axis while the rail can still move. Pinching or using the plain minus/plus icons changes whether one, two, or three rows share the rail without changing its outer height. Pinch responds continuously under the fingers before settling onto a row level. One row preserves each photograph's proportion; denser views use square plates. The photograph at the gesture's focal point stays anchored when density changes. Lists — upload queue, admin queue, challenge tasks — are hairline-divided rows, never cards.
 
 Interactive targets never go below 2.75rem of height, and the projected surface holds 3rem. Anything sitting at the bottom edge pads with `max(1rem, env(safe-area-inset-bottom))`.
 
@@ -313,7 +313,7 @@ The same world with the planes inverted: ink-deep ground, plaster type, ash-deep
 - **Don't** centre a display heading or a page's primary line; the arrangement is asymmetric and flush left.
 - **Don't** use the 2rem rule as a decorative divider between sections, and don't ornament a section break at all — the full-width ash rule or a dark plane does that work.
 - **Don't** set body text in Instrument Serif, and don't introduce an italic; the face ships upright only.
-- **Don't** let the photograph feed grow the page or reflow vertically. It stays a fixed-height horizontal rail; density changes happen inside that height and keep the first visible photograph anchored.
+- **Don't** inset the photograph feed with the page content or let it reflow vertically. It spans the viewport as a fixed-height horizontal rail; density changes happen inside that height and keep the gesture's focal photograph anchored.
 - **Don't** treat `/pokaz` as a dark theme with its own tokens. It is the same tokens with the planes inverted.
 - **Don't** animate anything beyond placement, the night-side slide change, and 160ms colour transitions — and never animate from an invisible default.
 - **Don't** load a font over the network; the display face is vendored under `public/fonts` and the body face is the platform stack.

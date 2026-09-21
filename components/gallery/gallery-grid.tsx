@@ -138,7 +138,8 @@ export function GalleryGrid({
 			{items.length ? (
 				<>
 					<p id="gallery-scroll-help" className="sr-only">
-						Przewiń poziomo, aby zobaczyć kolejne zdjęcia.
+						Przewiń poziomo, aby zobaczyć kolejne zdjęcia. Uszczypnij ekran, aby
+						zmienić ich wielkość.
 					</p>
 					<section
 						ref={gallery.viewportRef}
@@ -147,9 +148,10 @@ export function GalleryGrid({
 						tabIndex={0}
 						aria-label="Zdjęcia"
 						aria-describedby="gallery-scroll-help"
-						className="mt-12 h-[22rem] overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-gutter:stable] [touch-action:pan-x] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ma-ink sm:h-[30rem] lg:h-[34rem]"
+						className="relative left-1/2 mt-12 h-[22rem] w-[100dvw] -translate-x-1/2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-gutter:stable] [touch-action:pan-x] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink sm:h-[30rem] lg:h-[34rem]"
 					>
 						<ul
+							ref={gallery.contentRef}
 							className="grid h-full w-max grid-flow-col gap-0.5"
 							style={gridStyle}
 						>
