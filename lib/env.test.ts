@@ -60,6 +60,12 @@ describe("server env schema", () => {
 		);
 		await expect(promise).rejects.toThrow(/ADMIN_SESSION_SECRET: /);
 		await expect(promise).rejects.toThrow(/^Środowisko serwera/);
+		await expect(promise).rejects.toMatchObject({
+			name: "ServerEnvError",
+			issues: expect.arrayContaining([
+				{ key: "NEXT_PUBLIC_SUPABASE_URL", reason: "brak wartości" },
+			]),
+		});
 		await expect(promise).rejects.not.toThrow(/ZodError|"code"|expected:/);
 	});
 

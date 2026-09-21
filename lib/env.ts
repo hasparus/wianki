@@ -66,6 +66,45 @@ export type ServerEnv = z.infer<typeof serverSchema>;
 
 let cachedServerEnv: ServerEnv | undefined;
 
+export type ServerEnvIssue = {
+	key: string;
+	reason: string;
+};
+
+function normalizeEnvIssues(
+	issues: z.core.$ZodIssue[],
+	env: Record<string, string | undefined>,
+): ServerEnvIssue[] {
+	return issues.map((issue) => {
+		const key = issue.path.map(String).join(".") || "(env)";
+		return {
+			key,
+			reason:
+				env[key] === undefined && issue.code !== "custom"
+					? "brak wartości"
+					: issue.message,
+		};
+	});
+}
+
+function envErrorMessage(issues: ServerEnvIssue[]) {
+	return [
+		"Środowisko serwera jest źle skonfigurowane. Ustaw brakujące zmienne w Vercel (właściwe środowisko: Production lub Preview) albo w .env.local:",
+		...issues.map(({ key, reason }) => `- ${key}: ${reason}`),
+	].join("\n");
+}
+
+/** An expected deployment error that the HTTP boundary can render safely. */
+export class ServerEnvError extends Error {
+	readonly issues: ServerEnvIssue[];
+
+	constructor(issues: ServerEnvIssue[]) {
+		super(envErrorMessage(issues));
+		this.name = "ServerEnvError";
+		this.issues = issues;
+	}
+}
+
 /**
  * One line per variable, readable in a deploy log: which name, and whether it
  * is missing or what is wrong with it. Never the raw Zod issue list.
@@ -74,25 +113,16 @@ export function describeEnvIssues(
 	issues: z.core.$ZodIssue[],
 	env: Record<string, string | undefined>,
 ) {
-	const lines = issues.map((issue) => {
-		const key = issue.path.map(String).join(".") || "(env)";
-		const reason =
-			env[key] === undefined && issue.code !== "custom"
-				? "brak wartości"
-				: issue.message;
-		return `- ${key}: ${reason}`;
-	});
-	return [
-		"Środowisko serwera jest źle skonfigurowane. Ustaw brakujące zmienne w Vercel (właściwe środowisko: Production lub Preview) albo w .env.local:",
-		...lines,
-	].join("\n");
+	return envErrorMessage(normalizeEnvIssues(issues, env));
 }
 
 export function serverEnv(): ServerEnv {
 	if (cachedServerEnv) return cachedServerEnv;
 	const result = serverSchema.safeParse(process.env);
 	if (!result.success) {
-		throw new Error(describeEnvIssues(result.error.issues, process.env));
+		throw new ServerEnvError(
+			normalizeEnvIssues(result.error.issues, process.env),
+		);
 	}
 	cachedServerEnv = result.data;
 	return cachedServerEnv;
