@@ -1,9 +1,14 @@
-import { motion, type Transition, useReducedMotion } from "motion/react";
+import {
+	AnimatePresence,
+	motion,
+	type Transition,
+	usePresence,
+	useReducedMotion,
+} from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { memo } from "react";
+import { memo, useEffect } from "react";
 import {
-	GALLERY_SPRING,
 	type GalleryGeometry,
 	type GalleryRows,
 	horizontalGalleryLayout,
@@ -31,18 +36,33 @@ type PlateProps = {
 	item: GalleryItem;
 	rows: GalleryRows;
 	geometry: GalleryGeometry;
-	transition: Transition;
 	onSelect: (item: GalleryItem) => void;
 };
 
-const GALLERY_TRANSITION = GALLERY_SPRING satisfies Transition;
+type ZoomDirection = "in" | "out";
+
+type GalleryLayerProps = {
+	items: GalleryItem[];
+	rows: GalleryRows;
+	geometry: GalleryGeometry[];
+	width: number;
+	direction: ZoomDirection;
+	transition: Transition;
+	reduceMotion: boolean;
+	onSelect: (item: GalleryItem) => void;
+};
+
+const LAYER_TRANSITION = {
+	duration: 0.24,
+	ease: [0.22, 1, 0.36, 1],
+} satisfies Transition;
+
 const REDUCED_TRANSITION = { duration: 0 } satisfies Transition;
 
 const Plate = memo(function Plate({
 	item,
 	rows,
 	geometry,
-	transition,
 	onSelect,
 }: PlateProps) {
 	const sizes =
@@ -53,14 +73,16 @@ const Plate = memo(function Plate({
 				: "(max-width: 640px) 32vw, 11rem";
 
 	return (
-		<motion.li
-			initial={false}
-			animate={geometry}
-			transition={transition}
+		<li
 			data-photo-id={item.id}
 			data-gallery-x={geometry.x}
 			data-gallery-width={geometry.width}
 			className="absolute left-0 top-0 [contain:layout_paint]"
+			style={{
+				width: geometry.width,
+				height: geometry.height,
+				transform: `translate3d(${geometry.x}px, ${geometry.y}px, 0)`,
+			}}
 		>
 			<button
 				type="button"
@@ -80,9 +102,64 @@ const Plate = memo(function Plate({
 					className="object-cover group-hover:opacity-85"
 				/>
 			</button>
-		</motion.li>
+		</li>
 	);
 });
+
+function GalleryLayer({
+	items,
+	rows,
+	geometry,
+	width,
+	direction,
+	transition,
+	reduceMotion,
+	onSelect,
+}: GalleryLayerProps) {
+	const [isPresent, safeToRemove] = usePresence();
+
+	useEffect(() => {
+		if (isPresent) return;
+		if (reduceMotion) {
+			safeToRemove();
+			return;
+		}
+		const timer = window.setTimeout(safeToRemove, 260);
+		return () => window.clearTimeout(timer);
+	}, [isPresent, reduceMotion, safeToRemove]);
+
+	return (
+		<motion.ul
+			data-gallery-current={isPresent ? "" : undefined}
+			data-gallery-width={width}
+			aria-hidden={!isPresent}
+			className={`absolute inset-y-0 left-0 origin-center ${isPresent ? "z-0" : "pointer-events-none z-10"}`}
+			initial={{ scale: direction === "in" ? 0.97 : 1.03 }}
+			animate={{ scale: 1 }}
+			transition={transition}
+			style={{
+				width,
+				opacity: isPresent ? 1 : 0,
+				transition: reduceMotion
+					? "none"
+					: "opacity 240ms cubic-bezier(0.22, 1, 0.36, 1)",
+			}}
+		>
+			{items.map((item, index) => {
+				const itemGeometry = geometry[index];
+				return itemGeometry ? (
+					<Plate
+						key={item.id}
+						item={item}
+						rows={rows}
+						geometry={itemGeometry}
+						onSelect={onSelect}
+					/>
+				) : null;
+			})}
+		</motion.ul>
+	);
+}
 
 const iconButtonClass =
 	"grid min-h-11 min-w-11 place-items-center bg-transparent text-ma-ink transition-colors duration-150 hover:text-ma-pine focus-visible:outline-2 focus-visible:outline-ma-ink disabled:cursor-not-allowed disabled:text-ma-ash-deep";
@@ -97,7 +174,7 @@ export function GalleryGrid({
 	onSelect,
 }: GalleryGridProps) {
 	const reduceMotion = useReducedMotion() ?? false;
-	const transition = reduceMotion ? REDUCED_TRANSITION : GALLERY_TRANSITION;
+	const transition = reduceMotion ? REDUCED_TRANSITION : LAYER_TRANSITION;
 	const gallery = useHorizontalGallery({
 		itemCount: items.length,
 		hasMore,
@@ -174,27 +251,31 @@ export function GalleryGrid({
 						aria-describedby="gallery-scroll-help"
 						className="relative left-1/2 mt-12 h-[22rem] w-[100dvw] -translate-x-1/2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-gutter:stable] [touch-action:pan-x] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink sm:h-[30rem] lg:h-[34rem]"
 					>
-						<ul
-							className="relative h-full"
-							style={{
-								width: layout.width,
-								opacity: gallery.viewportSize.width > 0 ? 1 : 0,
-							}}
+						<div
+							data-gallery-spacer
+							data-gallery-width={layout.width}
+							aria-hidden
+							className="h-px"
+							style={{ width: layout.width }}
+						/>
+						<div
+							className="absolute inset-0"
+							style={{ opacity: gallery.viewportSize.width > 0 ? 1 : 0 }}
 						>
-							{items.map((item, index) => {
-								const geometry = layout.items[index];
-								return geometry ? (
-									<Plate
-										key={item.id}
-										item={item}
-										rows={gallery.rows}
-										geometry={geometry}
-										transition={transition}
-										onSelect={onSelect}
-									/>
-								) : null;
-							})}
-						</ul>
+							<AnimatePresence initial={false}>
+								<GalleryLayer
+									key={gallery.rows}
+									items={items}
+									rows={gallery.rows}
+									geometry={layout.items}
+									width={layout.width}
+									direction={gallery.zoomDirection}
+									transition={transition}
+									reduceMotion={reduceMotion}
+									onSelect={onSelect}
+								/>
+							</AnimatePresence>
+						</div>
 					</section>
 				</>
 			) : (

@@ -27,7 +27,14 @@ const PINCH_IN_THRESHOLD = 1.18;
 const PINCH_OUT_THRESHOLD = 0.82;
 
 function plates(viewport: HTMLElement) {
-	return Array.from(viewport.querySelectorAll<HTMLElement>("[data-photo-id]"));
+	const current = viewport.querySelectorAll<HTMLElement>(
+		"[data-gallery-current] [data-photo-id]",
+	);
+	return Array.from(
+		current.length
+			? current
+			: viewport.querySelectorAll<HTMLElement>("[data-photo-id]"),
+	);
 }
 
 function firstVisiblePlate(viewport: HTMLElement) {
@@ -116,6 +123,7 @@ export function useHorizontalGallery({
 	const anchorRef = useRef<ScrollAnchor | null>(null);
 	const scrollAnimationRef = useRef<AnimationPlaybackControls | null>(null);
 	const [rows, setRows] = useState<GalleryRows>(2);
+	const [zoomDirection, setZoomDirection] = useState<"in" | "out">("in");
 	const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 	const contentSize = `${itemCount}:${rows}`;
 
@@ -183,6 +191,7 @@ export function useHorizontalGallery({
 					? focalAnchor(viewport, focalPoint.x, focalPoint.y)
 					: firstVisibleAnchor(viewport);
 			}
+			setZoomDirection(direction);
 			setRows(next);
 		},
 		[rows],
@@ -269,17 +278,22 @@ export function useHorizontalGallery({
 		if (!anchor || !viewport) return;
 		anchorRef.current = null;
 		const plate = viewport.querySelector<HTMLElement>(
-			`[data-photo-id="${CSS.escape(anchor.photoId)}"]`,
+			`[data-gallery-current] [data-photo-id="${CSS.escape(anchor.photoId)}"]`,
 		);
 		if (!plate) return;
 		const x = Number(plate.dataset.galleryX);
 		const width = Number(plate.dataset.galleryWidth);
 		if (!Number.isFinite(x) || !Number.isFinite(width)) return;
+		const spacer = viewport.querySelector<HTMLElement>("[data-gallery-spacer]");
+		const contentWidth = Number(spacer?.dataset.galleryWidth);
+		const maxScroll = Number.isFinite(contentWidth)
+			? Math.max(0, contentWidth - viewport.clientWidth)
+			: viewport.scrollWidth - viewport.clientWidth;
 		const target = Math.max(
 			0,
 			Math.min(
 				x + width * anchor.plateFraction - anchor.viewportOffset,
-				viewport.scrollWidth - viewport.clientWidth,
+				maxScroll,
 			),
 		);
 		scrollAnimationRef.current?.stop();
@@ -306,6 +320,7 @@ export function useHorizontalGallery({
 		viewportRef,
 		viewportSize,
 		rows,
+		zoomDirection,
 		onScroll: loadNearEnd,
 		zoomIn: () => changeRows("in"),
 		zoomOut: () => changeRows("out"),
