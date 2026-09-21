@@ -1,3 +1,4 @@
+import { type AnimationPlaybackControls, animate } from "motion";
 import {
 	useCallback,
 	useEffect,
@@ -6,6 +7,7 @@ import {
 	useState,
 } from "react";
 import {
+	GALLERY_SPRING,
 	type GalleryRows,
 	galleryRowsAfterZoom,
 } from "@/components/gallery/horizontal-gallery";
@@ -29,9 +31,9 @@ function plates(viewport: HTMLElement) {
 }
 
 function firstVisiblePlate(viewport: HTMLElement) {
-	const edge = viewport.scrollLeft + 1;
+	const edge = viewport.getBoundingClientRect().left + 1;
 	return plates(viewport).find(
-		(candidate) => candidate.offsetLeft + candidate.offsetWidth > edge,
+		(candidate) => candidate.getBoundingClientRect().right > edge,
 	);
 }
 
@@ -41,7 +43,9 @@ function firstVisibleAnchor(viewport: HTMLElement): ScrollAnchor | null {
 	return {
 		photoId: plate.dataset.photoId,
 		plateFraction: 0,
-		viewportOffset: plate.offsetLeft - viewport.scrollLeft,
+		viewportOffset:
+			plate.getBoundingClientRect().left -
+			viewport.getBoundingClientRect().left,
 	};
 }
 
@@ -51,8 +55,9 @@ function focalAnchor(
 	clientY: number,
 ): ScrollAnchor | null {
 	const viewportRect = viewport.getBoundingClientRect();
+	const candidates = plates(viewport);
 	const plate =
-		plates(viewport).find((candidate) => {
+		candidates.find((candidate) => {
 			const rect = candidate.getBoundingClientRect();
 			return (
 				clientX >= rect.left &&
@@ -60,7 +65,17 @@ function focalAnchor(
 				clientY >= rect.top &&
 				clientY <= rect.bottom
 			);
-		}) ?? firstVisiblePlate(viewport);
+		}) ??
+		candidates.reduce<HTMLElement | undefined>((nearest, candidate) => {
+			if (!nearest) return candidate;
+			const distance = (element: HTMLElement) => {
+				const rect = element.getBoundingClientRect();
+				const dx = Math.max(rect.left - clientX, 0, clientX - rect.right);
+				const dy = Math.max(rect.top - clientY, 0, clientY - rect.bottom);
+				return Math.hypot(dx, dy);
+			};
+			return distance(candidate) < distance(nearest) ? candidate : nearest;
+		}, undefined);
 	if (!plate?.dataset.photoId) return null;
 	const rect = plate.getBoundingClientRect();
 	return {
@@ -89,15 +104,19 @@ export function useHorizontalGallery({
 	hasMore,
 	pending,
 	onLoadMore,
+	reduceMotion,
 }: {
 	itemCount: number;
 	hasMore: boolean;
 	pending: boolean;
 	onLoadMore: () => void;
+	reduceMotion: boolean;
 }) {
 	const viewportRef = useRef<HTMLElement>(null);
 	const anchorRef = useRef<ScrollAnchor | null>(null);
+	const scrollAnimationRef = useRef<AnimationPlaybackControls | null>(null);
 	const [rows, setRows] = useState<GalleryRows>(2);
+	const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 	const contentSize = `${itemCount}:${rows}`;
 
 	const loadNearEnd = useCallback(() => {
@@ -113,6 +132,27 @@ export function useHorizontalGallery({
 		const frame = window.requestAnimationFrame(loadNearEnd);
 		return () => window.cancelAnimationFrame(frame);
 	}, [contentSize, loadNearEnd]);
+
+	useLayoutEffect(() => {
+		if (itemCount === 0) return;
+		const viewport = viewportRef.current;
+		if (!viewport) return;
+		const measure = () => {
+			const next = {
+				width: viewport.clientWidth,
+				height: viewport.clientHeight,
+			};
+			setViewportSize((current) =>
+				current.width === next.width && current.height === next.height
+					? current
+					: next,
+			);
+		};
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(viewport);
+		return () => observer.disconnect();
+	}, [itemCount]);
 
 	useEffect(() => {
 		if (itemCount === 0) return;
@@ -232,14 +272,39 @@ export function useHorizontalGallery({
 			`[data-photo-id="${CSS.escape(anchor.photoId)}"]`,
 		);
 		if (!plate) return;
-		viewport.scrollLeft =
-			plate.offsetLeft +
-			plate.offsetWidth * anchor.plateFraction -
-			anchor.viewportOffset;
+		const x = Number(plate.dataset.galleryX);
+		const width = Number(plate.dataset.galleryWidth);
+		if (!Number.isFinite(x) || !Number.isFinite(width)) return;
+		const target = Math.max(
+			0,
+			Math.min(
+				x + width * anchor.plateFraction - anchor.viewportOffset,
+				viewport.scrollWidth - viewport.clientWidth,
+			),
+		);
+		scrollAnimationRef.current?.stop();
+		if (reduceMotion) {
+			viewport.scrollLeft = target;
+			return;
+		}
+		scrollAnimationRef.current = animate(viewport.scrollLeft, target, {
+			...GALLERY_SPRING,
+			onUpdate: (value) => {
+				viewport.scrollLeft = value;
+			},
+		});
 	});
+
+	useEffect(
+		() => () => {
+			scrollAnimationRef.current?.stop();
+		},
+		[],
+	);
 
 	return {
 		viewportRef,
+		viewportSize,
 		rows,
 		onScroll: loadNearEnd,
 		zoomIn: () => changeRows("in"),

@@ -1,13 +1,13 @@
-import {
-	LayoutGroup,
-	motion,
-	type Transition,
-	useReducedMotion,
-} from "motion/react";
+import { motion, type Transition, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { type CSSProperties, memo } from "react";
-import type { GalleryRows } from "@/components/gallery/horizontal-gallery";
+import { memo } from "react";
+import {
+	GALLERY_SPRING,
+	type GalleryGeometry,
+	type GalleryRows,
+	horizontalGalleryLayout,
+} from "@/components/gallery/horizontal-gallery";
 import { useHorizontalGallery } from "@/components/gallery/use-horizontal-gallery";
 import {
 	ArrowRightIcon,
@@ -30,26 +30,21 @@ type GalleryGridProps = {
 type PlateProps = {
 	item: GalleryItem;
 	rows: GalleryRows;
+	geometry: GalleryGeometry;
 	transition: Transition;
 	onSelect: (item: GalleryItem) => void;
 };
 
-const GALLERY_LAYOUT_TRANSITION = {
-	layout: { type: "spring", stiffness: 520, damping: 48, mass: 0.72 },
-} satisfies Transition;
-
-const REDUCED_LAYOUT_TRANSITION = {
-	layout: { duration: 0 },
-} satisfies Transition;
+const GALLERY_TRANSITION = GALLERY_SPRING satisfies Transition;
+const REDUCED_TRANSITION = { duration: 0 } satisfies Transition;
 
 const Plate = memo(function Plate({
 	item,
 	rows,
+	geometry,
 	transition,
 	onSelect,
 }: PlateProps) {
-	const closestRatio =
-		item.width && item.height ? `${item.width} / ${item.height}` : "4 / 3";
 	const sizes =
 		rows === 1
 			? "(max-width: 640px) 90vw, 34rem"
@@ -59,41 +54,32 @@ const Plate = memo(function Plate({
 
 	return (
 		<motion.li
-			layout
-			layoutDependency={rows}
+			initial={false}
+			animate={geometry}
 			transition={transition}
 			data-photo-id={item.id}
-			className="relative h-full w-full shrink-0 [contain:layout_paint]"
-			style={{ aspectRatio: rows === 1 ? closestRatio : "1 / 1" }}
+			data-gallery-x={geometry.x}
+			data-gallery-width={geometry.width}
+			className="absolute left-0 top-0 [contain:layout_paint]"
 		>
-			<motion.button
-				layout
-				layoutDependency={rows}
-				transition={transition}
+			<button
 				type="button"
 				onClick={() => onSelect(item)}
 				className="group relative block h-full w-full overflow-hidden bg-ma-ash/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink"
 				aria-label="Powiększ zdjęcie"
 			>
-				<motion.span
-					layout
-					layoutDependency={rows}
-					transition={transition}
-					className="absolute inset-0 block"
-				>
-					<Image
-						src={item.imageUrl}
-						alt=""
-						fill
-						sizes={sizes}
-						unoptimized
-						draggable={false}
-						placeholder={item.blurDataUrl ? "blur" : "empty"}
-						blurDataURL={item.blurDataUrl ?? undefined}
-						className="object-cover group-hover:opacity-85"
-					/>
-				</motion.span>
-			</motion.button>
+				<Image
+					src={item.imageUrl}
+					alt=""
+					fill
+					sizes={sizes}
+					unoptimized
+					draggable={false}
+					placeholder={item.blurDataUrl ? "blur" : "empty"}
+					blurDataURL={item.blurDataUrl ?? undefined}
+					className="object-cover group-hover:opacity-85"
+				/>
+			</button>
 		</motion.li>
 	);
 });
@@ -110,20 +96,21 @@ export function GalleryGrid({
 	onLoadMore,
 	onSelect,
 }: GalleryGridProps) {
-	const reduceMotion = useReducedMotion();
-	const transition = reduceMotion
-		? REDUCED_LAYOUT_TRANSITION
-		: GALLERY_LAYOUT_TRANSITION;
+	const reduceMotion = useReducedMotion() ?? false;
+	const transition = reduceMotion ? REDUCED_TRANSITION : GALLERY_TRANSITION;
 	const gallery = useHorizontalGallery({
 		itemCount: items.length,
 		hasMore,
 		pending,
 		onLoadMore,
+		reduceMotion,
 	});
-	const gridStyle = {
-		gridTemplateRows: `repeat(${gallery.rows}, minmax(0, 1fr))`,
-		gridAutoColumns: "auto",
-	} satisfies CSSProperties;
+	const layout = horizontalGalleryLayout(
+		items,
+		gallery.rows,
+		gallery.viewportSize.width,
+		gallery.viewportSize.height,
+	);
 
 	return (
 		<section aria-labelledby="gallery-title">
@@ -173,36 +160,43 @@ export function GalleryGrid({
 			) : null}
 
 			{items.length ? (
-				<LayoutGroup id="gallery-rail">
+				<>
 					<p id="gallery-scroll-help" className="sr-only">
 						Przewiń poziomo, aby zobaczyć kolejne zdjęcia. Uszczypnij ekran, aby
 						zmienić ich wielkość.
 					</p>
-					<motion.section
-						layoutScroll
+					<section
 						ref={gallery.viewportRef}
 						onScroll={gallery.onScroll}
+						// biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll the photo rail.
 						tabIndex={0}
 						aria-label="Zdjęcia"
 						aria-describedby="gallery-scroll-help"
 						className="relative left-1/2 mt-12 h-[22rem] w-[100dvw] -translate-x-1/2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-gutter:stable] [touch-action:pan-x] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink sm:h-[30rem] lg:h-[34rem]"
 					>
 						<ul
-							className="grid h-full min-w-full w-max grid-flow-col gap-0.5"
-							style={gridStyle}
+							className="relative h-full"
+							style={{
+								width: layout.width,
+								opacity: gallery.viewportSize.width > 0 ? 1 : 0,
+							}}
 						>
-							{items.map((item) => (
-								<Plate
-									key={item.id}
-									item={item}
-									rows={gallery.rows}
-									transition={transition}
-									onSelect={onSelect}
-								/>
-							))}
+							{items.map((item, index) => {
+								const geometry = layout.items[index];
+								return geometry ? (
+									<Plate
+										key={item.id}
+										item={item}
+										rows={gallery.rows}
+										geometry={geometry}
+										transition={transition}
+										onSelect={onSelect}
+									/>
+								) : null;
+							})}
 						</ul>
-					</motion.section>
-				</LayoutGroup>
+					</section>
+				</>
 			) : (
 				<div className="ma-empty mt-12">
 					<p className="font-serif text-3xl leading-tight">

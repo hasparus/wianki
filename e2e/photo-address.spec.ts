@@ -87,6 +87,28 @@ test.describe("a photograph has an address", () => {
 			.poll(() => rail.evaluate((element) => element.scrollLeft))
 			.toBe(200);
 
+		const photoNearestCenter = () =>
+			rail.evaluate((element) => {
+				const viewport = element.getBoundingClientRect();
+				const x = viewport.left + viewport.width / 2;
+				const y = viewport.top + viewport.height / 2;
+				return Array.from(
+					element.querySelectorAll<HTMLElement>("[data-photo-id]"),
+				).reduce<{ id: string; distance: number } | null>((nearest, plate) => {
+					const rect = plate.getBoundingClientRect();
+					const dx = Math.max(rect.left - x, 0, x - rect.right);
+					const dy = Math.max(rect.top - y, 0, y - rect.bottom);
+					const candidate = {
+						id: plate.dataset.photoId ?? "",
+						distance: Math.hypot(dx, dy),
+					};
+					return !nearest || candidate.distance < nearest.distance
+						? candidate
+						: nearest;
+				}, null)?.id;
+			});
+		const focalPhoto = await photoNearestCenter();
+
 		const pinch = (startRadius: number, endRadius: number) =>
 			rail.evaluate(
 				(element, radii) => {
@@ -134,41 +156,31 @@ test.describe("a photograph has an address", () => {
 			(element) => element.clientHeight,
 		);
 		await pinch(60, 90);
-		await expect
-			.poll(() =>
-				firstPlate.evaluate(
-					(element) =>
-						element.style.transform !== "" &&
-						element.style.transform !== "none",
-				),
-			)
-			.toBe(true);
+		await page.waitForTimeout(50);
+		const growingHeight = await firstPlate.evaluate(
+			(element) => element.clientHeight,
+		);
+		expect(growingHeight).toBeGreaterThan(plateHeight);
+		expect(growingHeight).toBeLessThan(before.height);
 		expect(
 			await rail.locator("ul").evaluate((element) => element.style.transform),
 		).toBe("");
 		await expect
 			.poll(() => firstPlate.evaluate((element) => element.clientHeight))
-			.toBeGreaterThan(plateHeight);
-		expect(await rail.evaluate((element) => element.clientHeight)).toBe(
-			before.height,
-		);
+			.toBe(before.height);
+		expect(await photoNearestCenter()).toBe(focalPhoto);
 
-		await expect
-			.poll(() => firstPlate.evaluate((element) => element.style.transform))
-			.toBe("none");
 		await pinch(90, 45);
-		await expect
-			.poll(() =>
-				firstPlate.evaluate(
-					(element) =>
-						element.style.transform !== "" &&
-						element.style.transform !== "none",
-				),
-			)
-			.toBe(true);
+		await page.waitForTimeout(50);
+		const shrinkingHeight = await firstPlate.evaluate(
+			(element) => element.clientHeight,
+		);
+		expect(shrinkingHeight).toBeGreaterThan(plateHeight);
+		expect(shrinkingHeight).toBeLessThan(before.height);
 		await expect
 			.poll(() => firstPlate.evaluate((element) => element.clientHeight))
 			.toBe(plateHeight);
+		expect(await photoNearestCenter()).toBe(focalPhoto);
 		expect(await rail.evaluate((element) => element.clientHeight)).toBe(
 			before.height,
 		);
