@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const baseEnv: Record<string, string> = {
 	NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
 	NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
+	NEXT_PUBLIC_ARCHIVE_WORKER_URL: "https://archive.example.workers.dev",
 	SUPABASE_SECRET_KEY: "sb_secret_test",
 	APP_ORIGIN: "http://localhost:3000",
 	GUEST_ENTRY_TOKEN: "guest_entry_token_value_32_bytes!!",
@@ -16,7 +17,6 @@ const baseEnv: Record<string, string> = {
 };
 
 const visionEnv: Record<string, string> = {
-	GOOGLE_CLOUD_PROJECT_ID: "test-project",
 	GOOGLE_VISION_CLIENT_EMAIL: "vision@example.iam.gserviceaccount.com",
 	GOOGLE_VISION_PRIVATE_KEY: "test-key",
 };
@@ -69,7 +69,18 @@ describe("server env schema", () => {
 		await expect(promise).rejects.not.toThrow(/ZodError|"code"|expected:/);
 	});
 
-	it("accepts Vision credentials with moderation enabled by default", async () => {
+	it("requires the browser-facing archive Worker URL", async () => {
+		const { NEXT_PUBLIC_ARCHIVE_WORKER_URL: _url, ...withoutArchiveUrl } =
+			baseEnv;
+		await expect(
+			loadServerEnv({
+				...withoutArchiveUrl,
+				...visionEnv,
+			}),
+		).rejects.toThrow(/NEXT_PUBLIC_ARCHIVE_WORKER_URL: brak wartości/);
+	});
+
+	it("accepts the two Vision credentials moderation actually uses", async () => {
 		const env = await loadServerEnv({ ...baseEnv, ...visionEnv });
 		expect(env.MODERATION_ENABLED).toBe(true);
 	});
