@@ -28,9 +28,10 @@ add production domains unless asked.
 V1 excludes video, comments, likes, face recognition, named accounts, Realtime.
 The gallery polls its first page every ten seconds and folds in what is new.
 Older pages arrive as the guest scrolls, never by button. The gallery is a
-full-viewport-width, fixed-height horizontal rail: guests swipe sideways and
-pinch to change how many rows share the same height without moving the page
-around; plain minus/plus icons provide the same zoom for non-touch input.
+full-viewport-width horizontal rail that fills the remainder of one dynamic
+viewport below its controls: guests swipe sideways and pinch to change how many
+rows share that stable height without moving the page around; plain minus/plus
+icons provide the same zoom for non-touch input.
 Density changes use explicit, column-major plate geometry. Motion crossfades
 the complete old and new layout layers with a restrained scale, so individual
 plates never fly through or cross one another. Never hand placement to CSS Grid

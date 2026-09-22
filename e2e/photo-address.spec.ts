@@ -72,14 +72,36 @@ test.describe("a photograph has an address", () => {
 
 		const rail = page.getByRole("region", { name: "Zdjęcia", exact: true });
 		await rail.scrollIntoViewIfNeeded();
+		const gallery = page.getByRole("region", {
+			name: "Galeria",
+			exact: true,
+		});
 		const before = await rail.evaluate((element) => ({
 			height: element.clientHeight,
 			clientWidth: element.clientWidth,
 			scrollWidth: element.scrollWidth,
 		}));
+		const viewport = await page.evaluate(() => ({
+			width: window.innerWidth,
+			height: window.innerHeight,
+		}));
+		const galleryBounds = await gallery.boundingBox();
+		const railBounds = await rail.boundingBox();
 		expect(before.scrollWidth).toBeGreaterThan(before.clientWidth);
-		const viewportWidth = await page.evaluate(() => window.innerWidth);
-		expect(Math.abs(before.clientWidth - viewportWidth)).toBeLessThanOrEqual(1);
+		expect(Math.abs(before.clientWidth - viewport.width)).toBeLessThanOrEqual(
+			1,
+		);
+		expect(
+			Math.abs((galleryBounds?.height ?? 0) - viewport.height),
+		).toBeLessThanOrEqual(1);
+		expect(
+			Math.abs(
+				(galleryBounds?.y ?? 0) +
+					(galleryBounds?.height ?? 0) -
+					((railBounds?.y ?? 0) + (railBounds?.height ?? 0)),
+			),
+		).toBeLessThanOrEqual(1);
+		expect(before.height).toBeGreaterThan(viewport.height / 2);
 		await rail.evaluate((element) => {
 			element.scrollLeft = 200;
 		});

@@ -190,7 +190,10 @@ export function GalleryGrid({
 	);
 
 	return (
-		<section aria-labelledby="gallery-title">
+		<section
+			aria-labelledby="gallery-title"
+			className="flex h-dvh min-h-0 flex-col pt-8 sm:pt-10"
+		>
 			<h2 id="gallery-title" className="sr-only">
 				Galeria
 			</h2>
@@ -230,8 +233,31 @@ export function GalleryGrid({
 				</div>
 			</div>
 
-			{message && !hasMore ? (
-				<p role="alert" className="mt-8 font-medium text-ma-oxblood">
+			{hasMore ? (
+				<div
+					className="mt-2 flex min-h-11 shrink-0 flex-wrap items-center gap-4"
+					aria-live="polite"
+				>
+					{message ? (
+						<>
+							<p role="alert" className="font-medium text-ma-oxblood">
+								{message}
+							</p>
+							<button
+								type="button"
+								onClick={onLoadMore}
+								disabled={pending}
+								className="ma-action ma-action--ghost"
+							>
+								Spróbuj ponownie
+							</button>
+						</>
+					) : pending ? (
+						<p className="ma-label">Wczytywanie…</p>
+					) : null}
+				</div>
+			) : message ? (
+				<p role="alert" className="mt-4 shrink-0 font-medium text-ma-oxblood">
 					{message}
 				</p>
 			) : null}
@@ -249,7 +275,7 @@ export function GalleryGrid({
 						tabIndex={0}
 						aria-label="Zdjęcia"
 						aria-describedby="gallery-scroll-help"
-						className="relative left-1/2 mt-12 h-[22rem] w-[100dvw] -translate-x-1/2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-gutter:stable] [touch-action:pan-x] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink sm:h-[30rem] lg:h-[34rem]"
+						className="relative left-1/2 mt-6 min-h-0 w-[100dvw] flex-1 -translate-x-1/2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-gutter:stable] [touch-action:pan-x] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink sm:mt-8"
 					>
 						<div
 							data-gallery-spacer
@@ -279,37 +305,12 @@ export function GalleryGrid({
 					</section>
 				</>
 			) : (
-				<div className="ma-empty mt-12">
+				<div className="ma-empty mt-6 flex-1 sm:mt-8">
 					<p className="font-serif text-3xl leading-tight">
 						Jeszcze nikt nic nie wrzucił.
 					</p>
 				</div>
 			)}
-
-			{hasMore ? (
-				<div
-					className="mt-10 flex min-h-12 flex-wrap items-center gap-4"
-					aria-live="polite"
-				>
-					{message ? (
-						<>
-							<p role="alert" className="font-medium text-ma-oxblood">
-								{message}
-							</p>
-							<button
-								type="button"
-								onClick={onLoadMore}
-								disabled={pending}
-								className="ma-action ma-action--ghost"
-							>
-								Spróbuj ponownie
-							</button>
-						</>
-					) : pending ? (
-						<p className="ma-label">Wczytywanie…</p>
-					) : null}
-				</div>
-			) : null}
 		</section>
 	);
 }

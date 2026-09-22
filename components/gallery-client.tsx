@@ -98,7 +98,7 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 			<div className="ma-base" aria-hidden />
 
 			<div className="w-full px-5 sm:px-10 lg:px-16">
-				<div className="mx-auto w-full max-w-6xl py-16">
+				<div className="mx-auto w-full max-w-6xl">
 					<GalleryGrid
 						items={items}
 						photoCount={stats.approvedPhotos}
