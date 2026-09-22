@@ -41,6 +41,7 @@ export type Database = {
 					derivative_size: number | null;
 					width: number | null;
 					height: number | null;
+					blur_data_url: string | null;
 					storage_path: string;
 					archive_key: string | null;
 					hot_status: Database["public"]["Enums"]["hot_status"];
@@ -63,6 +64,7 @@ export type Database = {
 					derivative_size?: number | null;
 					width?: number | null;
 					height?: number | null;
+					blur_data_url?: string | null;
 					storage_path: string;
 					archive_key?: string | null;
 					hot_status?: Database["public"]["Enums"]["hot_status"];

@@ -16,6 +16,7 @@ vi.mock("browser-image-compression", () => ({
 
 import imageCompression from "browser-image-compression";
 import {
+	makeBlurDataUrl,
 	prepareDerivative,
 	uploadDerivative,
 } from "@/components/upload/upload-client";
@@ -56,6 +57,8 @@ describe("gallery derivative preparation", () => {
 			derivative: jpegDerivative,
 			width: 1600,
 			height: 900,
+			// No canvas in this runtime: the photo still goes out, without a blur.
+			blurDataUrl: null,
 		});
 		expect(compress).toHaveBeenCalledOnce();
 		expect(compress).toHaveBeenCalledWith(
@@ -84,6 +87,37 @@ describe("gallery derivative preparation", () => {
 			),
 		).rejects.toThrow("mniejszego niż 500 KB");
 		expect(createImageBitmap).not.toHaveBeenCalled();
+	});
+
+	it("builds an 8px blur placeholder the way next/image does for static imports", async () => {
+		const jpegBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+		const drawImage = vi.fn();
+		const convertToBlob = vi.fn(async () => new Blob([jpegBytes]));
+		const sizes: { width: number; height: number }[] = [];
+		vi.stubGlobal(
+			"OffscreenCanvas",
+			class {
+				constructor(width: number, height: number) {
+					sizes.push({ width, height });
+				}
+				getContext() {
+					return { drawImage };
+				}
+				convertToBlob = convertToBlob;
+			},
+		);
+
+		const bitmap = { width: 1600, height: 900, close: vi.fn() };
+		const blur = await makeBlurDataUrl(bitmap as unknown as ImageBitmap);
+
+		expect(sizes).toEqual([{ width: 8, height: 5 }]);
+		expect(drawImage).toHaveBeenCalledWith(bitmap, 0, 0, 8, 5);
+		expect(convertToBlob).toHaveBeenCalledWith({
+			type: "image/jpeg",
+			quality: 0.7,
+		});
+		expect(blur).toBe("data:image/jpeg;base64,/9j/2Q==");
+		vi.unstubAllGlobals();
 	});
 
 	it("returns a clear preparation error when the browser cannot decode HEIC", async () => {

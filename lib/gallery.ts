@@ -11,6 +11,7 @@ type GalleryRow = {
 	storage_path: string;
 	width: number | null;
 	height: number | null;
+	blur_data_url: string | null;
 	created_at: string;
 };
 
@@ -43,7 +44,7 @@ export async function getGalleryPage(cursor?: string | null) {
 	const supabase = supabaseAdmin();
 	let query = supabase
 		.from("photos")
-		.select("id,storage_path,width,height,created_at")
+		.select("id,storage_path,width,height,blur_data_url,created_at")
 		.eq("hot_status", "uploaded")
 		.eq("moderation_status", "approved")
 		.order("created_at", { ascending: false })
@@ -73,6 +74,7 @@ export async function getGalleryPage(cursor?: string | null) {
 				imageUrl: url.signedUrl,
 				width: row.width,
 				height: row.height,
+				blurDataUrl: row.blur_data_url,
 				createdAt: row.created_at,
 			};
 		}),

@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 const visionKeys = [
-	"GOOGLE_CLOUD_PROJECT_ID",
 	"GOOGLE_VISION_CLIENT_EMAIL",
 	"GOOGLE_VISION_PRIVATE_KEY",
 ] as const;
@@ -10,6 +9,7 @@ const serverSchema = z
 	.object({
 		NEXT_PUBLIC_SUPABASE_URL: z.url(),
 		NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+		NEXT_PUBLIC_ARCHIVE_WORKER_URL: z.url(),
 		SUPABASE_SECRET_KEY: z.string().min(1),
 		APP_ORIGIN: z.url(),
 		GUEST_ENTRY_TOKEN: z.string().min(32),
@@ -28,7 +28,6 @@ const serverSchema = z
 		MODERATION_ENABLED: z.stringbool().default(true),
 		SLIDESHOW_LIVE_URL: z.url().optional(),
 		SLIDESHOW_LIVE_SECRET: z.string().min(32).optional(),
-		GOOGLE_CLOUD_PROJECT_ID: z.string().min(1).optional(),
 		GOOGLE_VISION_CLIENT_EMAIL: z.email().optional(),
 		GOOGLE_VISION_PRIVATE_KEY: z.string().min(1).optional(),
 		DELETION_CONTACT_EMAIL: z.email(),
@@ -66,16 +65,64 @@ export type ServerEnv = z.infer<typeof serverSchema>;
 
 let cachedServerEnv: ServerEnv | undefined;
 
-export function serverEnv(): ServerEnv {
-	cachedServerEnv ??= serverSchema.parse(process.env);
-	return cachedServerEnv;
+export type ServerEnvIssue = {
+	key: string;
+	reason: string;
+};
+
+function normalizeEnvIssues(
+	issues: z.core.$ZodIssue[],
+	env: Record<string, string | undefined>,
+): ServerEnvIssue[] {
+	return issues.map((issue) => {
+		const key = issue.path.map(String).join(".") || "(env)";
+		return {
+			key,
+			reason:
+				env[key] === undefined && issue.code !== "custom"
+					? "brak wartości"
+					: issue.message,
+		};
+	});
 }
 
-export function publicEnv() {
-	return {
-		supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-		supabasePublishableKey:
-			process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "",
-		appOrigin: process.env.NEXT_PUBLIC_APP_ORIGIN ?? "http://localhost:3000",
-	};
+function envErrorMessage(issues: ServerEnvIssue[]) {
+	return [
+		"Środowisko serwera jest źle skonfigurowane. Ustaw brakujące zmienne w Vercel (właściwe środowisko: Production lub Preview) albo w .env.local:",
+		...issues.map(({ key, reason }) => `- ${key}: ${reason}`),
+	].join("\n");
+}
+
+/** An expected deployment error that the HTTP boundary can render safely. */
+export class ServerEnvError extends Error {
+	readonly issues: ServerEnvIssue[];
+
+	constructor(issues: ServerEnvIssue[]) {
+		super(envErrorMessage(issues));
+		this.name = "ServerEnvError";
+		this.issues = issues;
+	}
+}
+
+/**
+ * One line per variable, readable in a deploy log: which name, and whether it
+ * is missing or what is wrong with it. Never the raw Zod issue list.
+ */
+export function describeEnvIssues(
+	issues: z.core.$ZodIssue[],
+	env: Record<string, string | undefined>,
+) {
+	return envErrorMessage(normalizeEnvIssues(issues, env));
+}
+
+export function serverEnv(): ServerEnv {
+	if (cachedServerEnv) return cachedServerEnv;
+	const result = serverSchema.safeParse(process.env);
+	if (!result.success) {
+		throw new ServerEnvError(
+			normalizeEnvIssues(result.error.issues, process.env),
+		);
+	}
+	cachedServerEnv = result.data;
+	return cachedServerEnv;
 }

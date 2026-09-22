@@ -77,9 +77,8 @@ export function useUploadBatch(onComplete: () => void) {
 					message: "",
 					photoId: init.photoId,
 				});
-				const { derivative, width, height } = await prepareDerivative(
-					item.file,
-				);
+				const { derivative, width, height, blurDataUrl } =
+					await prepareDerivative(item.file);
 				updateItem(item.id, { phase: "uploading", progress: 0 });
 				const [hot, archive] = await Promise.all([
 					uploadDerivative(init, derivative),
@@ -97,6 +96,7 @@ export function useUploadBatch(onComplete: () => void) {
 						derivativeType: derivative.type,
 						width,
 						height,
+						blurDataUrl,
 					});
 				} catch (error) {
 					throw hot.error ?? error;

@@ -29,8 +29,13 @@ vi.mock("@/lib/http", async (importOriginal) => ({
 }));
 
 import { POST } from "@/app/api/uploads/[photoId]/finalize/route";
+import { MAX_BLUR_DATA_URL_LENGTH } from "@/lib/domain";
 
-function finalizeRequest() {
+const blurDataUrl = `data:image/jpeg;base64,${Buffer.from([
+	0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0xff, 0xd9,
+]).toString("base64")}`;
+
+function finalizeRequest(extra: Record<string, unknown> = {}) {
 	return new Request(
 		"https://wedding.pawel.space/api/uploads/photo-1/finalize",
 		{
@@ -46,6 +51,7 @@ function finalizeRequest() {
 				derivativeType: "image/jpeg",
 				width: 2,
 				height: 2,
+				...extra,
 			}),
 		},
 	);
@@ -153,11 +159,61 @@ describe("upload finalization", () => {
 			derivative_content_type: "image/jpeg",
 			width: 2,
 			height: 2,
+			blur_data_url: null,
 			moderation_scores: null,
 			last_error: null,
 		});
 		expect(mocks.moderateImage).not.toHaveBeenCalled();
 		expect(mocks.after).toHaveBeenCalledOnce();
+	});
+
+	it("stores a small JPEG blur placeholder next to the derivative", async () => {
+		const image = new Blob(["jpeg"], { type: "image/jpeg" });
+		const { update } = mockBackend(image);
+
+		const response = await POST(finalizeRequest({ blurDataUrl }), {
+			params: Promise.resolve({ photoId: "photo-1" }),
+		});
+
+		expect(response.status).toBe(200);
+		expect(update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				hot_status: "uploaded",
+				blur_data_url: blurDataUrl,
+			}),
+		);
+	});
+
+	it("drops an oversized placeholder without failing the photo", async () => {
+		const image = new Blob(["jpeg"], { type: "image/jpeg" });
+		const { update } = mockBackend(image);
+
+		const response = await POST(
+			finalizeRequest({
+				blurDataUrl: `data:image/jpeg;base64,${"A".repeat(MAX_BLUR_DATA_URL_LENGTH)}`,
+			}),
+			{ params: Promise.resolve({ photoId: "photo-1" }) },
+		);
+
+		expect(response.status).toBe(200);
+		expect(update).toHaveBeenCalledWith(
+			expect.objectContaining({ hot_status: "uploaded", blur_data_url: null }),
+		);
+	});
+
+	it("drops a placeholder that is not a JPEG data URL without failing the photo", async () => {
+		const image = new Blob(["jpeg"], { type: "image/jpeg" });
+		const { update } = mockBackend(image);
+
+		const response = await POST(
+			finalizeRequest({ blurDataUrl: "data:text/html;base64,PHN2Zy8+" }),
+			{ params: Promise.resolve({ photoId: "photo-1" }) },
+		);
+
+		expect(response.status).toBe(200);
+		expect(update).toHaveBeenCalledWith(
+			expect.objectContaining({ hot_status: "uploaded", blur_data_url: null }),
+		);
 	});
 
 	it("updates moderation after the response has been accepted", async () => {

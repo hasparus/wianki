@@ -6,13 +6,17 @@ const mocks = vi.hoisted(() => ({
 	createGuestSession: vi.fn(),
 }));
 
-vi.mock("@/lib/env", () => ({ serverEnv: mocks.serverEnv }));
+vi.mock("@/lib/env", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/lib/env")>()),
+	serverEnv: mocks.serverEnv,
+}));
 vi.mock("@/lib/auth/session", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@/lib/auth/session")>()),
 	createGuestSession: mocks.createGuestSession,
 }));
 
 import { GUEST_COOKIE } from "@/lib/auth/session";
+import { ServerEnvError } from "@/lib/env";
 import { proxy } from "@/proxy";
 
 const tomorrow = new Date(Date.now() + 86_400_000);
@@ -35,6 +39,53 @@ function openUntil(date?: Date) {
 beforeEach(() => {
 	vi.clearAllMocks();
 	mocks.createGuestSession.mockResolvedValue("guest-jwt");
+});
+
+describe("invalid server environment", () => {
+	it("shows Zod-derived issues on page requests", async () => {
+		mocks.serverEnv.mockImplementation(() => {
+			throw new ServerEnvError([
+				{ key: "APP_ORIGIN", reason: "brak wartości" },
+				{ key: "<unsafe>", reason: "Nieprawidłowy adres & wartość" },
+			]);
+		});
+
+		const response = await visit("/");
+		const body = await response.text();
+
+		expect(response.status).toBe(500);
+		expect(response.headers.get("content-type")).toBe(
+			"text/html; charset=utf-8",
+		);
+		expect(body).toContain("Nie udało się uruchomić strony");
+		expect(body).toContain("APP_ORIGIN");
+		expect(body).toContain("brak wartości");
+		expect(body).toContain("&lt;unsafe&gt;");
+		expect(body).toContain("Nieprawidłowy adres &amp; wartość");
+		expect(body).not.toContain("<unsafe>");
+	});
+
+	it("returns structured issues to API clients", async () => {
+		mocks.serverEnv.mockImplementation(() => {
+			throw new ServerEnvError([{ key: "APP_ORIGIN", reason: "Invalid URL" }]);
+		});
+
+		const response = await visit("/api/gallery");
+
+		expect(response.status).toBe(500);
+		await expect(response.json()).resolves.toEqual({
+			error: "Środowisko serwera jest źle skonfigurowane.",
+			issues: [{ key: "APP_ORIGIN", reason: "Invalid URL" }],
+		});
+	});
+
+	it("does not hide unexpected proxy errors", async () => {
+		mocks.serverEnv.mockImplementation(() => {
+			throw new Error("unexpected");
+		});
+
+		await expect(visit("/")).rejects.toThrow("unexpected");
+	});
 });
 
 describe("open house window", () => {

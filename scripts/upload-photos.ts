@@ -18,6 +18,8 @@ import { parseArgs } from "node:util";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import {
+	BLUR_IMAGE_QUALITY,
+	BLUR_IMAGE_SIZE,
 	MAX_BATCH_FILES,
 	MAX_DERIVATIVE_BYTES,
 	MAX_ORIGINAL_BYTES,
@@ -104,7 +106,21 @@ async function makeDerivative(file: string) {
 			.toBuffer();
 		if (buffer.length <= MAX_DERIVATIVE_BYTES || quality <= 40) {
 			const meta = await sharp(buffer).metadata();
-			return { buffer, width: meta.width ?? null, height: meta.height ?? null };
+			// Same recipe as the browser: long edge 8px, JPEG q70, as a data URL.
+			const blur = await sharp(buffer)
+				.resize({
+					width: BLUR_IMAGE_SIZE,
+					height: BLUR_IMAGE_SIZE,
+					fit: "inside",
+				})
+				.jpeg({ quality: BLUR_IMAGE_QUALITY })
+				.toBuffer();
+			return {
+				buffer,
+				width: meta.width ?? null,
+				height: meta.height ?? null,
+				blurDataUrl: `data:image/jpeg;base64,${blur.toString("base64")}`,
+			};
 		}
 		quality -= 8;
 	}
@@ -189,6 +205,7 @@ async function uploadOne(
 				derivativeType: "image/jpeg",
 				width: derivative.width,
 				height: derivative.height,
+				blurDataUrl: derivative.blurDataUrl,
 			}),
 		},
 	);
