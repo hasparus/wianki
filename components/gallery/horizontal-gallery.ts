@@ -16,6 +16,74 @@ export type GalleryGeometry = {
 	height: number;
 };
 
+export type GallerySlotState = {
+	itemIds: readonly string[];
+	rows: GalleryRows;
+	slots: readonly number[];
+};
+
+function startsWith(items: readonly string[], prefix: readonly string[]) {
+	return prefix.every((item, index) => items[index] === item);
+}
+
+function endsWith(items: readonly string[], suffix: readonly string[]) {
+	const offset = items.length - suffix.length;
+	return (
+		offset >= 0 && suffix.every((item, index) => items[offset + index] === item)
+	);
+}
+
+/**
+ * Keep existing plates in their row when polling prepends fresh photographs.
+ * A partial incoming column leaves intentional empty slots at its end; shifting
+ * the old slots by complete columns means no photograph jumps vertically.
+ */
+export function gallerySlotState(
+	previous: GallerySlotState | null,
+	itemIds: readonly string[],
+	rows: GalleryRows,
+): GallerySlotState {
+	if (!previous || previous.rows !== rows) {
+		return { itemIds, rows, slots: itemIds.map((_, index) => index) };
+	}
+	if (
+		previous.itemIds.length === itemIds.length &&
+		startsWith(itemIds, previous.itemIds)
+	) {
+		return previous;
+	}
+
+	if (itemIds.length > previous.itemIds.length) {
+		const added = itemIds.length - previous.itemIds.length;
+		if (endsWith(itemIds, previous.itemIds)) {
+			const shift = Math.ceil(added / rows) * rows;
+			return {
+				itemIds,
+				rows,
+				slots: [
+					...itemIds.slice(0, added).map((_, index) => index),
+					...previous.slots.map((slot) => slot + shift),
+				],
+			};
+		}
+		if (startsWith(itemIds, previous.itemIds)) {
+			const nextSlot = (previous.slots.at(-1) ?? -1) + 1;
+			return {
+				itemIds,
+				rows,
+				slots: [
+					...previous.slots,
+					...itemIds
+						.slice(previous.itemIds.length)
+						.map((_, index) => nextSlot + index),
+				],
+			};
+		}
+	}
+
+	return { itemIds, rows, slots: itemIds.map((_, index) => index) };
+}
+
 export function galleryRowsAfterZoom(
 	rows: GalleryRows,
 	direction: "in" | "out",
@@ -31,6 +99,7 @@ export function horizontalGalleryLayout(
 	viewportWidth: number,
 	viewportHeight: number,
 	gap = 2,
+	slots: readonly number[] = items.map((_, index) => index),
 ): { items: GalleryGeometry[]; width: number } {
 	if (!items.length || viewportWidth <= 0 || viewportHeight <= 0) {
 		return { items: [], width: viewportWidth };
@@ -59,15 +128,16 @@ export function horizontalGalleryLayout(
 		return { items: geometry, width: Math.max(viewportWidth, x - gap) };
 	}
 
-	const columns = Math.ceil(items.length / rows);
+	const lastSlot = slots.at(-1) ?? -1;
+	const columns = Math.ceil((lastSlot + 1) / rows);
 	const totalGap = gap * Math.max(0, columns - 1);
 	const columnWidth = Math.max(
 		rowHeight,
 		(viewportWidth - totalGap) / Math.max(1, columns),
 	);
 	const geometry = items.map((_, index) => ({
-		x: Math.floor(index / rows) * (columnWidth + gap),
-		y: (index % rows) * (rowHeight + gap),
+		x: Math.floor((slots[index] ?? index) / rows) * (columnWidth + gap),
+		y: ((slots[index] ?? index) % rows) * (rowHeight + gap),
 		width: columnWidth,
 		height: rowHeight,
 	}));

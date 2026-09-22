@@ -10,6 +10,7 @@ import {
 	GALLERY_SPRING,
 	type GalleryRows,
 	galleryRowsAfterZoom,
+	gallerySlotState,
 } from "@/components/gallery/horizontal-gallery";
 
 type ScrollAnchor = {
@@ -107,13 +108,13 @@ function touchCenter(touches: TouchList): FocalPoint {
 }
 
 export function useHorizontalGallery({
-	itemCount,
+	itemIds,
 	hasMore,
 	pending,
 	onLoadMore,
 	reduceMotion,
 }: {
-	itemCount: number;
+	itemIds: readonly string[];
 	hasMore: boolean;
 	pending: boolean;
 	onLoadMore: () => void;
@@ -121,10 +122,22 @@ export function useHorizontalGallery({
 }) {
 	const viewportRef = useRef<HTMLElement>(null);
 	const anchorRef = useRef<ScrollAnchor | null>(null);
+	const contentAnchorRef = useRef<ScrollAnchor | null>(null);
 	const scrollAnimationRef = useRef<AnimationPlaybackControls | null>(null);
 	const [rows, setRows] = useState<GalleryRows>(2);
 	const [zoomDirection, setZoomDirection] = useState<"in" | "out">("in");
 	const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+	const itemKey = itemIds.join(":");
+	const itemCount = itemIds.length;
+	const previousItemKeyRef = useRef(itemKey);
+	const [storedSlots, setStoredSlots] = useState(() =>
+		gallerySlotState(null, itemIds, rows),
+	);
+	let slots = storedSlots;
+	if (storedSlots.rows !== rows || storedSlots.itemIds.join(":") !== itemKey) {
+		slots = gallerySlotState(storedSlots, itemIds, rows);
+		setStoredSlots(slots);
+	}
 	const contentSize = `${itemCount}:${rows}`;
 
 	const loadNearEnd = useCallback(() => {
@@ -273,40 +286,52 @@ export function useHorizontalGallery({
 	}, [changeRows, itemCount]);
 
 	useLayoutEffect(() => {
-		const anchor = anchorRef.current;
 		const viewport = viewportRef.current;
-		if (!anchor || !viewport) return;
+		if (!viewport) return;
+		const zoomAnchor = anchorRef.current;
+		const itemsChanged = previousItemKeyRef.current !== itemKey;
+		const anchor =
+			zoomAnchor ?? (itemsChanged ? contentAnchorRef.current : null);
 		anchorRef.current = null;
-		const plate = viewport.querySelector<HTMLElement>(
-			`[data-gallery-current] [data-photo-id="${CSS.escape(anchor.photoId)}"]`,
-		);
-		if (!plate) return;
-		const x = Number(plate.dataset.galleryX);
-		const width = Number(plate.dataset.galleryWidth);
-		if (!Number.isFinite(x) || !Number.isFinite(width)) return;
-		const spacer = viewport.querySelector<HTMLElement>("[data-gallery-spacer]");
-		const contentWidth = Number(spacer?.dataset.galleryWidth);
-		const maxScroll = Number.isFinite(contentWidth)
-			? Math.max(0, contentWidth - viewport.clientWidth)
-			: viewport.scrollWidth - viewport.clientWidth;
-		const target = Math.max(
-			0,
-			Math.min(
-				x + width * anchor.plateFraction - anchor.viewportOffset,
-				maxScroll,
-			),
-		);
-		scrollAnimationRef.current?.stop();
-		if (reduceMotion) {
-			viewport.scrollLeft = target;
-			return;
+		previousItemKeyRef.current = itemKey;
+
+		if (anchor) {
+			const plate = viewport.querySelector<HTMLElement>(
+				`[data-gallery-current] [data-photo-id="${CSS.escape(anchor.photoId)}"]`,
+			);
+			if (plate) {
+				const x = Number(plate.dataset.galleryX);
+				const width = Number(plate.dataset.galleryWidth);
+				const spacer = viewport.querySelector<HTMLElement>(
+					"[data-gallery-spacer]",
+				);
+				const contentWidth = Number(spacer?.dataset.galleryWidth);
+				if (Number.isFinite(x) && Number.isFinite(width)) {
+					const maxScroll = Number.isFinite(contentWidth)
+						? Math.max(0, contentWidth - viewport.clientWidth)
+						: viewport.scrollWidth - viewport.clientWidth;
+					const target = Math.max(
+						0,
+						Math.min(
+							x + width * anchor.plateFraction - anchor.viewportOffset,
+							maxScroll,
+						),
+					);
+					scrollAnimationRef.current?.stop();
+					if (itemsChanged || reduceMotion) {
+						viewport.scrollLeft = target;
+					} else {
+						scrollAnimationRef.current = animate(viewport.scrollLeft, target, {
+							...GALLERY_SPRING,
+							onUpdate: (value) => {
+								viewport.scrollLeft = value;
+							},
+						});
+					}
+				}
+			}
 		}
-		scrollAnimationRef.current = animate(viewport.scrollLeft, target, {
-			...GALLERY_SPRING,
-			onUpdate: (value) => {
-				viewport.scrollLeft = value;
-			},
-		});
+		contentAnchorRef.current = firstVisibleAnchor(viewport);
 	});
 
 	useEffect(
@@ -316,12 +341,19 @@ export function useHorizontalGallery({
 		[],
 	);
 
+	const onScroll = useCallback(() => {
+		const viewport = viewportRef.current;
+		if (viewport) contentAnchorRef.current = firstVisibleAnchor(viewport);
+		loadNearEnd();
+	}, [loadNearEnd]);
+
 	return {
 		viewportRef,
 		viewportSize,
 		rows,
+		slots: slots.slots,
 		zoomDirection,
-		onScroll: loadNearEnd,
+		onScroll,
 		zoomIn: () => changeRows("in"),
 		zoomOut: () => changeRows("out"),
 		canZoomIn: rows > 1,

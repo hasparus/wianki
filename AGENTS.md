@@ -34,8 +34,10 @@ rows share that stable height without moving the page around; plain minus/plus
 icons provide the same zoom for non-touch input.
 Density changes use explicit, column-major plate geometry. Motion crossfades
 the complete old and new layout layers with a restrained scale, so individual
-plates never fly through or cross one another. Never hand placement to CSS Grid
-reflow or animate each plate between row levels.
+plates never fly through or cross one another. Polling reserves complete logical
+columns for new photos and anchors the first visible plate, preventing existing
+photos from changing rows or shifting in the viewport. Never hand placement to
+CSS Grid reflow or animate each plate between row levels.
 Every plate blurs up from a stored 8px placeholder. It is DOM, not WebGL, on
 purpose: a WebGL grid was measured and lost on time to first plates, texture
 stalls and memory. One addition on top: live slideshow (`/pokaz`, editor

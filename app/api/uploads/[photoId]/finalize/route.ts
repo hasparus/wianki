@@ -23,7 +23,13 @@ const bodySchema = z.object({
 	derivativeType: z.enum(acceptedDerivativeTypes),
 	width: z.number().int().positive().max(20_000),
 	height: z.number().int().positive().max(20_000),
-	blurDataUrl: z.string().max(MAX_BLUR_DATA_URL_LENGTH).nullable().optional(),
+	blurDataUrl: z.preprocess(
+		(value) =>
+			typeof value === "string" && value.length > MAX_BLUR_DATA_URL_LENGTH
+				? null
+				: value,
+		z.string().nullable().optional(),
+	),
 });
 
 async function moderateFinalizedPhoto(

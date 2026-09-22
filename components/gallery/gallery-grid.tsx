@@ -2,12 +2,12 @@ import {
 	AnimatePresence,
 	motion,
 	type Transition,
-	usePresence,
+	useIsPresent,
 	useReducedMotion,
 } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { memo, useEffect } from "react";
+import { memo } from "react";
 import {
 	type GalleryGeometry,
 	type GalleryRows,
@@ -48,7 +48,6 @@ type GalleryLayerProps = {
 	width: number;
 	direction: ZoomDirection;
 	transition: Transition;
-	reduceMotion: boolean;
 	onSelect: (item: GalleryItem) => void;
 };
 
@@ -113,37 +112,22 @@ function GalleryLayer({
 	width,
 	direction,
 	transition,
-	reduceMotion,
 	onSelect,
 }: GalleryLayerProps) {
-	const [isPresent, safeToRemove] = usePresence();
-
-	useEffect(() => {
-		if (isPresent) return;
-		if (reduceMotion) {
-			safeToRemove();
-			return;
-		}
-		const timer = window.setTimeout(safeToRemove, 260);
-		return () => window.clearTimeout(timer);
-	}, [isPresent, reduceMotion, safeToRemove]);
+	const isPresent = useIsPresent();
 
 	return (
 		<motion.ul
 			data-gallery-current={isPresent ? "" : undefined}
 			data-gallery-width={width}
 			aria-hidden={!isPresent}
+			inert={!isPresent}
 			className={`absolute inset-y-0 left-0 origin-center ${isPresent ? "z-0" : "pointer-events-none z-10"}`}
-			initial={{ scale: direction === "in" ? 0.97 : 1.03 }}
-			animate={{ scale: 1 }}
+			initial={{ opacity: 0, scale: direction === "in" ? 0.97 : 1.03 }}
+			animate={{ opacity: 1, scale: 1 }}
+			exit={{ opacity: 0 }}
 			transition={transition}
-			style={{
-				width,
-				opacity: isPresent ? 1 : 0,
-				transition: reduceMotion
-					? "none"
-					: "opacity 240ms cubic-bezier(0.22, 1, 0.36, 1)",
-			}}
+			style={{ width }}
 		>
 			{items.map((item, index) => {
 				const itemGeometry = geometry[index];
@@ -176,7 +160,7 @@ export function GalleryGrid({
 	const reduceMotion = useReducedMotion() ?? false;
 	const transition = reduceMotion ? REDUCED_TRANSITION : LAYER_TRANSITION;
 	const gallery = useHorizontalGallery({
-		itemCount: items.length,
+		itemIds: items.map((item) => item.id),
 		hasMore,
 		pending,
 		onLoadMore,
@@ -187,6 +171,8 @@ export function GalleryGrid({
 		gallery.rows,
 		gallery.viewportSize.width,
 		gallery.viewportSize.height,
+		2,
+		gallery.slots,
 	);
 
 	return (
@@ -275,7 +261,7 @@ export function GalleryGrid({
 						tabIndex={0}
 						aria-label="Zdjęcia"
 						aria-describedby="gallery-scroll-help"
-						className="relative left-1/2 mt-6 min-h-0 w-[100dvw] flex-1 -translate-x-1/2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-gutter:stable] [touch-action:pan-x] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink sm:mt-8"
+						className="relative left-1/2 mt-6 min-h-0 w-[100dvw] flex-1 -translate-x-1/2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-gutter:stable] [touch-action:pan-x_pan-y] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink sm:mt-8"
 					>
 						<div
 							data-gallery-spacer
@@ -297,7 +283,6 @@ export function GalleryGrid({
 									width={layout.width}
 									direction={gallery.zoomDirection}
 									transition={transition}
-									reduceMotion={reduceMotion}
 									onSelect={onSelect}
 								/>
 							</AnimatePresence>

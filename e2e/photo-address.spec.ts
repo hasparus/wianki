@@ -34,7 +34,6 @@ test.describe("a photograph has an address", () => {
 			browserName === "webkit",
 			"WebKit cannot retain the secure guest session on the local HTTP test origin.",
 		);
-		await page.clock.install();
 		await page.route("**/api/gallery*", async (route) => {
 			await route.fulfill({
 				json: {
@@ -47,7 +46,10 @@ test.describe("a photograph has an address", () => {
 	});
 
 	/** The server page cannot reach Supabase in tests; the poll brings the photos. */
-	async function pollGallery(page: import("@playwright/test").Page) {
+	async function pollGallery(
+		page: import("@playwright/test").Page,
+		advanceClock = true,
+	) {
 		// The interval is registered on hydration, so wait for the page to live.
 		await expect(
 			page.getByRole("button", { name: "Wybierz zdjęcia" }),
@@ -56,19 +58,23 @@ test.describe("a photograph has an address", () => {
 			window.scrollTo(0, document.documentElement.scrollHeight),
 		);
 		const plates = page.getByRole("button", { name: "Powiększ zdjęcie" });
-		await expect
-			.poll(async () => {
-				await page.clock.fastForward(11_000);
-				return plates.count();
-			})
-			.toBeGreaterThan(0);
+		if (advanceClock) {
+			await expect
+				.poll(async () => {
+					await page.clock.fastForward(11_000);
+					return plates.count();
+				})
+				.toBeGreaterThan(0);
+			return;
+		}
+		await expect(plates.first()).toBeVisible({ timeout: 15_000 });
 	}
 
 	test("fills the screen, scrolls sideways, and pinches without changing height", async ({
 		page,
 	}) => {
 		await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
-		await pollGallery(page);
+		await pollGallery(page, false);
 
 		const rail = page.getByRole("region", { name: "Zdjęcia", exact: true });
 		await rail.scrollIntoViewIfNeeded();
@@ -192,7 +198,14 @@ test.describe("a photograph has an address", () => {
 		);
 		await pinch(60, 90);
 		await expect(rail.locator("ul")).toHaveCount(2);
-		await expect(rail.locator('ul[aria-hidden="true"]')).toHaveCount(1);
+		const outgoingAfterZoomIn = rail.locator('ul[aria-hidden="true"]');
+		await expect(outgoingAfterZoomIn).toHaveCount(1);
+		await expect(outgoingAfterZoomIn).toHaveAttribute("inert", "");
+		expect(
+			await outgoingAfterZoomIn.evaluate(
+				(element) => (element as HTMLElement).inert,
+			),
+		).toBe(true);
 		expect(
 			await currentPlate().evaluate((element) => element.clientHeight),
 		).toBe(before.height);
@@ -201,7 +214,9 @@ test.describe("a photograph has an address", () => {
 
 		await pinch(90, 45);
 		await expect(rail.locator("ul")).toHaveCount(2);
-		await expect(rail.locator('ul[aria-hidden="true"]')).toHaveCount(1);
+		const outgoingAfterZoomOut = rail.locator('ul[aria-hidden="true"]');
+		await expect(outgoingAfterZoomOut).toHaveCount(1);
+		await expect(outgoingAfterZoomOut).toHaveAttribute("inert", "");
 		expect(
 			await currentPlate().evaluate((element) => element.clientHeight),
 		).toBe(plateHeight);
@@ -224,11 +239,131 @@ test.describe("a photograph has an address", () => {
 			background: "rgba(0, 0, 0, 0)",
 			border: "0px",
 		});
+		expect(
+			await rail.evaluate((element) => getComputedStyle(element).touchAction),
+		).toBe("pan-x pan-y");
+
+		const cdp = await page.context().newCDPSession(page);
+		await cdp.send("Emulation.setTouchEmulationEnabled", {
+			enabled: true,
+			maxTouchPoints: 2,
+		});
+		await rail.scrollIntoViewIfNeeded();
+		const touchTarget = await rail.boundingBox();
+		const scrollBeforeTouch = await page.evaluate(() => window.scrollY);
+		const x = (touchTarget?.x ?? 0) + (touchTarget?.width ?? 0) / 2;
+		const startY = (touchTarget?.y ?? 0) + (touchTarget?.height ?? 0) / 2;
+		await cdp.send("Input.dispatchTouchEvent", {
+			type: "touchStart",
+			touchPoints: [{ x, y: startY, id: 1 }],
+		});
+		for (let distance = 20; distance <= 100; distance += 20) {
+			await cdp.send("Input.dispatchTouchEvent", {
+				type: "touchMove",
+				touchPoints: [{ x, y: startY + distance, id: 1 }],
+			});
+		}
+		await cdp.send("Input.dispatchTouchEvent", {
+			type: "touchEnd",
+			touchPoints: [],
+		});
+		await expect
+			.poll(() => page.evaluate(() => window.scrollY))
+			.toBeLessThan(scrollBeforeTouch);
+	});
+
+	test("keeps the viewed photograph still when polling prepends photos", async ({
+		page,
+	}) => {
+		await page.clock.install();
+		await page.unroute("**/api/gallery*");
+		let feed = photos;
+		await page.route("**/api/gallery*", async (route) => {
+			await route.fulfill({
+				json: {
+					items: feed,
+					nextCursor: null,
+					stats: { approvedPhotos: feed.length },
+				},
+			});
+		});
+		await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
+		await pollGallery(page);
+
+		const rail = page.getByRole("region", { name: "Zdjęcia", exact: true });
+		await rail.scrollIntoViewIfNeeded();
+		await rail.evaluate((element) => {
+			element.scrollLeft = 400;
+		});
+		const focalPosition = () =>
+			rail.evaluate((element) => {
+				const viewport = element.getBoundingClientRect();
+				const plate = Array.from(
+					element.querySelectorAll<HTMLElement>(
+						"[data-gallery-current] [data-photo-id]",
+					),
+				).find(
+					(candidate) =>
+						candidate.getBoundingClientRect().right > viewport.left + 1,
+				);
+				if (!plate) return null;
+				const rect = plate.getBoundingClientRect();
+				return {
+					id: plate.dataset.photoId,
+					x: rect.left - viewport.left,
+					y: rect.top - viewport.top,
+				};
+			});
+		const before = await focalPosition();
+		expect(before).not.toBeNull();
+
+		const prependAndExpectStable = async (id: string) => {
+			feed = [
+				{
+					id,
+					imageUrl: pixel,
+					width: 3,
+					height: 4,
+					createdAt: new Date().toISOString(),
+				},
+				...feed,
+			];
+			await page.clock.fastForward(11_000);
+			await expect(
+				rail.locator("[data-gallery-current] [data-photo-id]"),
+			).toHaveCount(feed.length);
+			const after = await focalPosition();
+			expect(after?.id).toBe(before?.id);
+			expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0))).toBeLessThanOrEqual(
+				1,
+			);
+			expect(Math.abs((after?.y ?? 0) - (before?.y ?? 0))).toBeLessThanOrEqual(
+				1,
+			);
+		};
+
+		await prependAndExpectStable("fresh-photo-1");
+		await prependAndExpectStable("fresh-photo-2");
+	});
+
+	test("removes outgoing layers immediately when motion is reduced", async ({
+		page,
+	}) => {
+		await page.clock.install();
+		await page.emulateMedia({ reducedMotion: "reduce" });
+		await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
+		await pollGallery(page);
+
+		const rail = page.getByRole("region", { name: "Zdjęcia", exact: true });
+		await page.getByRole("button", { name: "Większe zdjęcia" }).click();
+		await expect(rail.locator("ul")).toHaveCount(1);
+		await expect(rail.locator('ul[aria-hidden="true"]')).toHaveCount(0);
 	});
 
 	test("opening a photo writes it into the URL and closing takes it back out", async ({
 		page,
 	}) => {
+		await page.clock.install();
 		await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
 		await pollGallery(page);
 
@@ -246,6 +381,7 @@ test.describe("a photograph has an address", () => {
 	});
 
 	test("a shared address opens that photograph", async ({ page }) => {
+		await page.clock.install();
 		await page.goto(
 			"/?token=e2e_guest_entry_token_value_32_bytes&p=photo-taniec",
 		);
