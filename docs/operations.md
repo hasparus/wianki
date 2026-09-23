@@ -25,6 +25,17 @@
   from the admin panel afterwards.
 - Archive down -> gallery keeps running, reconcile later.
 
+## Historical gallery placeholders
+
+New uploads store tiny JPEG blur placeholders. Photos uploaded before that
+feature have none and can appear to paint progressively on slow connections.
+After the blur placeholder migration has been applied, inspect the number of
+missing previews with `node scripts/backfill-blur-placeholders.ts` (dry run),
+then run `node scripts/backfill-blur-placeholders.ts --apply`. It downloads only
+approved, EXIF-free derivatives from the private gallery bucket into memory,
+stores the 8px preview, and can be rerun safely; it does not touch originals.
+Never commit the local environment files or downloaded photos.
+
 ## Recovery and rotation
 
 | Leaked | Rotate |

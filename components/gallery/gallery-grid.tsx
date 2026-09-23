@@ -7,7 +7,7 @@ import {
 } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { memo } from "react";
+import { memo, useState } from "react";
 import {
 	type GalleryGeometry,
 	type GalleryRows,
@@ -39,14 +39,11 @@ type PlateProps = {
 	onSelect: (item: GalleryItem) => void;
 };
 
-type ZoomDirection = "in" | "out";
-
 type GalleryLayerProps = {
 	items: GalleryItem[];
 	rows: GalleryRows;
 	geometry: GalleryGeometry[];
 	width: number;
-	direction: ZoomDirection;
 	transition: Transition;
 	onSelect: (item: GalleryItem) => void;
 };
@@ -64,6 +61,7 @@ const Plate = memo(function Plate({
 	geometry,
 	onSelect,
 }: PlateProps) {
+	const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
 	const sizes =
 		rows === 1
 			? "(max-width: 640px) 90vw, 34rem"
@@ -89,6 +87,13 @@ const Plate = memo(function Plate({
 				className="group relative block h-full w-full overflow-hidden bg-ma-ash/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink"
 				aria-label="Powiększ zdjęcie"
 			>
+				{item.blurDataUrl ? (
+					<span
+						aria-hidden
+						className="absolute inset-0 scale-110 bg-cover bg-center blur-xl"
+						style={{ backgroundImage: `url("${item.blurDataUrl}")` }}
+					/>
+				) : null}
 				<Image
 					src={item.imageUrl}
 					alt=""
@@ -96,9 +101,8 @@ const Plate = memo(function Plate({
 					sizes={sizes}
 					unoptimized
 					draggable={false}
-					placeholder={item.blurDataUrl ? "blur" : "empty"}
-					blurDataURL={item.blurDataUrl ?? undefined}
-					className="object-cover group-hover:opacity-85"
+					onLoad={() => setLoadedUrl(item.imageUrl)}
+					className={`object-cover transition-opacity duration-150 motion-reduce:transition-none ${loadedUrl === item.imageUrl ? "opacity-100 group-hover:opacity-85" : "opacity-0"}`}
 				/>
 			</button>
 		</li>
@@ -110,7 +114,6 @@ function GalleryLayer({
 	rows,
 	geometry,
 	width,
-	direction,
 	transition,
 	onSelect,
 }: GalleryLayerProps) {
@@ -118,13 +121,14 @@ function GalleryLayer({
 
 	return (
 		<motion.ul
+			data-gallery-layer
 			data-gallery-current={isPresent ? "" : undefined}
 			data-gallery-width={width}
 			aria-hidden={!isPresent}
 			inert={!isPresent}
 			className={`absolute inset-y-0 left-0 origin-center ${isPresent ? "z-0" : "pointer-events-none z-10"}`}
-			initial={{ opacity: 0, scale: direction === "in" ? 0.97 : 1.03 }}
-			animate={{ opacity: 1, scale: 1 }}
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
 			transition={transition}
 			style={{ width }}
@@ -281,7 +285,6 @@ export function GalleryGrid({
 									rows={gallery.rows}
 									geometry={layout.items}
 									width={layout.width}
-									direction={gallery.zoomDirection}
 									transition={transition}
 									onSelect={onSelect}
 								/>

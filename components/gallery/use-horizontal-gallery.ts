@@ -1,4 +1,3 @@
-import { type AnimationPlaybackControls, animate } from "motion";
 import {
 	useCallback,
 	useEffect,
@@ -7,7 +6,6 @@ import {
 	useState,
 } from "react";
 import {
-	GALLERY_SPRING,
 	type GalleryRows,
 	galleryRowsAfterZoom,
 	gallerySlotState,
@@ -123,9 +121,7 @@ export function useHorizontalGallery({
 	const viewportRef = useRef<HTMLElement>(null);
 	const anchorRef = useRef<ScrollAnchor | null>(null);
 	const contentAnchorRef = useRef<ScrollAnchor | null>(null);
-	const scrollAnimationRef = useRef<AnimationPlaybackControls | null>(null);
 	const [rows, setRows] = useState<GalleryRows>(2);
-	const [zoomDirection, setZoomDirection] = useState<"in" | "out">("in");
 	const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 	const itemKey = itemIds.join(":");
 	const itemCount = itemIds.length;
@@ -200,11 +196,13 @@ export function useHorizontalGallery({
 			if (next === rows) return;
 			const viewport = viewportRef.current;
 			if (viewport) {
-				anchorRef.current = focalPoint
-					? focalAnchor(viewport, focalPoint.x, focalPoint.y)
-					: firstVisibleAnchor(viewport);
+				const rect = viewport.getBoundingClientRect();
+				anchorRef.current = focalAnchor(
+					viewport,
+					focalPoint?.x ?? rect.left + rect.width / 2,
+					focalPoint?.y ?? rect.top + rect.height / 2,
+				);
 			}
-			setZoomDirection(direction);
 			setRows(next);
 		},
 		[rows],
@@ -317,29 +315,20 @@ export function useHorizontalGallery({
 							maxScroll,
 						),
 					);
-					scrollAnimationRef.current?.stop();
-					if (itemsChanged || reduceMotion) {
-						viewport.scrollLeft = target;
-					} else {
-						scrollAnimationRef.current = animate(viewport.scrollLeft, target, {
-							...GALLERY_SPRING,
-							onUpdate: (value) => {
-								viewport.scrollLeft = value;
-							},
-						});
+					const adjustment = target - viewport.scrollLeft;
+					if (zoomAnchor && !reduceMotion) {
+						for (const outgoing of viewport.querySelectorAll<HTMLElement>(
+							"[data-gallery-layer]:not([data-gallery-current])",
+						)) {
+							outgoing.style.left = `${Number.parseFloat(outgoing.style.left || "0") + adjustment}px`;
+						}
 					}
+					viewport.scrollLeft = target;
 				}
 			}
 		}
 		contentAnchorRef.current = firstVisibleAnchor(viewport);
 	});
-
-	useEffect(
-		() => () => {
-			scrollAnimationRef.current?.stop();
-		},
-		[],
-	);
 
 	const onScroll = useCallback(() => {
 		const viewport = viewportRef.current;
@@ -352,7 +341,6 @@ export function useHorizontalGallery({
 		viewportSize,
 		rows,
 		slots: slots.slots,
-		zoomDirection,
 		onScroll,
 		zoomIn: () => changeRows("in"),
 		zoomOut: () => changeRows("out"),

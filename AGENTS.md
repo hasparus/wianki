@@ -33,9 +33,12 @@ viewport below its controls: guests swipe sideways and pinch to change how many
 rows share that stable height without moving the page around; plain minus/plus
 icons provide the same zoom for non-touch input.
 Density changes use explicit, column-major plate geometry. Motion crossfades
-the complete old and new layout layers with a restrained scale, so individual
-plates never fly through or cross one another. Polling reserves complete logical
-columns for new photos and anchors the first visible plate, preventing existing
+the complete old and new layout layers without scaling or moving individual
+plates. Button zoom anchors the nearest middle photo; a pinch anchors its own
+focal point. Scroll offset is corrected before paint, and the outgoing layer
+is counter-shifted so the old layout stays still during the crossfade.
+Polling reserves complete logical columns for new photos and anchors the first
+visible plate, preventing existing
 photos from changing rows or shifting in the viewport. Never hand placement to
 CSS Grid reflow or animate each plate between row levels.
 Every plate blurs up from a stored 8px placeholder. It is DOM, not WebGL, on
