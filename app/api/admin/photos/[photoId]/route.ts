@@ -156,6 +156,7 @@ export async function DELETE(
 		.from("photos")
 		.update({
 			hot_status: storageError ? "failed" : "deleted",
+			blur_data_url: null,
 			archive_status: archiveStatus,
 			moderation_status: "rejected",
 			last_error: errors.join(" | ") || null,

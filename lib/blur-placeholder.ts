@@ -1,4 +1,4 @@
-import { MAX_BLUR_DATA_URL_LENGTH } from "@/lib/domain";
+import { MAX_BLUR_DATA_URL_LENGTH } from "./domain.ts";
 
 const JPEG_DATA_URL_PREFIX = "data:image/jpeg;base64,";
 

@@ -62,7 +62,8 @@ drop out once neither copy has a retryable action.
 reconcile_archive`.
 
 **`DELETE /api/admin/photos/:photoId`** — removes derivative and original,
-records partial failure, keeps the row as an audit and retry tombstone.
+clears the blur placeholder even on partial failure, records that failure, and
+keeps the row as an audit and retry tombstone.
 
 ## Slideshow APIs
 

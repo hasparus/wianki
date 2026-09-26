@@ -2,13 +2,6 @@ export const GALLERY_ROW_LEVELS = [1, 2, 3] as const;
 
 export type GalleryRows = (typeof GALLERY_ROW_LEVELS)[number];
 
-export const GALLERY_SPRING = {
-	type: "spring" as const,
-	stiffness: 520,
-	damping: 48,
-	mass: 0.72,
-};
-
 export type GalleryGeometry = {
 	x: number;
 	y: number;

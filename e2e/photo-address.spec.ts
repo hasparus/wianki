@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import sharp from "sharp";
 
 /** A 1×1 transparent PNG: enough for next/image, small enough to inline. */
 const pixel =
@@ -69,6 +70,118 @@ test.describe("a photograph has an address", () => {
 		}
 		await expect(plates.first()).toBeVisible({ timeout: 15_000 });
 	}
+
+	test("shows a stored blur preview while the full photograph is still loading", async ({
+		page,
+	}) => {
+		await page.clock.install();
+		const tiny = await sharp({
+			create: {
+				width: 8,
+				height: 8,
+				channels: 3,
+				background: "#555555",
+			},
+		})
+			.jpeg()
+			.toBuffer();
+		const blurDataUrl = `data:image/jpeg;base64,${tiny.toString("base64")}`;
+		await page.unroute("**/api/gallery*");
+		await page.route("**/api/gallery*", async (route) => {
+			await route.fulfill({
+				json: {
+					items: [
+						{
+							...photos[0],
+							imageUrl: "https://photos.example.test/photo.jpg",
+							blurDataUrl,
+						},
+					],
+					nextCursor: null,
+					stats: { approvedPhotos: 1 },
+				},
+			});
+		});
+		let releaseImage: (() => void) | undefined;
+		await page.route("https://photos.example.test/photo.jpg", async (route) => {
+			await new Promise<void>((resolve) => {
+				releaseImage = resolve;
+			});
+			await route.fulfill({
+				contentType: "image/jpeg",
+				body: tiny,
+			});
+		});
+		try {
+			await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
+			await pollGallery(page);
+			const image = page.locator(
+				'[data-gallery-current] img[src*="photos.example.test"]',
+			);
+			await expect(image).toBeVisible();
+			const preview = page.locator(
+				"[data-gallery-current] [data-photo-id] span[aria-hidden]",
+			);
+			await expect(preview).toHaveCSS("background-image", /data:image\/jpeg/);
+			await expect(image).toHaveCSS("opacity", "0");
+			await expect.poll(() => Boolean(releaseImage)).toBe(true);
+			releaseImage?.();
+			await expect(image).toHaveClass(/opacity-100/);
+		} finally {
+			releaseImage?.();
+		}
+	});
+
+	test("does not hide a legacy photograph that has no blur preview", async ({
+		page,
+	}) => {
+		await page.clock.install();
+		await page.unroute("**/api/gallery*");
+		await page.route("**/api/gallery*", async (route) => {
+			await route.fulfill({
+				json: {
+					items: [
+						{
+							...photos[0],
+							imageUrl: "https://photos.example.test/legacy.jpg",
+							blurDataUrl: null,
+						},
+					],
+					nextCursor: null,
+					stats: { approvedPhotos: 1 },
+				},
+			});
+		});
+		let releaseImage: (() => void) | undefined;
+		await page.route(
+			"https://photos.example.test/legacy.jpg",
+			async (route) => {
+				await new Promise<void>((resolve) => {
+					releaseImage = resolve;
+				});
+				await route.fulfill({
+					contentType: "image/jpeg",
+					body: Buffer.from([]),
+				});
+			},
+		);
+		try {
+			await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
+			await pollGallery(page);
+			const image = page.locator(
+				'[data-gallery-current] img[src*="legacy.jpg"]',
+			);
+			await expect(image).toBeVisible();
+			await expect(image).toHaveCSS("opacity", "1");
+			await expect(
+				page.locator(
+					"[data-gallery-current] [data-photo-id] span[aria-hidden]",
+				),
+			).toHaveCount(0);
+		} finally {
+			releaseImage?.();
+		}
+	});
 
 	test("fills the screen, scrolls sideways, and pinches without changing height", async ({
 		page,
@@ -270,6 +383,87 @@ test.describe("a photograph has an address", () => {
 		await expect
 			.poll(() => page.evaluate(() => window.scrollY))
 			.toBeLessThan(scrollBeforeTouch);
+	});
+
+	test("keeps the middle photo fixed during button zoom without sliding the outgoing rail", async ({
+		page,
+	}) => {
+		await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
+		await pollGallery(page, false);
+
+		const rail = page.getByRole("region", { name: "Zdjęcia", exact: true });
+		await rail.scrollIntoViewIfNeeded();
+		await rail.evaluate((element) => {
+			element.scrollLeft = Math.min(
+				900,
+				element.scrollWidth - element.clientWidth,
+			);
+		});
+		const middlePhoto = () =>
+			rail.evaluate((element) => {
+				const viewport = element.getBoundingClientRect();
+				const x = viewport.left + viewport.width / 2;
+				const y = viewport.top + viewport.height / 2;
+				const plate = Array.from(
+					element.querySelectorAll<HTMLElement>(
+						"[data-gallery-current] [data-photo-id]",
+					),
+				).reduce<HTMLElement | null>((nearest, candidate) => {
+					const distance = (photo: HTMLElement) => {
+						const rect = photo.getBoundingClientRect();
+						return Math.hypot(
+							Math.max(rect.left - x, 0, x - rect.right),
+							Math.max(rect.top - y, 0, y - rect.bottom),
+						);
+					};
+					return !nearest || distance(candidate) < distance(nearest)
+						? candidate
+						: nearest;
+				}, null);
+				if (!plate) return null;
+				const rect = plate.getBoundingClientRect();
+				return {
+					id: plate.dataset.photoId ?? "",
+					left: rect.left,
+					width: rect.width,
+					focalX: Math.max(rect.left, Math.min(x, rect.right)),
+				};
+			});
+		const before = await middlePhoto();
+		expect(before).not.toBeNull();
+
+		await page.getByRole("button", { name: "Większe zdjęcia" }).click();
+		const outgoing = rail.locator('ul[aria-hidden="true"]');
+		await expect(outgoing).toHaveCount(1);
+		const photoId = before?.id ?? "";
+		const after = await rail.evaluate((element, id) => {
+			const oldPlate = element.querySelector<HTMLElement>(
+				`ul[aria-hidden="true"] [data-photo-id="${CSS.escape(id)}"]`,
+			);
+			const newPlate = element.querySelector<HTMLElement>(
+				`[data-gallery-current] [data-photo-id="${CSS.escape(id)}"]`,
+			);
+			const viewport = element.getBoundingClientRect();
+			return {
+				oldLeft: oldPlate?.getBoundingClientRect().left,
+				newLeft: newPlate?.getBoundingClientRect().left,
+				newWidth: newPlate?.getBoundingClientRect().width,
+				viewportCenter: viewport.left + viewport.width / 2,
+			};
+		}, photoId);
+		expect(
+			Math.abs((after.oldLeft ?? 0) - (before?.left ?? 0)),
+		).toBeLessThanOrEqual(1);
+		const fraction =
+			((before?.focalX ?? 0) - (before?.left ?? 0)) / (before?.width ?? 1);
+		expect(
+			Math.abs(
+				(after.newLeft ?? 0) +
+					fraction * (after.newWidth ?? 0) -
+					after.viewportCenter,
+			),
+		).toBeLessThanOrEqual(2);
+		await expect(outgoing).toHaveCount(0);
 	});
 
 	test("keeps the viewed photograph still when polling prepends photos", async ({
