@@ -102,7 +102,7 @@ const Plate = memo(function Plate({
 					unoptimized
 					draggable={false}
 					onLoad={() => setLoadedUrl(item.imageUrl)}
-					className={`object-cover transition-opacity duration-150 motion-reduce:transition-none ${loadedUrl === item.imageUrl ? "opacity-100 group-hover:opacity-85" : "opacity-0"}`}
+					className={`object-cover transition-opacity duration-150 motion-reduce:transition-none ${!item.blurDataUrl || loadedUrl === item.imageUrl ? "opacity-100 group-hover:opacity-85" : "opacity-0"}`}
 				/>
 			</button>
 		</li>

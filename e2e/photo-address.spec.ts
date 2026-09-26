@@ -132,6 +132,57 @@ test.describe("a photograph has an address", () => {
 		}
 	});
 
+	test("does not hide a legacy photograph that has no blur preview", async ({
+		page,
+	}) => {
+		await page.clock.install();
+		await page.unroute("**/api/gallery*");
+		await page.route("**/api/gallery*", async (route) => {
+			await route.fulfill({
+				json: {
+					items: [
+						{
+							...photos[0],
+							imageUrl: "https://photos.example.test/legacy.jpg",
+							blurDataUrl: null,
+						},
+					],
+					nextCursor: null,
+					stats: { approvedPhotos: 1 },
+				},
+			});
+		});
+		let releaseImage: (() => void) | undefined;
+		await page.route(
+			"https://photos.example.test/legacy.jpg",
+			async (route) => {
+				await new Promise<void>((resolve) => {
+					releaseImage = resolve;
+				});
+				await route.fulfill({
+					contentType: "image/jpeg",
+					body: Buffer.from([]),
+				});
+			},
+		);
+		try {
+			await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
+			await pollGallery(page);
+			const image = page.locator(
+				'[data-gallery-current] img[src*="legacy.jpg"]',
+			);
+			await expect(image).toBeVisible();
+			await expect(image).toHaveCSS("opacity", "1");
+			await expect(
+				page.locator(
+					"[data-gallery-current] [data-photo-id] span[aria-hidden]",
+				),
+			).toHaveCount(0);
+		} finally {
+			releaseImage?.();
+		}
+	});
+
 	test("fills the screen, scrolls sideways, and pinches without changing height", async ({
 		page,
 	}) => {

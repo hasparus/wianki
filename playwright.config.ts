@@ -1,10 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = Number(process.env.PLAYWRIGHT_PORT ?? "3000");
+if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+	throw new Error("PLAYWRIGHT_PORT must be a valid port number.");
+}
+const origin = `http://localhost:${port}`;
+
 const ciEnv = {
 	NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
 	NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_e2e",
 	SUPABASE_SECRET_KEY: "sb_secret_e2e",
-	APP_ORIGIN: "http://localhost:3000",
+	APP_ORIGIN: origin,
 	GUEST_ENTRY_TOKEN: "e2e_guest_entry_token_value_32_bytes",
 	GUEST_JOIN_CODE: "e2e-join-code",
 	GUEST_ACCESS_PASSPHRASE: "e2e invitation passphrase",
@@ -26,7 +32,7 @@ export default defineConfig({
 	retries: process.env.CI ? 2 : 0,
 	reporter: process.env.CI ? "github" : "list",
 	use: {
-		baseURL: "http://localhost:3000",
+		baseURL: origin,
 		trace: "on-first-retry",
 	},
 	projects: [
@@ -36,8 +42,8 @@ export default defineConfig({
 	webServer: process.env.PLAYWRIGHT_EXTERNAL_SERVER
 		? undefined
 		: {
-				command: "node node_modules/next/dist/bin/next dev",
-				url: "http://localhost:3000/login",
+				command: `node node_modules/next/dist/bin/next dev --port ${port}`,
+				url: `${origin}/login`,
 				reuseExistingServer: false,
 				env: { ...process.env, ...ciEnv },
 				timeout: 120_000,
