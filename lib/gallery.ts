@@ -63,22 +63,36 @@ export async function getGalleryPage(cursor?: string | null) {
 	const hasMore = rows.length > GALLERY_PAGE_SIZE;
 	const visible = rows.slice(0, GALLERY_PAGE_SIZE);
 	const lastVisible = visible.at(-1);
-	const signed = await Promise.all(
-		visible.map(async (row): Promise<GalleryItem> => {
-			const { data: url, error: urlError } = await supabase.storage
-				.from(GALLERY_BUCKET)
-				.createSignedUrl(row.storage_path, 60 * 60);
-			if (urlError) throw urlError;
-			return {
-				id: row.id,
-				imageUrl: url.signedUrl,
-				width: row.width,
-				height: row.height,
-				blurDataUrl: row.blur_data_url,
-				createdAt: row.created_at,
-			};
-		}),
-	);
+	// One signing request per page, not one per photograph: the page is what
+	// the guest is waiting on while the placeholders stand in the rail.
+	const urls = new Map<string, string>();
+	if (visible.length) {
+		const { data: signedUrls, error: urlError } = await supabase.storage
+			.from(GALLERY_BUCKET)
+			.createSignedUrls(
+				visible.map((row) => row.storage_path),
+				60 * 60,
+			);
+		if (urlError) throw urlError;
+		for (const entry of signedUrls) {
+			if (entry.error || !entry.path || !entry.signedUrl) {
+				throw new Error(entry.error ?? "Nie udało się podpisać zdjęcia.");
+			}
+			urls.set(entry.path, entry.signedUrl);
+		}
+	}
+	const signed = visible.map((row): GalleryItem => {
+		const imageUrl = urls.get(row.storage_path);
+		if (!imageUrl) throw new Error("Nie udało się podpisać zdjęcia.");
+		return {
+			id: row.id,
+			imageUrl,
+			width: row.width,
+			height: row.height,
+			blurDataUrl: row.blur_data_url,
+			createdAt: row.created_at,
+		};
+	});
 	return {
 		items: signed,
 		nextCursor:

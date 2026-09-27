@@ -27,7 +27,9 @@ add production domains unless asked.
 
 V1 excludes video, comments, likes, face recognition, named accounts, Realtime.
 The gallery polls its first page every ten seconds and folds in what is new.
-Older pages arrive as the guest scrolls, never by button. The gallery is a
+Older pages arrive as the guest scrolls, never by button: the rail stands a
+plate for every counted photo from the first paint and fetches the next page
+while the loaded edge is still screens away. The gallery is a
 full-viewport-width horizontal rail that fills the remainder of one dynamic
 viewport below its controls: guests swipe sideways and pinch to change how many
 rows share that stable height without moving the page around; plain minus/plus

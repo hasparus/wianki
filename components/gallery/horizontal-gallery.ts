@@ -86,6 +86,21 @@ export function galleryRowsAfterZoom(
 	return next ?? rows;
 }
 
+export type HorizontalGalleryLayout = {
+	items: GalleryGeometry[];
+	/** Plates held for photographs the server counted but has not sent yet. */
+	placeholders: GalleryGeometry[];
+	/** Right edge of the last loaded photograph; loading more is keyed to it. */
+	loadedWidth: number;
+	width: number;
+};
+
+/**
+ * Lay the rail out for every photograph the gallery holds, not only the pages
+ * loaded so far. `reserved` trailing plates follow the loaded ones in the same
+ * column-major order, so a page arriving by scroll fills plates that were
+ * already standing there instead of growing the rail under the guest.
+ */
 export function horizontalGalleryLayout(
 	items: ReadonlyArray<{ width: number | null; height: number | null }>,
 	rows: GalleryRows,
@@ -93,19 +108,33 @@ export function horizontalGalleryLayout(
 	viewportHeight: number,
 	gap = 2,
 	slots: readonly number[] = items.map((_, index) => index),
-): { items: GalleryGeometry[]; width: number } {
-	if (!items.length || viewportWidth <= 0 || viewportHeight <= 0) {
-		return { items: [], width: viewportWidth };
+	reserved = 0,
+): HorizontalGalleryLayout {
+	if (
+		(!items.length && !reserved) ||
+		viewportWidth <= 0 ||
+		viewportHeight <= 0
+	) {
+		return {
+			items: [],
+			placeholders: [],
+			loadedWidth: 0,
+			width: viewportWidth,
+		};
 	}
 
 	const rowHeight = (viewportHeight - gap * (rows - 1)) / rows;
 	if (rows === 1) {
-		const naturalWidths = items.map((item) =>
-			item.width && item.height
-				? rowHeight * (item.width / item.height)
-				: rowHeight * (4 / 3),
-		);
-		const totalGap = gap * Math.max(0, items.length - 1);
+		const fallbackWidth = rowHeight * (4 / 3);
+		const naturalWidths = [
+			...items.map((item) =>
+				item.width && item.height
+					? rowHeight * (item.width / item.height)
+					: fallbackWidth,
+			),
+			...Array.from({ length: reserved }, () => fallbackWidth),
+		];
+		const totalGap = gap * Math.max(0, naturalWidths.length - 1);
 		const naturalWidth = naturalWidths.reduce((sum, width) => sum + width, 0);
 		const fillScale = Math.max(
 			1,
@@ -118,25 +147,38 @@ export function horizontalGalleryLayout(
 			x += width + gap;
 			return item;
 		});
-		return { items: geometry, width: Math.max(viewportWidth, x - gap) };
+		const loaded = geometry.slice(0, items.length);
+		const lastLoaded = loaded.at(-1);
+		return {
+			items: loaded,
+			placeholders: geometry.slice(items.length),
+			loadedWidth: lastLoaded ? lastLoaded.x + lastLoaded.width : 0,
+			width: Math.max(viewportWidth, x - gap),
+		};
 	}
 
-	const lastSlot = slots.at(-1) ?? -1;
-	const columns = Math.ceil((lastSlot + 1) / rows);
+	const firstReservedSlot = (slots.at(-1) ?? -1) + 1;
+	const columns = Math.ceil((firstReservedSlot + reserved) / rows);
 	const totalGap = gap * Math.max(0, columns - 1);
 	const columnWidth = Math.max(
 		rowHeight,
 		(viewportWidth - totalGap) / Math.max(1, columns),
 	);
-	const geometry = items.map((_, index) => ({
-		x: Math.floor((slots[index] ?? index) / rows) * (columnWidth + gap),
-		y: ((slots[index] ?? index) % rows) * (rowHeight + gap),
+	const place = (slot: number) => ({
+		x: Math.floor(slot / rows) * (columnWidth + gap),
+		y: (slot % rows) * (rowHeight + gap),
 		width: columnWidth,
 		height: rowHeight,
-	}));
+	});
+	const geometry = items.map((_, index) => place(slots[index] ?? index));
+	const lastLoaded = geometry.at(-1);
 
 	return {
 		items: geometry,
+		placeholders: Array.from({ length: reserved }, (_, index) =>
+			place(firstReservedSlot + index),
+		),
+		loadedWidth: lastLoaded ? lastLoaded.x + lastLoaded.width : 0,
 		width: Math.max(viewportWidth, columns * columnWidth + totalGap),
 	};
 }

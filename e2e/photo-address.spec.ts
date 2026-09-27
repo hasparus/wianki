@@ -183,6 +183,64 @@ test.describe("a photograph has an address", () => {
 		}
 	});
 
+	test("stands every counted photograph in the rail and fetches ahead of the guest", async ({
+		page,
+	}) => {
+		await page.clock.install();
+		const page1 = Array.from({ length: 60 }, (_, index) => ({
+			...photos[0],
+			id: `page-1-${index}`,
+		}));
+		const page2 = Array.from({ length: 60 }, (_, index) => ({
+			...photos[0],
+			id: `page-2-${index}`,
+		}));
+		const cursors: string[] = [];
+		await page.unroute("**/api/gallery*");
+		await page.route("**/api/gallery*", async (route) => {
+			const cursor = new URL(route.request().url()).searchParams.get("cursor");
+			if (cursor) cursors.push(cursor);
+			await route.fulfill({
+				json: {
+					items: cursor ? page2 : page1,
+					nextCursor: cursor ? "after-page-2" : "after-page-1",
+					stats: { approvedPhotos: 200 },
+				},
+			});
+		});
+		await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
+		await pollGallery(page);
+
+		const rail = page.getByRole("region", { name: "Zdjęcia", exact: true });
+		const placeholders = page.locator(
+			"[data-gallery-current] li[data-gallery-from-end]:not([data-photo-id])",
+		);
+		await expect(placeholders).toHaveCount(140);
+		const lastPlaceholder = await placeholders.last().evaluate((element) => ({
+			x: Number(element.dataset.galleryX),
+			width: Number(element.dataset.galleryWidth),
+		}));
+		const railWidth = await rail.evaluate((element) => element.scrollWidth);
+		expect(railWidth).toBeGreaterThanOrEqual(
+			Math.floor(lastPlaceholder.x + lastPlaceholder.width),
+		);
+
+		const firstPlaceholderX = Number(
+			await placeholders.first().getAttribute("data-gallery-x"),
+		);
+		expect(cursors).toEqual([]);
+		// Two screens before the loaded edge, the next page is already asked for.
+		await rail.evaluate((element, x) => {
+			element.scrollLeft = Math.max(0, x - element.clientWidth * 3);
+		}, firstPlaceholderX);
+		await expect.poll(() => cursors).toEqual(["after-page-1"]);
+		// The page filled plates that were already standing; the rail did not grow.
+		await expect(placeholders).toHaveCount(80);
+		await expect(
+			page.locator("[data-gallery-current] li[data-gallery-from-end]"),
+		).toHaveCount(200);
+	});
+
 	test("fills the screen, scrolls sideways, and pinches without changing height", async ({
 		page,
 	}) => {

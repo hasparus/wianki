@@ -34,6 +34,7 @@ type GalleryGridProps = {
 
 type PlateProps = {
 	item: GalleryItem;
+	fromEnd: number;
 	rows: GalleryRows;
 	geometry: GalleryGeometry;
 	onSelect: (item: GalleryItem) => void;
@@ -43,6 +44,7 @@ type GalleryLayerProps = {
 	items: GalleryItem[];
 	rows: GalleryRows;
 	geometry: GalleryGeometry[];
+	placeholders: GalleryGeometry[];
 	width: number;
 	transition: Transition;
 	onSelect: (item: GalleryItem) => void;
@@ -55,8 +57,17 @@ const LAYER_TRANSITION = {
 
 const REDUCED_TRANSITION = { duration: 0 } satisfies Transition;
 
+function plateStyle(geometry: GalleryGeometry) {
+	return {
+		width: geometry.width,
+		height: geometry.height,
+		transform: `translate3d(${geometry.x}px, ${geometry.y}px, 0)`,
+	};
+}
+
 const Plate = memo(function Plate({
 	item,
+	fromEnd,
 	rows,
 	geometry,
 	onSelect,
@@ -72,14 +83,11 @@ const Plate = memo(function Plate({
 	return (
 		<li
 			data-photo-id={item.id}
+			data-gallery-from-end={fromEnd}
 			data-gallery-x={geometry.x}
 			data-gallery-width={geometry.width}
 			className="absolute left-0 top-0 [contain:layout_paint]"
-			style={{
-				width: geometry.width,
-				height: geometry.height,
-				transform: `translate3d(${geometry.x}px, ${geometry.y}px, 0)`,
-			}}
+			style={plateStyle(geometry)}
 		>
 			<button
 				type="button"
@@ -109,15 +117,41 @@ const Plate = memo(function Plate({
 	);
 });
 
+/**
+ * A photograph the gallery counted but has not fetched yet. It stands in the
+ * rail from the first paint, so the guest scrolls through plates rather than
+ * off the end; its page fills it with the blur and then the photograph.
+ */
+const PlaceholderPlate = memo(function PlaceholderPlate({
+	fromEnd,
+	geometry,
+}: {
+	fromEnd: number;
+	geometry: GalleryGeometry;
+}) {
+	return (
+		<li
+			aria-hidden
+			data-gallery-from-end={fromEnd}
+			data-gallery-x={geometry.x}
+			data-gallery-width={geometry.width}
+			className="absolute left-0 top-0 bg-ma-ash/40 [contain:strict]"
+			style={plateStyle(geometry)}
+		/>
+	);
+});
+
 function GalleryLayer({
 	items,
 	rows,
 	geometry,
+	placeholders,
 	width,
 	transition,
 	onSelect,
 }: GalleryLayerProps) {
 	const isPresent = useIsPresent();
+	const total = items.length + placeholders.length;
 
 	return (
 		<motion.ul
@@ -139,11 +173,22 @@ function GalleryLayer({
 					<Plate
 						key={item.id}
 						item={item}
+						fromEnd={total - index}
 						rows={rows}
 						geometry={itemGeometry}
 						onSelect={onSelect}
 					/>
 				) : null;
+			})}
+			{placeholders.map((placeholderGeometry, index) => {
+				const fromEnd = placeholders.length - index;
+				return (
+					<PlaceholderPlate
+						key={`placeholder-${fromEnd}`}
+						fromEnd={fromEnd}
+						geometry={placeholderGeometry}
+					/>
+				);
 			})}
 		</motion.ul>
 	);
@@ -163,8 +208,12 @@ export function GalleryGrid({
 }: GalleryGridProps) {
 	const reduceMotion = useReducedMotion() ?? false;
 	const transition = reduceMotion ? REDUCED_TRANSITION : LAYER_TRANSITION;
+	// The count comes with every page, so the rail can stand at full length
+	// while its later pages are still on the way.
+	const reserved = hasMore ? Math.max(0, photoCount - items.length) : 0;
 	const gallery = useHorizontalGallery({
 		itemIds: items.map((item) => item.id),
+		reserved,
 		hasMore,
 		pending,
 		onLoadMore,
@@ -177,6 +226,7 @@ export function GalleryGrid({
 		gallery.viewportSize.height,
 		2,
 		gallery.slots,
+		reserved,
 	);
 
 	return (
@@ -270,6 +320,7 @@ export function GalleryGrid({
 						<div
 							data-gallery-spacer
 							data-gallery-width={layout.width}
+							data-gallery-loaded-end={layout.loadedWidth}
 							aria-hidden
 							className="h-px"
 							style={{ width: layout.width }}
@@ -284,6 +335,7 @@ export function GalleryGrid({
 									items={items}
 									rows={gallery.rows}
 									geometry={layout.items}
+									placeholders={layout.placeholders}
 									width={layout.width}
 									transition={transition}
 									onSelect={onSelect}

@@ -93,4 +93,53 @@ describe("horizontal gallery geometry", () => {
 		const last = layout.items.at(-1);
 		expect(last && last.x + last.width).toBe(1920);
 	});
+
+	it("reserves trailing plates for photographs not loaded yet", () => {
+		const loaded = horizontalGalleryLayout(items.slice(0, 4), 2, 800, 400);
+		const reserved = horizontalGalleryLayout(
+			items.slice(0, 4),
+			2,
+			800,
+			400,
+			2,
+			undefined,
+			96,
+		);
+
+		expect(reserved.placeholders).toHaveLength(96);
+		expect(reserved.width).toBeGreaterThan(loaded.width);
+		expect(reserved.loadedWidth).toBe(
+			reserved.items[3].x + reserved.items[3].width,
+		);
+		expect(reserved.placeholders[0].x).toBeGreaterThan(reserved.items[3].x);
+	});
+
+	it.each([1, 2, 3] as const)(
+		"fills placeholders without moving loaded plates with %i row(s)",
+		(rows) => {
+			const before = horizontalGalleryLayout(
+				items.slice(0, 5),
+				rows,
+				800,
+				400,
+				2,
+				undefined,
+				95,
+			);
+			const after = horizontalGalleryLayout(
+				[...items.slice(0, 5), ...items],
+				rows,
+				800,
+				400,
+				2,
+				undefined,
+				86,
+			);
+			if (rows > 1) {
+				expect(after.width).toBe(before.width);
+				expect(after.items[5]).toEqual(before.placeholders[0]);
+			}
+			expect(after.items.slice(0, 5)).toEqual(before.items);
+		},
+	);
 });

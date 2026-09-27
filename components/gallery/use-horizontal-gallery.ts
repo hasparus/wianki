@@ -11,8 +11,14 @@ import {
 	gallerySlotState,
 } from "@/components/gallery/horizontal-gallery";
 
+/**
+ * A plate is found again by its photograph, or, while it is still an empty
+ * placeholder, by its distance from the end of the rail. That distance holds
+ * when a page fills placeholders and when a poll prepends fresh photographs.
+ */
 type ScrollAnchor = {
-	photoId: string;
+	photoId: string | null;
+	fromEnd: string;
 	plateFraction: number;
 	viewportOffset: number;
 };
@@ -24,15 +30,17 @@ type FocalPoint = {
 
 const PINCH_IN_THRESHOLD = 1.18;
 const PINCH_OUT_THRESHOLD = 0.82;
+/** Fetch the next page while the loaded edge is this many screens away. */
+const LOAD_AHEAD_VIEWPORTS = 2.5;
 
 function plates(viewport: HTMLElement) {
 	const current = viewport.querySelectorAll<HTMLElement>(
-		"[data-gallery-current] [data-photo-id]",
+		"[data-gallery-current] [data-gallery-from-end]",
 	);
 	return Array.from(
 		current.length
 			? current
-			: viewport.querySelectorAll<HTMLElement>("[data-photo-id]"),
+			: viewport.querySelectorAll<HTMLElement>("[data-gallery-from-end]"),
 	);
 }
 
@@ -43,11 +51,18 @@ function firstVisiblePlate(viewport: HTMLElement) {
 	);
 }
 
+function plateAnchor(plate: HTMLElement | undefined) {
+	const fromEnd = plate?.dataset.galleryFromEnd;
+	if (!plate || !fromEnd) return null;
+	return { photoId: plate.dataset.photoId ?? null, fromEnd };
+}
+
 function firstVisibleAnchor(viewport: HTMLElement): ScrollAnchor | null {
 	const plate = firstVisiblePlate(viewport);
-	if (!plate?.dataset.photoId) return null;
+	const anchor = plateAnchor(plate);
+	if (!plate || !anchor) return null;
 	return {
-		photoId: plate.dataset.photoId,
+		...anchor,
 		plateFraction: 0,
 		viewportOffset:
 			plate.getBoundingClientRect().left -
@@ -82,10 +97,11 @@ function focalAnchor(
 			};
 			return distance(candidate) < distance(nearest) ? candidate : nearest;
 		}, undefined);
-	if (!plate?.dataset.photoId) return null;
+	const anchor = plateAnchor(plate);
+	if (!plate || !anchor) return null;
 	const rect = plate.getBoundingClientRect();
 	return {
-		photoId: plate.dataset.photoId,
+		...anchor,
 		plateFraction: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)),
 		viewportOffset: clientX - viewportRect.left,
 	};
@@ -107,12 +123,15 @@ function touchCenter(touches: TouchList): FocalPoint {
 
 export function useHorizontalGallery({
 	itemIds,
+	reserved,
 	hasMore,
 	pending,
 	onLoadMore,
 	reduceMotion,
 }: {
 	itemIds: readonly string[];
+	/** Placeholder plates standing in for photographs not fetched yet. */
+	reserved: number;
 	hasMore: boolean;
 	pending: boolean;
 	onLoadMore: () => void;
@@ -123,14 +142,18 @@ export function useHorizontalGallery({
 	const contentAnchorRef = useRef<ScrollAnchor | null>(null);
 	const [rows, setRows] = useState<GalleryRows>(2);
 	const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
-	const itemKey = itemIds.join(":");
+	const itemKey = `${itemIds.join(":")}|${reserved}`;
 	const itemCount = itemIds.length;
 	const previousItemKeyRef = useRef(itemKey);
 	const [storedSlots, setStoredSlots] = useState(() =>
 		gallerySlotState(null, itemIds, rows),
 	);
 	let slots = storedSlots;
-	if (storedSlots.rows !== rows || storedSlots.itemIds.join(":") !== itemKey) {
+	if (
+		storedSlots.rows !== rows ||
+		storedSlots.itemIds.length !== itemIds.length ||
+		storedSlots.itemIds.some((id, index) => itemIds[index] !== id)
+	) {
 		slots = gallerySlotState(storedSlots, itemIds, rows);
 		setStoredSlots(slots);
 	}
@@ -139,9 +162,11 @@ export function useHorizontalGallery({
 	const loadNearEnd = useCallback(() => {
 		const viewport = viewportRef.current;
 		if (!viewport || !hasMore || pending) return;
-		const remaining =
-			viewport.scrollWidth - viewport.clientWidth - viewport.scrollLeft;
-		if (remaining <= viewport.clientWidth * 0.75) onLoadMore();
+		const spacer = viewport.querySelector<HTMLElement>("[data-gallery-spacer]");
+		const loadedEnd = Number(spacer?.dataset.galleryLoadedEnd);
+		const end = Number.isFinite(loadedEnd) ? loadedEnd : viewport.scrollWidth;
+		const remaining = end - viewport.clientWidth - viewport.scrollLeft;
+		if (remaining <= viewport.clientWidth * LOAD_AHEAD_VIEWPORTS) onLoadMore();
 	}, [hasMore, pending, onLoadMore]);
 
 	useEffect(() => {
@@ -295,7 +320,9 @@ export function useHorizontalGallery({
 
 		if (anchor) {
 			const plate = viewport.querySelector<HTMLElement>(
-				`[data-gallery-current] [data-photo-id="${CSS.escape(anchor.photoId)}"]`,
+				anchor.photoId
+					? `[data-gallery-current] [data-photo-id="${CSS.escape(anchor.photoId)}"]`
+					: `[data-gallery-current] [data-gallery-from-end="${anchor.fromEnd}"]`,
 			);
 			if (plate) {
 				const x = Number(plate.dataset.galleryX);
