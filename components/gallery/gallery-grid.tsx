@@ -6,7 +6,6 @@ import {
 	useReducedMotion,
 } from "motion/react";
 import Image from "next/image";
-import Link from "next/link";
 import { memo, useState } from "react";
 import {
 	type GalleryGeometry,
@@ -14,11 +13,7 @@ import {
 	horizontalGalleryLayout,
 } from "@/components/gallery/horizontal-gallery";
 import { useHorizontalGallery } from "@/components/gallery/use-horizontal-gallery";
-import {
-	ArrowRightIcon,
-	MinusIcon,
-	PlusIcon,
-} from "@/components/slideshow/icons";
+import { MinusIcon, PlusIcon } from "@/components/slideshow/icons";
 import type { GalleryItem } from "@/lib/domain";
 import { photoCountNoun } from "@/lib/i18n";
 
@@ -237,64 +232,60 @@ export function GalleryGrid({
 			<h2 id="gallery-title" className="sr-only">
 				Galeria
 			</h2>
-			<div className="flex flex-wrap items-center justify-between gap-3">
+			{/*
+			 * One quiet line: the count on the left, zoom on the right. The
+			 * slideshow is reached from the footer, not from above the photographs.
+			 */}
+			<div className="flex items-center justify-between gap-3">
 				<p className="flex items-baseline gap-2" aria-live="polite">
 					<span className="ma-numeral text-3xl">{photoCount}</span>
 					<span className="ma-label">{photoCountNoun(photoCount)}</span>
 				</p>
-				<div className="flex items-center gap-3">
-					{items.length ? (
-						<fieldset className="flex items-center" aria-label="Wielkość zdjęć">
-							<legend className="sr-only">Wielkość zdjęć w galerii</legend>
-							<button
-								type="button"
-								onClick={gallery.zoomOut}
-								disabled={!gallery.canZoomOut}
-								className={iconButtonClass}
-								aria-label="Mniejsze zdjęcia"
-							>
-								<MinusIcon className="size-5" />
-							</button>
-							<button
-								type="button"
-								onClick={gallery.zoomIn}
-								disabled={!gallery.canZoomIn}
-								className={iconButtonClass}
-								aria-label="Większe zdjęcia"
-							>
-								<PlusIcon className="size-5" />
-							</button>
-						</fieldset>
-					) : null}
-					<Link href="/pokaz" className="ma-action ma-action--ghost">
-						Pokaz slajdów
-						<ArrowRightIcon />
-					</Link>
-				</div>
+				{items.length ? (
+					<fieldset
+						className="-mr-3 flex items-center"
+						aria-label="Wielkość zdjęć"
+					>
+						<legend className="sr-only">Wielkość zdjęć w galerii</legend>
+						<button
+							type="button"
+							onClick={gallery.zoomOut}
+							disabled={!gallery.canZoomOut}
+							className={iconButtonClass}
+							aria-label="Mniejsze zdjęcia"
+						>
+							<MinusIcon className="size-5" />
+						</button>
+						<button
+							type="button"
+							onClick={gallery.zoomIn}
+							disabled={!gallery.canZoomIn}
+							className={iconButtonClass}
+							aria-label="Większe zdjęcia"
+						>
+							<PlusIcon className="size-5" />
+						</button>
+					</fieldset>
+				) : null}
 			</div>
 
-			{hasMore ? (
-				<div
-					className="mt-2 flex min-h-11 shrink-0 flex-wrap items-center gap-4"
-					aria-live="polite"
-				>
-					{message ? (
-						<>
-							<p role="alert" className="font-medium text-ma-oxblood">
-								{message}
-							</p>
-							<button
-								type="button"
-								onClick={onLoadMore}
-								disabled={pending}
-								className="ma-action ma-action--ghost"
-							>
-								Spróbuj ponownie
-							</button>
-						</>
-					) : pending ? (
-						<p className="ma-label">Wczytywanie…</p>
-					) : null}
+			{/* Placeholder plates already show what is still coming. */}
+			<p className="sr-only" aria-live="polite">
+				{pending && !message ? "Wczytywanie…" : ""}
+			</p>
+			{hasMore && message ? (
+				<div className="mt-2 flex min-h-11 shrink-0 flex-wrap items-center gap-4">
+					<p role="alert" className="font-medium text-ma-oxblood">
+						{message}
+					</p>
+					<button
+						type="button"
+						onClick={onLoadMore}
+						disabled={pending}
+						className="ma-action ma-action--ghost"
+					>
+						Spróbuj ponownie
+					</button>
 				</div>
 			) : message ? (
 				<p role="alert" className="mt-4 shrink-0 font-medium text-ma-oxblood">

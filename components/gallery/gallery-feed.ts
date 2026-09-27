@@ -85,6 +85,8 @@ export function useGalleryFeed(initial: GalleryResponse) {
 				setItems(folded.items);
 				setCursor(folded.cursor);
 				setStats(page.stats);
+				// A poll that got through proves the gallery is back.
+				setMessage("");
 			} catch {
 				// A missed poll is not worth an alarm; the next one is ten seconds away.
 			}
