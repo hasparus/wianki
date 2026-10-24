@@ -265,7 +265,7 @@ export function GalleryGrid({
 						tabIndex={0}
 						aria-label="Zdjęcia"
 						aria-describedby="gallery-scroll-help"
-						className="relative left-1/2 mt-6 min-h-0 w-[100dvw] flex-1 -translate-x-1/2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-gutter:stable] [touch-action:pan-x_pan-y] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink sm:mt-8"
+						className="relative left-1/2 mt-6 min-h-0 w-[100dvw] flex-1 -translate-x-1/2 overflow-x-auto overflow-y-hidden overscroll-x-contain [touch-action:pan-x_pan-y] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ma-ink sm:mt-8"
 					>
 						<div
 							data-gallery-spacer

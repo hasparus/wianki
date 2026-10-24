@@ -183,6 +183,65 @@ test.describe("a photograph has an address", () => {
 		}
 	});
 
+	test.describe("classic scrollbars", () => {
+		const classicTest = test.extend({
+			page: async ({ playwright, browserName, baseURL }, use) => {
+				const browser = await playwright[browserName].launch({
+					ignoreDefaultArgs: ["--hide-scrollbars"],
+				});
+				try {
+					const page = await browser.newPage({ baseURL });
+					await use(page);
+				} finally {
+					await browser.close();
+				}
+			},
+		});
+
+		classicTest(
+			"keeps the photo rail full width with classic scrollbars",
+			async ({ page }) => {
+				await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
+				await page.addStyleTag({
+					content: `
+					[aria-label="Zdjęcia"] {
+						scrollbar-color: auto !important;
+						scrollbar-width: auto !important;
+					}
+					[aria-label="Zdjęcia"]::-webkit-scrollbar {
+						width: 15px;
+						height: 15px;
+					}
+				`,
+				});
+				await pollGallery(page, false);
+				const rail = page.getByRole("region", { name: "Zdjęcia", exact: true });
+				await expect
+					.poll(() =>
+						rail.evaluate(
+							(element) => element.scrollWidth - element.clientWidth,
+						),
+					)
+					.toBeGreaterThan(0);
+				await expect
+					.poll(() =>
+						rail.evaluate(
+							(element: HTMLElement) =>
+								element.offsetHeight - element.clientHeight,
+						),
+					)
+					.toBeGreaterThan(0);
+				await expect
+					.poll(() =>
+						rail.evaluate((element) =>
+							Math.abs(element.clientWidth - window.innerWidth),
+						),
+					)
+					.toBeLessThanOrEqual(1);
+			},
+		);
+	});
+
 	test("fills the screen, scrolls sideways, and pinches without changing height", async ({
 		page,
 	}) => {
