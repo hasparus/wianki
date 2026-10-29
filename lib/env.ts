@@ -157,8 +157,9 @@ export function resetServerEnvCache() {
 	cachedServerEnv = undefined;
 }
 
+/** `localhost`, any `*.localhost` subdomain (dev sites) and loopback addresses. */
 export function isLocalHost(host: string) {
-	return /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
+	return /^(([a-z0-9-]+\.)*localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(host);
 }
 
 export function platformScheme(host: string) {

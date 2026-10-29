@@ -3,19 +3,20 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 /**
- * Bulk-upload photos from disk through the real guest pipeline.
+ * Bulk-upload photos from disk through the real guest pipeline of one site.
  *
  *   node scripts/upload-photos.ts <file-or-dir>... [--dry-run] [--concurrency N]
  *
- * Reads APP_ORIGIN, GUEST_ACCESS_PASSPHRASE and the Supabase public keys from
- * the environment or from .secrets.deploy / .env.local in the repo root.
+ * Reads SITE_ORIGIN (the site's own origin, e.g. https://rosia.wianki.app),
+ * GUEST_ACCESS_PASSPHRASE and NEXT_PUBLIC_ARCHIVE_WORKER_URL from the
+ * environment or from .secrets.deploy / .env.local in the repo root.
  *
  * It deliberately drives the same HTTP endpoints a phone would, so uploaded
- * photos land in exactly the same state as guest uploads: EXIF-free derivative
- * in Supabase, full original in R2, one row per photo. Nothing writes to the
+ * photos land in exactly the same state as guest uploads: EXIF-free
+ * derivative through the app into the private gallery bucket, full original
+ * through the archive Worker, one row per photo. Nothing writes to the
  * database directly.
  */
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import {
 	MAX_BATCH_FILES,
@@ -24,11 +25,15 @@ import {
 } from "../lib/domain.ts";
 import { encodeBlurPreview } from "./lib/blur-preview.ts";
 import { errorMessage, loadLocalEnv } from "./lib/cli.ts";
+import {
+	jsonBody,
+	loginSite,
+	type SiteApi,
+	siteOriginFromEnv,
+} from "./lib/site-api.ts";
 
 type UploadInit = {
 	photoId: string;
-	path: string;
-	uploadToken: string;
 	archiveToken: string;
 };
 
@@ -117,28 +122,8 @@ async function makeDerivative(file: string) {
 	throw new Error("could not compress under 500 KiB");
 }
 
-async function login(origin: string, passphrase: string) {
-	const form = new FormData();
-	form.set("passphrase", passphrase);
-	const response = await fetch(`${origin}/api/auth/guest`, {
-		method: "POST",
-		headers: { Origin: origin },
-		body: form,
-		redirect: "manual",
-	});
-	if (!response.ok) throw new Error(`login failed (${response.status})`);
-	const cookie = response.headers
-		.getSetCookie()
-		.map((c) => c.split(";")[0])
-		.join("; ");
-	if (!cookie.includes("wedding_guest")) throw new Error("no guest cookie");
-	return cookie;
-}
-
 async function uploadOne(
-	origin: string,
-	cookie: string,
-	supabase: SupabaseClient,
+	api: SiteApi,
 	archiveWorkerUrl: string,
 	file: string,
 	init: UploadInit,
@@ -146,13 +131,17 @@ async function uploadOne(
 	const original = await readFile(file);
 	const derivative = await makeDerivative(file);
 
-	const { error: storageError } = await supabase.storage
-		.from("gallery")
-		.uploadToSignedUrl(init.path, init.uploadToken, derivative.buffer, {
-			contentType: "image/jpeg",
-			cacheControl: "3600",
-		});
-	if (storageError) throw new Error(`gallery copy: ${storageError.message}`);
+	// The derivative rides through the app itself, like the browser's PUT:
+	// raw JPEG bytes to a handler that checks the guest cookie and ownership.
+	const gallery = await api.call(`/api/uploads/${init.photoId}/derivative`, {
+		method: "PUT",
+		headers: { "Content-Type": "image/jpeg" },
+		body: derivative.buffer,
+	});
+	if (!gallery.ok) {
+		const body = await readJson(gallery);
+		throw new Error(`gallery copy: ${body.error ?? `HTTP ${gallery.status}`}`);
+	}
 
 	let archiveReceipt: string | null = null;
 	let archiveError: string | null = null;
@@ -166,7 +155,7 @@ async function uploadOne(
 					"Content-Type":
 						CONTENT_TYPE[path.extname(file).toLowerCase()] ||
 						"application/octet-stream",
-					Origin: origin,
+					Origin: api.origin,
 					"Content-Length": String(original.length),
 				},
 				body: original,
@@ -179,42 +168,32 @@ async function uploadOne(
 		archiveError = errorMessage(error).slice(0, 200);
 	}
 
-	const finalize = await fetch(
-		`${origin}/api/uploads/${init.photoId}/finalize`,
-		{
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Origin: origin,
-				Cookie: cookie,
-			},
-			body: JSON.stringify({
-				archiveReceipt,
-				archiveError,
-				derivativeSize: derivative.buffer.length,
-				derivativeType: "image/jpeg",
-				width: derivative.width,
-				height: derivative.height,
-				blurDataUrl: derivative.blurDataUrl,
-			}),
-		},
-	);
-	if (!finalize.ok) {
-		const body = await readJson(finalize);
-		throw new Error(body.error ?? `finalize HTTP ${finalize.status}`);
-	}
+	await api.json(`/api/uploads/${init.photoId}/finalize`, {
+		method: "POST",
+		...jsonBody({
+			archiveReceipt,
+			archiveError,
+			derivativeSize: derivative.buffer.length,
+			derivativeType: "image/jpeg",
+			width: derivative.width,
+			height: derivative.height,
+			blurDataUrl: derivative.blurDataUrl,
+		}),
+	});
 	return { archived: Boolean(archiveReceipt), archiveError };
 }
 
 async function main() {
 	const env = loadLocalEnv([
-		"APP_ORIGIN",
+		"SITE_ORIGIN",
 		"GUEST_ACCESS_PASSPHRASE",
-		"NEXT_PUBLIC_SUPABASE_URL",
-		"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
 		"NEXT_PUBLIC_ARCHIVE_WORKER_URL",
 	]);
-	const origin = env.APP_ORIGIN.replace(/\/$/, "");
+	const origin = siteOriginFromEnv(env.SITE_ORIGIN);
+	const archiveWorkerUrl = env.NEXT_PUBLIC_ARCHIVE_WORKER_URL.replace(
+		/\/$/,
+		"",
+	);
 
 	const files: string[] = [];
 	for (const input of inputs)
@@ -243,12 +222,7 @@ async function main() {
 	}
 	if (usable.length === 0) return;
 
-	const cookie = await login(origin, env.GUEST_ACCESS_PASSPHRASE);
-	const supabase = createClient(
-		env.NEXT_PUBLIC_SUPABASE_URL,
-		env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-		{ auth: { persistSession: false, autoRefreshToken: false } },
-	);
+	const api = await loginSite(origin, env.GUEST_ACCESS_PASSPHRASE, "guest");
 
 	let done = 0;
 	let failed = 0;
@@ -262,32 +236,17 @@ async function main() {
 				size: (await stat(file)).size,
 			})),
 		);
-		const response = await fetch(`${origin}/api/uploads/init`, {
+		const body = await api.json<ApiBody>("/api/uploads/init", {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Origin: origin,
-				Cookie: cookie,
-			},
-			body: JSON.stringify({ consent: true, files: meta }),
+			...jsonBody({ consent: true, files: meta }),
 		});
-		const body = await readJson(response);
-		if (!response.ok || !body.uploads) {
-			throw new Error(body.error ?? `init HTTP ${response.status}`);
-		}
+		if (!body.uploads) throw new Error("init returned no uploads");
 		return body.uploads;
 	}
 
 	async function send(file: string, init: UploadInit) {
 		try {
-			const result = await uploadOne(
-				origin,
-				cookie,
-				supabase,
-				env.NEXT_PUBLIC_ARCHIVE_WORKER_URL,
-				file,
-				init,
-			);
+			const result = await uploadOne(api, archiveWorkerUrl, file, init);
 			done++;
 			if (!result.archived) unarchived++;
 			console.log(
