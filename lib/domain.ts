@@ -11,7 +11,11 @@ export const BLUR_IMAGE_SIZE = 8;
 export const BLUR_IMAGE_QUALITY = 70;
 export const MAX_BLUR_DATA_URL_LENGTH = 4096;
 export const GALLERY_PAGE_SIZE = 25;
-export const GALLERY_BUCKET = "gallery";
+/** A site on trial stops accepting photos here until it is paid for. */
+export const TRIAL_PHOTO_LIMIT = 100;
+/** Originals included in the yearly plan; more is metered per block. */
+export const INCLUDED_ARCHIVE_BYTES = 10 * 1024 * 1024 * 1024;
+export const OVERAGE_BLOCK_BYTES = 10 * 1024 * 1024 * 1024;
 
 export const acceptedOriginalTypes = [
 	"image/jpeg",

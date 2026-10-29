@@ -10,13 +10,17 @@ export type UploadClaims = Extract<Claims, { operation: "upload" }>;
  * size guard are written once in index.ts; a backend only has to put an
  * original somewhere, find it again, and remove it.
  *
+ * Every call is scoped to one site: the key layout, the lookup and the
+ * removal guard all start from `siteId`, so a token for one wedding can
+ * never reach into another wedding's originals.
+ *
  * `key` is whatever identifies the object to its own backend — an R2 object
  * key or a Drive file id — and is what the app stores as `archive_key`.
  */
 export type ArchiveBackend = {
 	upload(body: ReadableStream, claims: UploadClaims): Promise<ArchivedObject>;
-	find(photoId: string): Promise<ArchivedObject | null>;
-	remove(photoId: string, key: string): Promise<void>;
+	find(siteId: string, photoId: string): Promise<ArchivedObject | null>;
+	remove(siteId: string, photoId: string, key: string): Promise<void>;
 };
 
 /** Keeps a guest's filename usable as an object name without path tricks. */

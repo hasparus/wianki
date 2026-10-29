@@ -1,9 +1,9 @@
 import { SignJWT } from "jose";
 import { serverEnv } from "@/lib/env";
+import type { Site } from "@/lib/sites";
 import {
 	SLIDESHOW_LIVE_AUDIENCE,
 	SLIDESHOW_PARTY,
-	SLIDESHOW_ROOM,
 	type SlideshowLiveRole,
 } from "@/lib/slideshow-protocol";
 
@@ -20,12 +20,19 @@ export function slideshowLiveConfigured() {
 	return Boolean(env.SLIDESHOW_LIVE_URL && env.SLIDESHOW_LIVE_SECRET);
 }
 
+/**
+ * One room per wedding, named by the site id. The token carries the room and
+ * the site's origin, so the live Worker admits exactly this site's guests
+ * and answers CORS for exactly this site's pages.
+ */
 export async function createSlideshowLiveAccess(
+	site: Pick<Site, "id" | "origin">,
 	role: SlideshowLiveRole,
 ): Promise<SlideshowLiveAccess | null> {
 	const env = serverEnv();
 	if (!env.SLIDESHOW_LIVE_URL || !env.SLIDESHOW_LIVE_SECRET) return null;
-	const token = await new SignJWT({ role })
+	const room = site.id;
+	const token = await new SignJWT({ role, room, origin: site.origin })
 		.setProtectedHeader({ alg: "HS256", typ: "JWT" })
 		.setIssuedAt()
 		.setAudience(SLIDESHOW_LIVE_AUDIENCE)
@@ -34,7 +41,7 @@ export async function createSlideshowLiveAccess(
 	return {
 		host: new URL(env.SLIDESHOW_LIVE_URL).host,
 		party: SLIDESHOW_PARTY,
-		room: SLIDESHOW_ROOM,
+		room,
 		token,
 		role,
 	};

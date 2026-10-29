@@ -1,15 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-	supabaseBrowser: vi.fn(),
-	from: vi.fn(),
-	uploadToSignedUrl: vi.fn(),
+	fetch: vi.fn(),
 }));
 
 vi.mock("client-only", () => ({}));
-vi.mock("@/lib/supabase/browser", () => ({
-	supabaseBrowser: mocks.supabaseBrowser,
-}));
 vi.mock("browser-image-compression", () => ({
 	default: vi.fn(),
 }));
@@ -27,12 +22,7 @@ const compress = vi.mocked(imageCompression);
 describe("gallery derivative preparation", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.from.mockReturnValue({
-			uploadToSignedUrl: mocks.uploadToSignedUrl,
-		});
-		mocks.supabaseBrowser.mockReturnValue({
-			storage: { from: mocks.from },
-		});
+		vi.stubGlobal("fetch", mocks.fetch);
 		vi.stubGlobal(
 			"createImageBitmap",
 			vi.fn(async () => ({
@@ -130,48 +120,50 @@ describe("gallery derivative preparation", () => {
 		).rejects.toThrow("Nie udało się przygotować zdjęcia");
 	});
 
-	it("uploads raw JPEG bytes instead of Blob FormData", async () => {
-		mocks.uploadToSignedUrl.mockResolvedValueOnce({
-			data: { path: "batch/photo.jpg" },
-			error: null,
-		});
+	it("puts raw JPEG bytes to the derivative endpoint", async () => {
+		mocks.fetch.mockResolvedValueOnce(
+			Response.json({ ok: true, size: 4 }, { status: 200 }),
+		);
 		const derivative = new File(["jpeg"], "photo.jpg", {
 			type: "image/jpeg",
 		});
 
 		await expect(
 			uploadDerivative(
-				{
-					photoId: "photo-1",
-					path: "batch/photo.jpg",
-					uploadToken: "token",
-					archiveToken: "archive-token",
-				},
+				{ photoId: "photo-1", archiveToken: "archive-token" },
 				derivative,
 			),
 		).resolves.toEqual({ error: null });
 
-		expect(mocks.uploadToSignedUrl).toHaveBeenCalledWith(
-			"batch/photo.jpg",
-			"token",
-			expect.any(ArrayBuffer),
-			{
-				cacheControl: "3600",
-				contentType: "image/jpeg",
-			},
+		expect(mocks.fetch).toHaveBeenCalledWith(
+			"/api/uploads/photo-1/derivative",
+			expect.objectContaining({
+				method: "PUT",
+				headers: { "Content-Type": "image/jpeg" },
+				body: expect.any(ArrayBuffer),
+			}),
 		);
 	});
 
+	it("returns the server's error so finalization can still record it", async () => {
+		mocks.fetch.mockResolvedValueOnce(
+			Response.json(
+				{ error: "Kopia galeryjna jest zbyt duża." },
+				{ status: 413 },
+			),
+		);
+		const result = await uploadDerivative(
+			{ photoId: "photo-1", archiveToken: "archive-token" },
+			new File(["jpeg"], "photo.jpg", { type: "image/jpeg" }),
+		);
+		expect(result.error?.message).toBe("Kopia galeryjna jest zbyt duża.");
+	});
+
 	it("normalizes a transport exception so finalization can still run", async () => {
-		mocks.uploadToSignedUrl.mockRejectedValueOnce(new TypeError("Load failed"));
+		mocks.fetch.mockRejectedValueOnce(new TypeError("Load failed"));
 
 		const result = await uploadDerivative(
-			{
-				photoId: "photo-1",
-				path: "batch/photo.jpg",
-				uploadToken: "token",
-				archiveToken: "archive-token",
-			},
+			{ photoId: "photo-1", archiveToken: "archive-token" },
 			new File(["jpeg"], "photo.jpg", { type: "image/jpeg" }),
 		);
 

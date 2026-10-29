@@ -1,14 +1,15 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "wedding-slideshow-live",
+	// Local `wrangler dev` only. Production infrastructure (the Durable
+	// Object, secrets) is declared in alchemy.run.ts at the repository root.
+	// There are no vars: the origin a connection may come from and the room
+	// it may join are signed into each token by the app. Only
+	// LIVE_TOKEN_SECRET is needed, as a secret (.dev.vars locally).
+	"name": "wianki-slideshow-live",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-07-23",
 	"observability": {
 		"enabled": true
-	},
-	"vars": {
-		// Must equal the origin this deployment is actually served from.
-		"ALLOWED_ORIGIN": "https://wesele.monwid-olechnowicz.com"
 	},
 	"durable_objects": {
 		"bindings": [

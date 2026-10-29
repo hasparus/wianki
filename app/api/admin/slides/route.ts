@@ -1,12 +1,14 @@
 import { z } from "zod";
 import { denyAdminRequest, readAdminSession } from "@/lib/auth/session";
+import { all, batch, first, placeholders } from "@/lib/db";
+import { GALLERY_ELIGIBLE } from "@/lib/gallery";
 import { jsonError, noStoreJson } from "@/lib/http";
+import { siteFromRequest } from "@/lib/sites";
 import { getAdminSlides, isValidSlideOrder } from "@/lib/slideshow";
 import {
 	SLIDESHOW_MAX_SUBTITLE,
 	SLIDESHOW_MAX_TITLE,
 } from "@/lib/slideshow-protocol";
-import { supabaseAdmin } from "@/lib/supabase/server";
 
 const createSchema = z.union([
 	z.object({ photoIds: z.array(z.uuid()).min(1).max(100) }),
@@ -25,64 +27,57 @@ const reorderSchema = z.object({
 	order: z.array(z.uuid()).min(1).max(500),
 });
 
-async function nextPosition() {
-	const { data, error } = await supabaseAdmin()
-		.from("slideshow_slides")
-		.select("position")
-		.order("position", { ascending: false })
-		.limit(1);
-	if (error) throw error;
-	return (data?.[0]?.position ?? 0) + 1;
+async function nextPosition(siteId: string) {
+	const row = await first<{ position: number | null }>(
+		"select max(position) as position from slideshow_slides where site_id = ?",
+		[siteId],
+	);
+	return (row?.position ?? 0) + 1;
 }
 
-export async function GET() {
-	if (!(await readAdminSession())) return jsonError("Brak dostępu.", 401);
+export async function GET(request: Request) {
+	const site = await siteFromRequest(request);
+	if (!site) return jsonError("Nie znaleziono strony.", 404);
+	if (!(await readAdminSession(site))) return jsonError("Brak dostępu.", 401);
 	try {
-		return noStoreJson({ slides: await getAdminSlides() });
+		return noStoreJson({ slides: await getAdminSlides(site.id) });
 	} catch {
 		return jsonError("Nie udało się pobrać slajdów.", 500);
 	}
 }
 
 export async function POST(request: Request) {
-	const denied = await denyAdminRequest(request);
+	const site = await siteFromRequest(request);
+	if (!site) return jsonError("Nie znaleziono strony.", 404);
+	const denied = await denyAdminRequest(request, site);
 	if (denied) return denied;
 	const parsed = createSchema.safeParse(await request.json().catch(() => null));
 	if (!parsed.success) return jsonError("Nieprawidłowe dane slajdu.", 400);
-	const supabase = supabaseAdmin();
 
 	try {
 		if ("photoIds" in parsed.data) {
 			const { photoIds } = parsed.data;
-			const { data: eligible, error: photosError } = await supabase
-				.from("photos")
-				.select("id")
-				.in("id", photoIds)
-				.eq("hot_status", "uploaded")
-				.eq("moderation_status", "approved");
-			if (photosError) throw photosError;
-			const { data: taken, error: takenError } = await supabase
-				.from("slideshow_slides")
-				.select("photo_id")
-				.in("photo_id", photoIds);
-			if (takenError) throw takenError;
-			const takenIds = new Set(
-				(taken ?? []).map((row) => row.photo_id).filter(Boolean),
+			const eligible = await all<{ id: string }>(
+				`select id from photos where site_id = ? and id in (${placeholders(photoIds.length)}) and ${GALLERY_ELIGIBLE}`,
+				[site.id, ...photoIds],
 			);
-			const eligibleIds = new Set((eligible ?? []).map((row) => row.id));
+			const taken = await all<{ photo_id: string }>(
+				`select photo_id from slideshow_slides where site_id = ? and photo_id in (${placeholders(photoIds.length)})`,
+				[site.id, ...photoIds],
+			);
+			const takenIds = new Set(taken.map((row) => row.photo_id));
+			const eligibleIds = new Set(eligible.map((row) => row.id));
 			const toAdd = photoIds.filter(
 				(id) => eligibleIds.has(id) && !takenIds.has(id),
 			);
 			if (toAdd.length > 0) {
-				const start = await nextPosition();
-				const { error } = await supabase.from("slideshow_slides").insert(
+				const start = await nextPosition(site.id);
+				await batch(
 					toAdd.map((photoId, index) => ({
-						kind: "photo" as const,
-						photo_id: photoId,
-						position: start + index,
+						sql: "insert into slideshow_slides (id, site_id, kind, photo_id, position) values (?, ?, 'photo', ?, ?)",
+						params: [crypto.randomUUID(), site.id, photoId, start + index],
 					})),
 				);
-				if (error) throw error;
 			}
 			return noStoreJson({
 				added: toAdd.length,
@@ -90,13 +85,18 @@ export async function POST(request: Request) {
 			});
 		}
 
-		const { error } = await supabase.from("slideshow_slides").insert({
-			kind: "text" as const,
-			title: parsed.data.title,
-			subtitle: parsed.data.subtitle,
-			position: await nextPosition(),
-		});
-		if (error) throw error;
+		await batch([
+			{
+				sql: "insert into slideshow_slides (id, site_id, kind, title, subtitle, position) values (?, ?, 'text', ?, ?, ?)",
+				params: [
+					crypto.randomUUID(),
+					site.id,
+					parsed.data.title,
+					parsed.data.subtitle,
+					await nextPosition(site.id),
+				],
+			},
+		]);
 		return noStoreJson({ added: 1, skipped: 0 });
 	} catch {
 		return jsonError("Nie udało się dodać slajdów.", 500);
@@ -104,19 +104,19 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-	const denied = await denyAdminRequest(request);
+	const site = await siteFromRequest(request);
+	if (!site) return jsonError("Nie znaleziono strony.", 404);
+	const denied = await denyAdminRequest(request, site);
 	if (denied) return denied;
 	const parsed = reorderSchema.safeParse(
 		await request.json().catch(() => null),
 	);
 	if (!parsed.success) return jsonError("Nieprawidłowa kolejność.", 400);
-	const supabase = supabaseAdmin();
 	try {
-		const { data, error } = await supabase
-			.from("slideshow_slides")
-			.select("id,kind,photo_id,title,subtitle");
-		if (error) throw error;
-		const rows = data ?? [];
+		const rows = await all<{ id: string }>(
+			"select id from slideshow_slides where site_id = ?",
+			[site.id],
+		);
 		if (
 			!isValidSlideOrder(
 				rows.map((row) => row.id),
@@ -128,17 +128,14 @@ export async function PATCH(request: Request) {
 				409,
 			);
 		}
-		// One upsert rather than one update per slide: a renumbering that fails
+		// One batch rather than one update per slide: a renumbering that fails
 		// halfway would leave the deck in an order nobody asked for.
-		const { error: reorderError } = await supabase
-			.from("slideshow_slides")
-			.upsert(
-				rows.map((row) => ({
-					...row,
-					position: parsed.data.order.indexOf(row.id) + 1,
-				})),
-			);
-		if (reorderError) throw reorderError;
+		await batch(
+			parsed.data.order.map((id, index) => ({
+				sql: "update slideshow_slides set position = ? where id = ? and site_id = ?",
+				params: [index + 1, id, site.id],
+			})),
+		);
 		return noStoreJson({ ok: true });
 	} catch {
 		return jsonError("Nie udało się zapisać kolejności.", 500);

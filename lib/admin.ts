@@ -1,5 +1,5 @@
-import { GALLERY_BUCKET } from "@/lib/domain";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { all } from "@/lib/db";
+import { derivativeUrl } from "@/lib/storage";
 
 const ADMIN_PAGE_SIZE = 50;
 
@@ -21,7 +21,6 @@ export type AdminPhotoPage = {
 
 type AdminRow = {
 	id: string;
-	storage_path: string;
 	archive_key: string | null;
 	original_filename: string;
 	hot_status: string;
@@ -65,57 +64,48 @@ export function decodeAdminCursor(value: string): AdminCursor | null {
 	}
 }
 
+/**
+ * Every actionable photo state, newest first. Fully deleted tombstones stay
+ * in D1 for audit but drop out once neither copy has a retryable action.
+ */
 export async function getAdminPhotosPage(
+	siteId: string,
 	cursor?: string | null,
 ): Promise<AdminPhotoPage> {
-	const supabase = supabaseAdmin();
-	let query = supabase
-		.from("photos")
-		.select(
-			"id,storage_path,archive_key,original_filename,hot_status,archive_status,moderation_status,last_error,created_at",
-		)
-		.or(
-			"hot_status.neq.deleted,and(archive_status.neq.trashed,archive_key.not.is.null)",
-		)
-		.order("created_at", { ascending: false })
-		.order("id", { ascending: false })
-		.limit(ADMIN_PAGE_SIZE + 1);
+	const params: (string | number)[] = [siteId];
+	let where =
+		"site_id = ? and (hot_status <> 'deleted' or (archive_status <> 'trashed' and archive_key is not null))";
 	if (cursor) {
 		const decoded = decodeAdminCursor(cursor);
 		if (!decoded) throw new Error("Nieprawidłowy kursor panelu.");
-		query = query.or(
-			`created_at.lt.${decoded.createdAt},and(created_at.eq.${decoded.createdAt},id.lt.${decoded.id})`,
-		);
+		where += " and (created_at < ? or (created_at = ? and id < ?))";
+		params.push(decoded.createdAt, decoded.createdAt, decoded.id);
 	}
-	const { data, error } = await query;
-	if (error) throw error;
-	const rows = ((data ?? []) as AdminRow[]).filter(isAdminPhotoActionable);
+	params.push(ADMIN_PAGE_SIZE + 1);
+	const rows = await all<AdminRow>(
+		`select id, archive_key, original_filename, hot_status, archive_status,
+		        moderation_status, last_error, created_at
+		 from photos where ${where}
+		 order by created_at desc, id desc
+		 limit ?`,
+		params,
+	);
 	const hasMore = rows.length > ADMIN_PAGE_SIZE;
 	const visible = rows.slice(0, ADMIN_PAGE_SIZE);
 	const lastVisible = visible.at(-1);
-	const photos = await Promise.all(
-		visible.map(async (row): Promise<AdminPhoto> => {
-			let imageUrl: string | null = null;
-			if (row.hot_status === "uploaded") {
-				const { data: signed } = await supabase.storage
-					.from(GALLERY_BUCKET)
-					.createSignedUrl(row.storage_path, 60 * 30);
-				imageUrl = signed?.signedUrl ?? null;
-			}
-			return {
+	return {
+		photos: visible.map(
+			(row): AdminPhoto => ({
 				id: row.id,
-				imageUrl,
+				imageUrl: row.hot_status === "uploaded" ? derivativeUrl(row.id) : null,
 				originalFilename: row.original_filename,
 				hotStatus: row.hot_status,
 				archiveStatus: row.archive_status,
 				moderationStatus: row.moderation_status,
 				lastError: row.last_error,
 				createdAt: row.created_at,
-			};
-		}),
-	);
-	return {
-		photos,
+			}),
+		),
 		nextCursor:
 			hasMore && lastVisible
 				? encodeAdminCursor({
@@ -126,7 +116,7 @@ export async function getAdminPhotosPage(
 	};
 }
 
-export async function getAdminQueue(): Promise<AdminPhoto[]> {
-	const page = await getAdminPhotosPage();
+export async function getAdminQueue(siteId: string): Promise<AdminPhoto[]> {
+	const page = await getAdminPhotosPage(siteId);
 	return page.photos;
 }

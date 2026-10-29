@@ -1,14 +1,13 @@
+import { all, first } from "@/lib/db";
 import {
-	GALLERY_BUCKET,
 	GALLERY_PAGE_SIZE,
 	type GalleryItem,
 	type GalleryStats,
 } from "@/lib/domain";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { derivativeUrl } from "@/lib/storage";
 
 type GalleryRow = {
 	id: string;
-	storage_path: string;
 	width: number | null;
 	height: number | null;
 	blur_data_url: string | null;
@@ -40,47 +39,41 @@ export function decodeGalleryCursor(value: string): GalleryCursor | null {
 	}
 }
 
-export async function getGalleryPage(cursor?: string | null) {
-	const supabase = supabaseAdmin();
-	let query = supabase
-		.from("photos")
-		.select("id,storage_path,width,height,blur_data_url,created_at")
-		.eq("hot_status", "uploaded")
-		.eq("moderation_status", "approved")
-		.order("created_at", { ascending: false })
-		.order("id", { ascending: false })
-		.limit(GALLERY_PAGE_SIZE + 1);
+/** The gallery rule, as SQL. The slideshow and the picker reuse it verbatim. */
+export const GALLERY_ELIGIBLE =
+	"hot_status = 'uploaded' and moderation_status = 'approved'";
+
+export async function getGalleryPage(siteId: string, cursor?: string | null) {
+	const params: (string | number)[] = [siteId];
+	let where = `site_id = ? and ${GALLERY_ELIGIBLE}`;
 	if (cursor) {
 		const decoded = decodeGalleryCursor(cursor);
 		if (!decoded) throw new Error("Nieprawidłowy kursor galerii.");
-		query = query.or(
-			`created_at.lt.${decoded.createdAt},and(created_at.eq.${decoded.createdAt},id.lt.${decoded.id})`,
-		);
+		where += " and (created_at < ? or (created_at = ? and id < ?))";
+		params.push(decoded.createdAt, decoded.createdAt, decoded.id);
 	}
-	const { data, error } = await query;
-	if (error) throw error;
-	const rows = (data ?? []) as GalleryRow[];
+	params.push(GALLERY_PAGE_SIZE + 1);
+	const rows = await all<GalleryRow>(
+		`select id, width, height, blur_data_url, created_at from photos
+		 where ${where}
+		 order by created_at desc, id desc
+		 limit ?`,
+		params,
+	);
 	const hasMore = rows.length > GALLERY_PAGE_SIZE;
 	const visible = rows.slice(0, GALLERY_PAGE_SIZE);
 	const lastVisible = visible.at(-1);
-	const signed = await Promise.all(
-		visible.map(async (row): Promise<GalleryItem> => {
-			const { data: url, error: urlError } = await supabase.storage
-				.from(GALLERY_BUCKET)
-				.createSignedUrl(row.storage_path, 60 * 60);
-			if (urlError) throw urlError;
-			return {
+	return {
+		items: visible.map(
+			(row): GalleryItem => ({
 				id: row.id,
-				imageUrl: url.signedUrl,
+				imageUrl: derivativeUrl(row.id),
 				width: row.width,
 				height: row.height,
 				blurDataUrl: row.blur_data_url,
 				createdAt: row.created_at,
-			};
-		}),
-	);
-	return {
-		items: signed,
+			}),
+		),
 		nextCursor:
 			hasMore && lastVisible
 				? encodeGalleryCursor({
@@ -91,12 +84,10 @@ export async function getGalleryPage(cursor?: string | null) {
 	};
 }
 
-export async function getGalleryStats(): Promise<GalleryStats> {
-	const { error, count } = await supabaseAdmin()
-		.from("photos")
-		.select("id", { count: "exact", head: true })
-		.eq("hot_status", "uploaded")
-		.eq("moderation_status", "approved");
-	if (error) throw error;
-	return { approvedPhotos: count ?? 0 };
+export async function getGalleryStats(siteId: string): Promise<GalleryStats> {
+	const row = await first<{ count: number }>(
+		`select count(*) as count from photos where site_id = ? and ${GALLERY_ELIGIBLE}`,
+		[siteId],
+	);
+	return { approvedPhotos: row?.count ?? 0 };
 }

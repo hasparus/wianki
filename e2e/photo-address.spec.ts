@@ -46,7 +46,7 @@ test.describe("a photograph has an address", () => {
 		});
 	});
 
-	/** The server page cannot reach Supabase in tests; the poll brings the photos. */
+	/** The seeded local D1 holds no photos; the mocked poll brings them. */
 	async function pollGallery(
 		page: import("@playwright/test").Page,
 		advanceClock = true,

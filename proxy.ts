@@ -1,15 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { secretMatches } from "@/lib/auth/secrets";
-import {
-	ADMIN_COOKIE,
-	adminCookieOptions,
-	createAdminSession,
-	createGuestSession,
-	GUEST_COOKIE,
-	guestCookieOptions,
-} from "@/lib/auth/session";
+import { ADMIN_COOKIE, GUEST_COOKIE, OWNER_COOKIE } from "@/lib/auth/session";
 import { ServerEnvError, serverEnv } from "@/lib/env";
+import { targetFromHost } from "@/lib/sites";
 
 function escapeHtml(value: string) {
 	return value.replace(
@@ -84,7 +77,42 @@ span { overflow-wrap: anywhere; }
 	);
 }
 
-function decodeJoinCode(segment: string) {
+/**
+ * The owner console lives on the platform host. Public: the landing page,
+ * pricing, privacy, login, the Stripe webhook. Everything under /konto and
+ * /api/konto wants an owner cookie; the handlers verify it properly.
+ */
+function platformProxy(request: NextRequest) {
+	const { pathname } = request.nextUrl;
+	const needsOwner =
+		(pathname.startsWith("/konto") && !pathname.startsWith("/konto/login")) ||
+		pathname.startsWith("/api/konto");
+	if (needsOwner && !request.cookies.has(OWNER_COOKIE)) {
+		if (pathname.startsWith("/api/")) {
+			return NextResponse.json({ error: "Brak dostępu." }, { status: 401 });
+		}
+		const login = new URL("/konto/login", request.url);
+		login.searchParams.set("next", pathname);
+		return NextResponse.redirect(login);
+	}
+	// A wedding's pages do not exist on the platform host.
+	if (
+		pathname === "/login" ||
+		pathname === "/admin" ||
+		pathname.startsWith("/admin/") ||
+		pathname === "/pokaz" ||
+		pathname.startsWith("/api/uploads") ||
+		pathname.startsWith("/api/gallery") ||
+		pathname.startsWith("/api/admin") ||
+		pathname.startsWith("/api/photos") ||
+		pathname.startsWith("/api/slideshow")
+	) {
+		return NextResponse.rewrite(new URL("/404", request.url), { status: 404 });
+	}
+	return NextResponse.next();
+}
+
+function decodeSegment(segment: string) {
 	try {
 		return decodeURIComponent(segment);
 	} catch {
@@ -92,31 +120,22 @@ function decodeJoinCode(segment: string) {
 	}
 }
 
-export async function proxy(request: NextRequest) {
+/**
+ * A wedding's host. Secrets live in D1, which the proxy does not read, so
+ * every exchange of a token, join code or open house for a cookie is handed
+ * to /api/auth/enter and only the presence of a cookie is checked here.
+ */
+function siteProxy(request: NextRequest) {
 	const { pathname, searchParams } = request.nextUrl;
-	let env: ReturnType<typeof serverEnv>;
-	try {
-		env = serverEnv();
-	} catch (error) {
-		if (error instanceof ServerEnvError) {
-			return serverEnvErrorResponse(error, pathname);
-		}
-		throw error;
-	}
 
-	if (pathname === "/" && searchParams.has("token")) {
-		const candidate = searchParams.get("token") ?? "";
-		const cleanUrl = request.nextUrl.clone();
-		cleanUrl.searchParams.delete("token");
-		const response = NextResponse.redirect(cleanUrl);
-		if (secretMatches(candidate, env.GUEST_ENTRY_TOKEN)) {
-			response.cookies.set(
-				GUEST_COOKIE,
-				await createGuestSession(),
-				guestCookieOptions,
-			);
-		}
-		return response;
+	if (
+		(pathname === "/" || pathname === "/admin") &&
+		searchParams.has("token")
+	) {
+		const enter = new URL("/api/auth/enter", request.url);
+		enter.searchParams.set("token", searchParams.get("token") ?? "");
+		enter.searchParams.set("next", pathname);
+		return NextResponse.redirect(enter);
 	}
 
 	// Short join link shown as a QR code during the slideshow. The code is a
@@ -124,53 +143,12 @@ export async function proxy(request: NextRequest) {
 	// the projected QR never burns the printed table QR codes.
 	const joinMatch = pathname.match(/^\/p\/([^/]+)$/);
 	if (joinMatch) {
-		const candidate = decodeJoinCode(joinMatch[1]);
-		if (
-			candidate &&
-			env.GUEST_JOIN_CODE &&
-			secretMatches(candidate, env.GUEST_JOIN_CODE)
-		) {
-			const response = NextResponse.redirect(new URL("/pokaz", request.url));
-			response.cookies.set(
-				GUEST_COOKIE,
-				await createGuestSession(),
-				guestCookieOptions,
-			);
-			return response;
-		}
-		return NextResponse.redirect(new URL("/login", request.url));
-	}
-
-	if (pathname === "/admin" && searchParams.has("token")) {
-		const candidate = searchParams.get("token") ?? "";
-		const cleanUrl = request.nextUrl.clone();
-		cleanUrl.searchParams.delete("token");
-		const response = NextResponse.redirect(cleanUrl);
-		if (secretMatches(candidate, env.ADMIN_ENTRY_TOKEN)) {
-			response.cookies.set(
-				ADMIN_COOKIE,
-				await createAdminSession(),
-				adminCookieOptions,
-			);
-		}
-		return response;
-	}
-
-	// Open house: while GUEST_OPEN_UNTIL is in the future, a first visit mints
-	// its own guest session, so nobody has to type the passphrase.
-	if (
-		env.GUEST_OPEN_UNTIL &&
-		Date.now() < env.GUEST_OPEN_UNTIL.getTime() &&
-		!request.cookies.has(GUEST_COOKIE)
-	) {
-		const session = await createGuestSession();
-		request.cookies.set(GUEST_COOKIE, session);
-		const response =
-			pathname === "/login"
-				? NextResponse.redirect(new URL("/", request.url))
-				: NextResponse.next({ request: { headers: request.headers } });
-		response.cookies.set(GUEST_COOKIE, session, guestCookieOptions);
-		return response;
+		const code = decodeSegment(joinMatch[1]);
+		if (!code) return NextResponse.redirect(new URL("/login", request.url));
+		const enter = new URL("/api/auth/enter", request.url);
+		enter.searchParams.set("code", code);
+		enter.searchParams.set("next", "/pokaz");
+		return NextResponse.redirect(enter);
 	}
 
 	const publicPath =
@@ -178,6 +156,11 @@ export async function proxy(request: NextRequest) {
 		pathname === "/privacy" ||
 		pathname.startsWith("/api/auth/");
 	if (publicPath) return NextResponse.next();
+
+	// Owner console paths do not exist on a wedding's host.
+	if (pathname.startsWith("/konto") || pathname.startsWith("/api/konto")) {
+		return NextResponse.rewrite(new URL("/404", request.url), { status: 404 });
+	}
 
 	if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
 		if (!request.cookies.has(ADMIN_COOKIE)) {
@@ -188,18 +171,44 @@ export async function proxy(request: NextRequest) {
 
 	// Any signed-in device passes this optimistic gate; the couple's admin
 	// session counts as one, so they reach /pokaz without scanning a guest QR.
-	// Every page and handler still authorizes its own request.
+	// Every page and handler still authorizes its own request. A first visit
+	// goes through /api/auth/enter, which knows whether the open house is on.
 	if (
 		!request.cookies.has(GUEST_COOKIE) &&
 		!request.cookies.has(ADMIN_COOKIE)
 	) {
-		return NextResponse.redirect(new URL("/login", request.url));
+		if (pathname.startsWith("/api/")) {
+			return NextResponse.json(
+				{ error: "Sesja gościa wygasła." },
+				{ status: 401 },
+			);
+		}
+		const enter = new URL("/api/auth/enter", request.url);
+		enter.searchParams.set("next", pathname);
+		return NextResponse.redirect(enter);
 	}
 	return NextResponse.next();
 }
 
+export async function proxy(request: NextRequest) {
+	let env: ReturnType<typeof serverEnv>;
+	try {
+		env = serverEnv();
+	} catch (error) {
+		if (error instanceof ServerEnvError) {
+			return serverEnvErrorResponse(error, request.nextUrl.pathname);
+		}
+		throw error;
+	}
+
+	const target = targetFromHost(request.headers.get("host"), env.PLATFORM_HOST);
+	return target.kind === "platform"
+		? platformProxy(request)
+		: siteProxy(request);
+}
+
 export const config = {
 	matcher: [
-		"/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)",
+		"/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|woff2)$).*)",
 	],
 };

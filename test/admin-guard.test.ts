@@ -1,47 +1,51 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ serverEnv: vi.fn(), get: vi.fn() }));
+const mocks = vi.hoisted(() => ({ get: vi.fn() }));
 
-vi.mock("@/lib/env", () => ({ serverEnv: mocks.serverEnv }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: mocks.get }) }));
 
-import { denyAdminRequest } from "@/lib/auth/session";
+import { createAdminSession, denyAdminRequest } from "@/lib/auth/session";
+import { setupSite, siteRequest } from "./helpers/site";
 
-const ORIGIN = "https://wianki.vercel.app";
+let context: Awaited<ReturnType<typeof setupSite>>;
 
-function request(origin?: string) {
-	return new Request(`${ORIGIN}/api/admin/slides`, {
-		method: "POST",
-		headers: origin ? { origin } : {},
-	});
-}
-
-beforeEach(() => {
+beforeEach(async () => {
 	vi.clearAllMocks();
-	mocks.serverEnv.mockReturnValue({
-		APP_ORIGIN: ORIGIN,
-		ADMIN_SESSION_SECRET: "0123456789abcdef0123456789abcdef",
-	});
+	context = await setupSite();
 });
 
 describe("denyAdminRequest", () => {
 	it("rejects a request without an admin cookie", async () => {
 		mocks.get.mockReturnValue(undefined);
-		expect((await denyAdminRequest(request(ORIGIN)))?.status).toBe(401);
+		const request = siteRequest(context.site, "/api/admin/slides", {
+			method: "POST",
+		});
+		expect((await denyAdminRequest(request, context.site))?.status).toBe(401);
 	});
 
 	it("rejects a cross-origin request even with an admin cookie", async () => {
-		const { createAdminSession } = await import("@/lib/auth/session");
-		mocks.get.mockReturnValue({ value: await createAdminSession() });
-		expect(
-			(await denyAdminRequest(request("https://evil.example")))?.status,
-		).toBe(403);
-		expect((await denyAdminRequest(request()))?.status).toBe(403);
+		mocks.get.mockReturnValue({
+			value: await createAdminSession(context.site),
+		});
+		const evil = siteRequest(context.site, "/api/admin/slides", {
+			method: "POST",
+			headers: { origin: "https://evil.example" },
+		});
+		expect((await denyAdminRequest(evil, context.site))?.status).toBe(403);
+		const none = siteRequest(context.site, "/api/admin/slides", {
+			method: "POST",
+			sameOrigin: false,
+		});
+		expect((await denyAdminRequest(none, context.site))?.status).toBe(403);
 	});
 
 	it("lets a same-origin admin request through", async () => {
-		const { createAdminSession } = await import("@/lib/auth/session");
-		mocks.get.mockReturnValue({ value: await createAdminSession() });
-		expect(await denyAdminRequest(request(ORIGIN))).toBeNull();
+		mocks.get.mockReturnValue({
+			value: await createAdminSession(context.site),
+		});
+		const request = siteRequest(context.site, "/api/admin/slides", {
+			method: "POST",
+		});
+		expect(await denyAdminRequest(request, context.site)).toBeNull();
 	});
 });

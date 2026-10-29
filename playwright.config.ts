@@ -6,23 +6,20 @@ if (!Number.isInteger(port) || port < 1 || port > 65_535) {
 }
 const origin = `http://localhost:${port}`;
 
+/**
+ * The dev server resolves the Host header to a site: PLATFORM_HOST is the
+ * owner console, anything else is looked up as a site's custom domain. The
+ * tests visit `localhost`, so the platform lives on `platform.localhost` and
+ * db/seed-dev.sql (applied by `npm run db:reset:local` before the run) holds
+ * a site whose custom_domain is `localhost`, together with the entry tokens
+ * and passphrases the specs type in.
+ */
 const ciEnv = {
-	NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
-	NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_e2e",
-	SUPABASE_SECRET_KEY: "sb_secret_e2e",
-	APP_ORIGIN: origin,
-	GUEST_ENTRY_TOKEN: "e2e_guest_entry_token_value_32_bytes",
-	GUEST_JOIN_CODE: "e2e-join-code",
-	GUEST_ACCESS_PASSPHRASE: "e2e invitation passphrase",
-	GUEST_SESSION_SECRET: "e2e_guest_session_secret_value_32b",
-	ADMIN_ENTRY_TOKEN: "e2e_admin_entry_token_value_32_bytes",
-	ADMIN_SESSION_SECRET: "e2e_admin_session_secret_value_32b",
+	PLATFORM_HOST: "platform.localhost",
+	SESSION_SECRET: "e2e_session_secret_value_at_least_32b",
 	ARCHIVE_WORKER_URL: "https://archive.example.workers.dev",
 	NEXT_PUBLIC_ARCHIVE_WORKER_URL: "https://archive.example.workers.dev",
 	ARCHIVE_TOKEN_SECRET: "e2e_archive_token_secret_value_32b",
-	GOOGLE_VISION_CLIENT_EMAIL: "vision@example.iam.gserviceaccount.com",
-	GOOGLE_VISION_PRIVATE_KEY: "unused-e2e-key",
-	DELETION_CONTACT_EMAIL: "couple@example.com",
 	CONSENT_VERSION: "e2e",
 };
 

@@ -1,5 +1,11 @@
 # Wedding-day deploy runbook
 
+> Historical. This is the Supabase + Vercel deployment of 8 Aug 2026, kept
+> as a record of the first wedding. The platform now deploys to Cloudflare
+> with Alchemy; see [docs/deploy.md](deploy.md) and
+> [scripts/export-supabase.ts](../scripts/export-supabase.ts) for moving that
+> wedding over.
+
 Written 8 Aug 2026, about 4 h before the event. Goal: guests scan a QR, upload
 photos, slideshow runs at the reception.
 

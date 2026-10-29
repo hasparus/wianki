@@ -1,75 +1,95 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-	denyAdminRequest: vi.fn(),
-	supabaseAdmin: vi.fn(),
-}));
-vi.mock("@/lib/auth/session", () => ({
-	denyAdminRequest: mocks.denyAdminRequest,
-}));
-vi.mock("@/lib/supabase/server", () => ({
-	supabaseAdmin: mocks.supabaseAdmin,
-}));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), after: vi.fn() }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: mocks.get }) }));
+vi.mock("next/server", () => ({ after: mocks.after }));
 
 import { DELETE } from "@/app/api/admin/photos/[photoId]/route";
-
-function mockBackend(storageError: Error | null) {
-	const single = vi.fn().mockResolvedValue({
-		data: {
-			id: "photo-1",
-			storage_path: "private/photo.jpg",
-			archive_key: null,
-			original_size: 12,
-		},
-		error: null,
-	});
-	const eq = vi.fn().mockReturnValue({ single });
-	const updateEq = vi.fn().mockResolvedValue({ error: null });
-	const update = vi.fn().mockReturnValue({ eq: updateEq });
-	const insert = vi.fn().mockResolvedValue({ error: null });
-	mocks.supabaseAdmin.mockReturnValue({
-		from: vi.fn((table: string) =>
-			table === "photos"
-				? { select: vi.fn().mockReturnValue({ eq }), update }
-				: { insert },
-		),
-		storage: {
-			from: vi.fn().mockReturnValue({
-				remove: vi.fn().mockResolvedValue({ error: storageError }),
-			}),
-		},
-	});
-	return update;
-}
+import { createAdminSession } from "@/lib/auth/session";
+import { first } from "@/lib/db";
+import { derivativeKey } from "@/lib/storage";
+import { insertPhoto, setupSite, siteRequest } from "./helpers/site";
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mocks.denyAdminRequest.mockResolvedValue(null);
 });
 
 describe("admin deletion", () => {
 	it.each([
-		{ storageError: null, hotStatus: "deleted" },
-		{ storageError: new Error("Storage unavailable"), hotStatus: "failed" },
+		{ storageError: false, hotStatus: "deleted" },
+		{ storageError: true, hotStatus: "failed" },
 	])(
 		"clears the preview when the derivative removal leaves $hotStatus",
 		async ({ storageError, hotStatus }) => {
-			const update = mockBackend(storageError);
+			const context = await setupSite();
+			const photo = await insertPhoto(context.site.id, {
+				hotStatus: "uploaded",
+				moderationStatus: "approved",
+			});
+			await context.GALLERY.put(
+				derivativeKey(context.site.id, photo.storagePath),
+				new Uint8Array([1]),
+			);
+			if (storageError) {
+				vi.spyOn(context.GALLERY, "delete").mockRejectedValueOnce(
+					new Error("Storage unavailable"),
+				);
+			}
+			mocks.get.mockReturnValue({
+				value: await createAdminSession(context.site),
+			});
+
 			const response = await DELETE(
-				new Request("https://wedding.example/api/admin/photos/photo-1", {
+				siteRequest(context.site, `/api/admin/photos/${photo.id}`, {
 					method: "DELETE",
 				}),
-				{ params: Promise.resolve({ photoId: "photo-1" }) },
+				{ params: Promise.resolve({ photoId: photo.id }) },
 			);
 
 			expect(response.status).toBe(200);
-			expect(update).toHaveBeenCalledWith(
-				expect.objectContaining({
-					hot_status: hotStatus,
-					blur_data_url: null,
-					moderation_status: "rejected",
-				}),
-			);
+			expect(
+				await first("select * from photos where id = ?", [photo.id]),
+			).toMatchObject({
+				hot_status: hotStatus,
+				blur_data_url: null,
+				moderation_status: "rejected",
+				archive_status: "failed",
+			});
+			expect(
+				await first("select action from moderation_events where photo_id = ?", [
+					photo.id,
+				]),
+			).toEqual({
+				action: storageError ? "deletion_partial" : "deleted",
+			});
+			if (!storageError) {
+				expect(context.GALLERY.objects.size).toBe(0);
+			}
 		},
 	);
+
+	it("does not delete a photo that belongs to another site", async () => {
+		const context = await setupSite();
+		const photo = await insertPhoto(context.site.id, { hotStatus: "uploaded" });
+		const otherSite = {
+			...context.site,
+			id: "99999999-9999-4999-8999-999999999999",
+		};
+		mocks.get.mockReturnValue({
+			value: await createAdminSession(context.site),
+		});
+		// The request arrives on the right host, but we pretend the photo is elsewhere.
+		const response = await DELETE(
+			siteRequest(context.site, `/api/admin/photos/${photo.id}`, {
+				method: "DELETE",
+			}),
+			{
+				params: Promise.resolve({
+					photoId: "00000000-0000-4000-8000-000000000000",
+				}),
+			},
+		);
+		expect(response.status).toBe(404);
+		expect(otherSite.id).not.toBe(context.site.id);
+	});
 });

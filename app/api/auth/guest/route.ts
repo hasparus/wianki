@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { secretMatches } from "@/lib/auth/secrets";
+import { verifyPassphrase } from "@/lib/auth/secrets";
 import {
 	ADMIN_COOKIE,
 	adminCookieOptions,
@@ -8,8 +8,8 @@ import {
 	GUEST_COOKIE,
 	guestCookieOptions,
 } from "@/lib/auth/session";
-import { serverEnv } from "@/lib/env";
 import { assertSameOrigin, jsonError } from "@/lib/http";
+import { siteFromRequest } from "@/lib/sites";
 
 /**
  * One passphrase field, two roles. The admin passphrase is checked first and
@@ -17,8 +17,10 @@ import { assertSameOrigin, jsonError } from "@/lib/http";
  * wrong guest passphrase, so the form leaks nothing about which one exists.
  */
 export async function POST(request: Request) {
+	const site = await siteFromRequest(request);
+	if (!site) return jsonError("Nie znaleziono strony.", 404);
 	try {
-		assertSameOrigin(request);
+		assertSameOrigin(request, site.origin);
 	} catch (response) {
 		return response as Response;
 	}
@@ -29,21 +31,17 @@ export async function POST(request: Request) {
 		return jsonError("Nieprawidłowe hasło.", 401);
 	}
 
-	const env = serverEnv();
 	const jar = await cookies();
 
-	if (
-		env.ADMIN_ACCESS_PASSPHRASE &&
-		secretMatches(passphrase, env.ADMIN_ACCESS_PASSPHRASE)
-	) {
-		jar.set(ADMIN_COOKIE, await createAdminSession(), adminCookieOptions);
+	if (await verifyPassphrase(passphrase, site.admin_passphrase_hash)) {
+		jar.set(ADMIN_COOKIE, await createAdminSession(site), adminCookieOptions);
 		return Response.json({ ok: true, redirect: "/admin" });
 	}
 
-	if (!secretMatches(passphrase, env.GUEST_ACCESS_PASSPHRASE)) {
+	if (!(await verifyPassphrase(passphrase, site.guest_passphrase_hash))) {
 		return jsonError("Nieprawidłowe hasło.", 401);
 	}
 
-	jar.set(GUEST_COOKIE, await createGuestSession(), guestCookieOptions);
+	jar.set(GUEST_COOKIE, await createGuestSession(site), guestCookieOptions);
 	return Response.json({ ok: true, redirect: "/" });
 }
