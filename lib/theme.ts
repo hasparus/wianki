@@ -308,7 +308,7 @@ export function resolveTokens(theme: SiteTheme): Record<TokenName, string> {
 export function sanitizeCustomCss(css: string) {
 	return css
 		.slice(0, CUSTOM_CSS_MAX)
-		.replace(/<\/style/gi, "")
+		.replace(/<\/style\s*>?/gi, "")
 		.replace(/@import\b[^;{]*(?:;|(?=[}]))?/gi, "")
 		.replace(/expression\s*\(/gi, "")
 		.replace(/-moz-binding/gi, "")
