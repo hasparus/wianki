@@ -1,12 +1,18 @@
-# Wedding photo gallery
+# Wianki — wedding photo galleries
 
-Private, mobile-first wedding gallery. Guests upload from their phones. The web
-derivative goes to private Supabase Storage. The original streams through a
-Cloudflare Worker into an archive you pick: an R2 bucket, or a Drive folder you
-own. Vision SafeSearch checks the derivative before it publishes.
+Private, mobile-first wedding galleries, one platform serving many weddings.
+Guests upload from their phones. The web derivative goes to a private R2
+bucket. The original streams through a Cloudflare Worker into a second,
+cheaper R2 bucket. Vision SafeSearch checks the derivative before it
+publishes, for the sites that turn moderation on.
 
-Trust your guests? `MODERATION_ENABLED=false`. Photos auto-approve at
+Trust your guests? Turn moderation off for the site. Photos auto-approve at
 finalization, appear at once, no Vision credentials needed.
+
+Everything runs on Cloudflare — Workers (the Next.js app through OpenNext),
+D1, R2, Durable Objects — and is declared in `alchemy.run.ts`. The owner
+console on the platform host creates sites; each wedding lives on
+`<slug>.<platform host>` or on its own domain.
 
 UI and ops docs are Polish-first. Technical docs are English, so agents share
 exact contracts.
@@ -14,21 +20,24 @@ exact contracts.
 ## Local prerequisites
 
 - Node 24, npm
-- Docker Desktop, for local Supabase
-- Supabase CLI (`npx supabase`)
-- Cloudflare account + Wrangler
-- Google Cloud project with Vision API, unless `MODERATION_ENABLED=false`
-- Drive backend only: Google OAuth desktop client with `drive.file`
+- Cloudflare account (Workers Paid) for a deployed stage; nothing for local
+  work, D1 and R2 are emulated by wrangler
+- Google Cloud project with Vision API, only for sites with moderation on
 
-`.env.example` -> `.env.local`, replace every placeholder. Never commit
-`.env.local`, `.dev.vars`, `private/`, `oauth-output/`.
+`.env.example` -> `.env.local` for `next dev`, or `.env` for alchemy; replace
+every placeholder. Never commit either, nor `private/`, `oauth-output/`,
+`wrangler.jsonc`, `.alchemy/`.
 
 ```powershell
 npm install
-npx supabase start
-npx supabase db reset
-npm run dev
+npm run db:reset:local   # local D1: migrations + demo site (db/seed-dev.sql)
+npm run dev              # http://localhost:3000 is the demo wedding
 ```
+
+`npm run infra:dev` runs the Workers alongside the app in miniflare. The demo
+site answers on `localhost`, the owner console on whatever `PLATFORM_HOST`
+says (`platform.localhost:3000` in the tests). Passphrases of the demo site:
+`e2e invitation passphrase` (guest), `e2e admin passphrase long` (admin).
 
 Checks:
 
@@ -39,79 +48,59 @@ npm run test:e2e
 
 ## Integration order
 
-1. EU Supabase project, link with `npx supabase link`.
-2. `npx supabase db push`. Confirm the `gallery` bucket is private.
-3. Project URL, publishable key, secret key -> Vercel.
-4. Google Cloud project with billing, Vision API on.
-5. Vision-only service account. Project ID, email, private key -> Vercel. Skip
-   4 and 5 with `MODERATION_ENABLED=false`.
-6. Pick the archive. Set `ARCHIVE_BACKEND` in both
-   `workers/archive/wrangler.jsonc` and Vercel.
+1. Cloudflare account, API token, `CLOUDFLARE_ACCOUNT_ID` +
+   `CLOUDFLARE_API_TOKEN` + `ALCHEMY_PASSWORD` in `.env`.
+2. Three random secrets: `SESSION_SECRET`, `ARCHIVE_TOKEN_SECRET`,
+   `SLIDESHOW_LIVE_SECRET`.
+3. `npx alchemy deploy --stage prod`. D1, both R2 buckets (EU jurisdiction),
+   the archive and slideshow Workers and the app come up; migrations are
+   applied; the run prints the URLs.
+4. Zone for the platform host in the same account, wildcard DNS record,
+   `CLOUDFLARE_ZONE_ID` + `PLATFORM_HOST`, deploy again: the apex becomes the
+   owner console, `*.<host>` the weddings.
+5. Optional: `STRIPE_SECRET_KEY` (billing), `EMAIL_FROM` (magic-link mail
+   through Cloudflare Email Sending), Vision service account (moderation).
+6. Open the owner console, sign in with a magic link, create a site. Print the
+   guest QR the console gives you. Guard the admin QR like a shared admin
+   password.
 
-   **`r2`** (default). Bucket in the same Cloudflare account,
-   `r2_buckets[0].bucket_name` points at it. No Google, no consent screen, no
-   refresh token to renew. Deletion is immediate and final.
+The archive Worker keeps the `drive` backend in `src/drive.ts` for anyone who
+wants originals in a Google Drive folder, but the platform deploys `r2` and
+Alchemy does not configure Drive.
 
-   **`drive`**. Originals sit in a folder you own and can open from any Drive
-   client, and deletion only trashes them — Drive keeps it 30 days. Costs a
-   consent screen and a refresh token that dies after 7 days unless the consent
-   app is published to Production. Desktop OAuth client with `drive.file`, set
-   `GOOGLE_DRIVE_OAUTH_CLIENT_ID` and `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET`, run
-   `npm run drive:bootstrap`. Drop the `r2_buckets` block from
-   `wrangler.jsonc`, copy the four values out of the ignored
-   `oauth-output/drive-oauth.json`:
-
-   ```powershell
-   cd workers/archive
-   npx wrangler secret put GOOGLE_OAUTH_CLIENT_ID
-   npx wrangler secret put GOOGLE_OAUTH_CLIENT_SECRET
-   npx wrangler secret put GOOGLE_OAUTH_REFRESH_TOKEN
-   npx wrangler secret put GOOGLE_DRIVE_FOLDER_ID
-   ```
-
-7. Shared archive secret on the Worker:
-
-   ```powershell
-   cd workers/archive
-   npx wrangler secret put ARCHIVE_TOKEN_SECRET
-   ```
-
-8. `ALLOWED_ORIGIN` in `wrangler.jsonc`, deploy the Worker, then both Worker
-   URLs (server and public) -> Vercel.
-9. Attach `wedding.pawel.space` to Vercel with the DNS record it asks for.
-10. Production origin, deletion-contact email, and four independent random
-    secrets: guest entry, guest session, admin entry, admin session.
-11. `npm run qr:generate`. Print the guest QR. Guard the admin QR like a shared
-    admin password.
-
-Optional: `GUEST_JOIN_CODE` adds a short join QR to the slideshow corner.
-`SLIDESHOW_LIVE_URL` + `SLIDESHOW_LIVE_SECRET` turn on live reactions. See
-[docs/slideshow.md](docs/slideshow.md).
-
-Read [integration setup](docs/integrations.md) and the
+Read [docs/deploy.md](docs/deploy.md) for the full procedure and costs,
+[integration setup](docs/integrations.md) and the
 [event runbook](docs/operations.md) before deploying.
 
 ## Architecture map
 
-- `proxy.ts` — token exchange, clean redirects, optimistic route checks
+- `alchemy.run.ts` — every Cloudflare, and optionally Stripe, resource
+- `proxy.ts` — Host -> site resolution, token exchange, optimistic route checks
+- `app/konto` + `app/api/konto` — owner console: sites, QR codes, billing
 - `app/api/uploads` — capability issuance, verified finalization
 - `app/api/gallery` — approved-photo pagination and stats
 - `app/api/admin` — moderation, reconciliation, deletion
+- `lib/cloudflare.ts`, `lib/db.ts`, `lib/storage.ts` — the only code that
+  touches bindings (`DB`, `GALLERY`, `SEND_EMAIL`)
 - `workers/archive` — streaming upload and archive lifecycle, one backend per
   deployment (`src/r2.ts`, `src/drive.ts`)
 - `app/pokaz` + `app/admin/pokaz` — live slideshow and its editor
 - `workers/slideshow-live` — PartyServer room for ephemeral reactions and
   comments (`docs/slideshow.md`)
 - `lib/slideshow-protocol.ts` — the live wire contract, shared by app and worker
-- `supabase/migrations` — tables, enums, indexes, RLS, private bucket
+- `db/migrations` — D1 schema: tables, check constraints, indexes
 
 ## Recovery
 
-- Lost guest QR -> rotate `GUEST_ENTRY_TOKEN`, regenerate, reprint.
-- Leaked join code -> rotate `GUEST_JOIN_CODE`. Printed table QRs survive.
-- Lost admin QR -> rotate `ADMIN_ENTRY_TOKEN` + `ADMIN_SESSION_SECRET`. Every
-  existing admin cookie dies.
-- Bad Drive refresh token -> rerun `npm run drive:bootstrap`, replace the
-  Worker secret.
+- Lost guest QR -> rotate the site's guest entry token in the owner console,
+  reprint.
+- Leaked join code -> rotate the site's join code. Printed table QRs survive.
+- Lost admin QR -> rotate the admin entry token and bump the site's session
+  key version. Every existing admin and guest cookie of that site dies; no
+  other site notices.
+- Leaked `SESSION_SECRET` -> new value, `alchemy deploy`. Everyone on every
+  site signs in again.
 - Partial upload -> "Znajdź w archiwum" from `/admin`.
 - Partial deletion -> the admin queue keeps the error and lets you retry.
+- Lost Alchemy state -> `npx alchemy deploy --adopt` picks the existing
+  resources up by name.

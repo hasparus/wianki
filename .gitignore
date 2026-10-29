@@ -40,8 +40,17 @@ yarn-error.log*
 .dev.vars*
 !.dev.vars.example
 
-# vercel
+# vercel (historical deploys)
 .vercel
+
+# Cloudflare / Alchemy / OpenNext: generated per stage, never committed.
+# wrangler.local.jsonc is the checked-in exception (local-only bindings).
+wrangler.jsonc
+.alchemy/
+.open-next/
+.wrangler/
+.env
+.dev.vars
 
 # typescript
 *.tsbuildinfo
