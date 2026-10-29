@@ -30,9 +30,22 @@ export function bindings(): Bindings {
 	return getCloudflareContext().env as unknown as Bindings;
 }
 
-/** String vars and secrets from the Worker env, falling back to process.env. */
+/**
+ * String vars and secrets from the Worker env, falling back to process.env.
+ *
+ * The middleware bundle Next produces carries its own `process` shim, whose
+ * `env` is whatever was known at build time. OpenNext copies the Worker's
+ * vars onto the real `globalThis.process.env` on every request, so that one
+ * is read as well; without it the proxy sees no configuration at all.
+ */
 export function runtimeEnv(): Record<string, string | undefined> {
-	const out: Record<string, string | undefined> = { ...process.env };
+	const globalProcessEnv = (
+		globalThis as { process?: { env?: Record<string, string | undefined> } }
+	).process?.env;
+	const out: Record<string, string | undefined> = {
+		...globalProcessEnv,
+		...process.env,
+	};
 	let env: Record<string, unknown> | undefined;
 	try {
 		env = override ?? (getCloudflareContext().env as Record<string, unknown>);

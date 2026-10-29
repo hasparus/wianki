@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/headers", () => ({
 	cookies: async () => ({ get: () => undefined }),
@@ -11,7 +11,7 @@ import { setBindingsForTests } from "@/lib/cloudflare";
 import { resetServerEnvCache } from "@/lib/env";
 import { proxy } from "@/proxy";
 import { createTestBucket, createTestD1 } from "./helpers/d1";
-import { setupSite } from "./helpers/site";
+import { setupSite, TEST_ENV } from "./helpers/site";
 
 const tomorrow = new Date(Date.now() + 86_400_000).toISOString();
 const yesterday = new Date(Date.now() - 86_400_000).toISOString();
@@ -31,9 +31,15 @@ beforeEach(async () => {
 
 describe("invalid server environment", () => {
 	beforeEach(() => {
-		// Bindings without PLATFORM_HOST: the real schema produces the error.
+		// Bindings without PLATFORM_HOST, and no shell variable standing in for
+		// it: the real schema produces the error.
 		setBindingsForTests({ DB: createTestD1(), GALLERY: createTestBucket() });
+		for (const key of Object.keys(TEST_ENV)) vi.stubEnv(key, undefined);
 		resetServerEnvCache();
+	});
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
 	});
 
 	it("shows Zod-derived issues on page requests", async () => {
