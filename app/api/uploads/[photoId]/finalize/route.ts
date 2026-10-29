@@ -2,19 +2,21 @@ import { after } from "next/server";
 import { z } from "zod";
 import { verifyArchiveReceipt } from "@/lib/archive-token";
 import { readGuestSession } from "@/lib/auth/session";
+import { syncStorageUsage } from "@/lib/billing";
 import { parseBlurDataUrl } from "@/lib/blur-placeholder";
+import { first, run } from "@/lib/db";
 import {
 	type ArchiveStatus,
 	acceptedDerivativeTypes,
-	GALLERY_BUCKET,
 	MAX_BLUR_DATA_URL_LENGTH,
 	MAX_DERIVATIVE_BYTES,
 	type ModerationStatus,
 } from "@/lib/domain";
-import { serverEnv } from "@/lib/env";
+import { moderationConfigured } from "@/lib/env";
 import { assertSameOrigin, jsonError, noStoreJson } from "@/lib/http";
 import { moderateImage } from "@/lib/moderation";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { siteFromRequest } from "@/lib/sites";
+import { derivativeBlob, derivativeKey } from "@/lib/storage";
 
 const bodySchema = z.object({
 	archiveReceipt: z.string().min(1).nullable(),
@@ -32,12 +34,23 @@ const bodySchema = z.object({
 	),
 });
 
+async function recordModerationEvent(
+	photoId: string,
+	actor: "vision" | "admin" | "system",
+	action: string,
+	details: unknown,
+) {
+	await run(
+		"insert into moderation_events (photo_id, actor, action, details) values (?, ?, ?, ?)",
+		[photoId, actor, action, details === null ? null : JSON.stringify(details)],
+	);
+}
+
 async function moderateFinalizedPhoto(
 	photoId: string,
 	image: Blob,
 	archiveError: string | null,
 ) {
-	const supabase = supabaseAdmin();
 	let moderationStatus: ModerationStatus = "review_required";
 	let moderationScores: Record<string, string | undefined> | null = null;
 	let moderationError: string | null = null;
@@ -55,47 +68,39 @@ async function moderateFinalizedPhoto(
 
 	const lastError =
 		[archiveError, moderationError].filter(Boolean).join(" | ") || null;
-	const { error: updateError } = await supabase
-		.from("photos")
-		.update({
-			moderation_status: moderationStatus,
-			moderation_scores: moderationScores,
-			last_error: lastError,
-		})
-		.eq("id", photoId);
-	if (updateError) throw updateError;
-
-	const { error: eventError } = await supabase
-		.from("moderation_events")
-		.insert({
-			photo_id: photoId,
-			actor: moderationScores ? "vision" : "system",
-			action: moderationStatus,
-			details: moderationScores ?? { error: moderationError },
-		});
-	if (eventError) throw eventError;
+	await run(
+		"update photos set moderation_status = ?, moderation_scores = ?, last_error = ? where id = ?",
+		[
+			moderationStatus,
+			moderationScores ? JSON.stringify(moderationScores) : null,
+			lastError,
+			photoId,
+		],
+	);
+	await recordModerationEvent(
+		photoId,
+		moderationScores ? "vision" : "system",
+		moderationStatus,
+		moderationScores ?? { error: moderationError },
+	);
 }
 
 async function recordAutoApproval(photoId: string) {
-	const { error } = await supabaseAdmin()
-		.from("moderation_events")
-		.insert({
-			photo_id: photoId,
-			actor: "system",
-			action: "approved",
-			details: { reason: "moderation_disabled" },
-		});
-	if (error) throw error;
+	await recordModerationEvent(photoId, "system", "approved", {
+		reason: "moderation_disabled",
+	});
 }
 
 export async function POST(
 	request: Request,
 	{ params }: { params: Promise<{ photoId: string }> },
 ) {
-	const session = await readGuestSession();
+	const site = await siteFromRequest(request);
+	if (!site) return jsonError("Nie znaleziono strony.", 404);
+	const session = await readGuestSession(site);
 	if (!session) return jsonError("Sesja gościa wygasła.", 401);
 	try {
-		assertSameOrigin(request);
+		assertSameOrigin(request, site.origin);
 	} catch (response) {
 		return response as Response;
 	}
@@ -104,14 +109,17 @@ export async function POST(
 	if (!parsed.success)
 		return jsonError("Nieprawidłowe potwierdzenie zdjęcia.", 400);
 	const { photoId } = await params;
-	const supabase = supabaseAdmin();
-	const { data: photo, error: photoError } = await supabase
-		.from("photos")
-		.select("id,storage_path,original_size,archive_status,archive_key")
-		.eq("id", photoId)
-		.eq("guest_id", session.guestId)
-		.single();
-	if (photoError || !photo) return jsonError("Nie znaleziono zdjęcia.", 404);
+	const photo = await first<{
+		id: string;
+		storage_path: string;
+		original_size: number;
+		archive_status: string;
+		archive_key: string | null;
+	}>(
+		"select id, storage_path, original_size, archive_status, archive_key from photos where id = ? and site_id = ? and guest_id = ?",
+		[photoId, site.id, session.guestId],
+	);
+	if (!photo) return jsonError("Nie znaleziono zdjęcia.", 404);
 
 	let archiveKey: string | null = photo.archive_key;
 	let archiveStatus: ArchiveStatus =
@@ -137,53 +145,55 @@ export async function POST(
 		}
 	}
 
-	const { data: image, error: downloadError } = await supabase.storage
-		.from(GALLERY_BUCKET)
-		.download(photo.storage_path as string);
-	if (downloadError || !image || image.size > MAX_DERIVATIVE_BYTES) {
+	const image = await derivativeBlob(
+		derivativeKey(site.id, photo.storage_path),
+	).catch(() => null);
+	if (!image || image.size > MAX_DERIVATIVE_BYTES) {
 		const galleryError = "Nieprawidłowa kopia galeryjna.";
 		const lastError =
 			[galleryError, archiveError].filter(Boolean).join(" | ") || galleryError;
-		await supabase
-			.from("photos")
-			.update({
-				hot_status: "failed",
-				archive_status: archiveStatus,
-				archive_key: archiveKey,
-				last_error: lastError,
-			})
-			.eq("id", photoId);
+		await run(
+			"update photos set hot_status = 'failed', archive_status = ?, archive_key = ?, last_error = ? where id = ?",
+			[archiveStatus, archiveKey, lastError, photoId],
+		);
 		return jsonError("Nie udało się zweryfikować kopii galeryjnej.", 400);
 	}
 
-	const moderationEnabled = serverEnv().MODERATION_ENABLED;
+	// A site asks for moderation, and the deployment has Vision to do it.
+	// Asking without Vision would park every photo in review_required.
+	const moderationEnabled = site.moderationEnabled && moderationConfigured();
 	const moderationStatus: ModerationStatus = moderationEnabled
 		? "pending"
 		: "approved";
-	const { error: updateError } = await supabase
-		.from("photos")
-		.update({
-			hot_status: "uploaded",
-			archive_status: archiveStatus,
-			moderation_status: moderationStatus,
-			archive_key: archiveKey,
-			derivative_size: parsed.data.derivativeSize,
-			derivative_content_type: parsed.data.derivativeType,
-			width: parsed.data.width,
-			height: parsed.data.height,
-			blur_data_url: parseBlurDataUrl(parsed.data.blurDataUrl),
-			moderation_scores: null,
-			last_error: archiveError,
-		})
-		.eq("id", photoId);
-	if (updateError)
+	try {
+		await run(
+			`update photos set hot_status = 'uploaded', archive_status = ?, moderation_status = ?,
+			   archive_key = ?, derivative_size = ?, derivative_content_type = ?, width = ?, height = ?,
+			   blur_data_url = ?, moderation_scores = null, last_error = ?
+			 where id = ?`,
+			[
+				archiveStatus,
+				moderationStatus,
+				archiveKey,
+				parsed.data.derivativeSize,
+				parsed.data.derivativeType,
+				parsed.data.width,
+				parsed.data.height,
+				parseBlurDataUrl(parsed.data.blurDataUrl),
+				archiveError,
+				photoId,
+			],
+		);
+	} catch {
 		return jsonError("Nie udało się zapisać wyniku zdjęcia.", 500);
+	}
 
-	after(() =>
-		moderationEnabled
+	after(async () => {
+		await (moderationEnabled
 			? moderateFinalizedPhoto(photoId, image, archiveError)
-			: recordAutoApproval(photoId),
-	);
+			: recordAutoApproval(photoId));
+		await syncStorageUsage(site.id);
+	});
 
 	return noStoreJson({
 		ok: true,

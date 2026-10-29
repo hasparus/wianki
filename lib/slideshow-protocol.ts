@@ -6,7 +6,6 @@ import { jwtVerify } from "jose";
  * ends cannot drift). Nothing here may touch server env or Cloudflare globals.
  */
 export const SLIDESHOW_LIVE_AUDIENCE = "wedding-slideshow-live";
-export const SLIDESHOW_ROOM = "wesele";
 export const SLIDESHOW_PARTY = "slideshow-party";
 export const REACTION_EMOJI = ["❤️", "🥂", "😂", "👏", "🥹"] as const;
 export const MAX_COMMENT_LENGTH = 140;
@@ -126,10 +125,18 @@ export function applyControl(
 	};
 }
 
+export type LiveAccessClaims = {
+	role: SlideshowLiveRole;
+	/** The room the token admits to; one room per wedding, named by site id. */
+	room: string;
+	/** The site's origin, which the live Worker reflects as the CORS origin. */
+	origin: string;
+};
+
 export async function verifyLiveToken(
 	token: string | null,
 	secret: string,
-): Promise<SlideshowLiveRole | null> {
+): Promise<LiveAccessClaims | null> {
 	if (!token) return null;
 	try {
 		const { payload } = await jwtVerify(
@@ -137,9 +144,16 @@ export async function verifyLiveToken(
 			new TextEncoder().encode(secret),
 			{ algorithms: ["HS256"], audience: SLIDESHOW_LIVE_AUDIENCE },
 		);
-		return payload.role === "guest" || payload.role === "admin"
-			? payload.role
-			: null;
+		if (
+			(payload.role !== "guest" && payload.role !== "admin") ||
+			typeof payload.room !== "string" ||
+			!payload.room ||
+			typeof payload.origin !== "string" ||
+			!payload.origin
+		) {
+			return null;
+		}
+		return { role: payload.role, room: payload.room, origin: payload.origin };
 	} catch {
 		return null;
 	}

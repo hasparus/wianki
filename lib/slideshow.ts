@@ -1,14 +1,14 @@
 import QRCode from "qrcode";
-import { GALLERY_BUCKET } from "@/lib/domain";
-import { serverEnv } from "@/lib/env";
+import { all, first, nowIso, run } from "@/lib/db";
+import { GALLERY_ELIGIBLE } from "@/lib/gallery";
+import type { Site } from "@/lib/sites";
 import {
 	clampSlideSeconds,
 	SLIDESHOW_DEFAULT_SECONDS,
 } from "@/lib/slideshow-protocol";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { derivativeUrl } from "@/lib/storage";
 
 export const SLIDESHOW_AUTO_LIMIT = 150;
-const SIGNED_URL_SECONDS = 60 * 60 * 6;
 
 export type SlideshowSlide = {
 	id: string;
@@ -25,23 +25,25 @@ export type SlideshowDeck = {
 	source: "custom" | "auto";
 };
 
-export async function getSlideSeconds(): Promise<number> {
-	const { data, error } = await supabaseAdmin()
-		.from("slideshow_settings")
-		.select("slide_seconds")
-		.limit(1)
-		.maybeSingle();
-	if (error || !data) return SLIDESHOW_DEFAULT_SECONDS;
-	return clampSlideSeconds(data.slide_seconds);
+export async function getSlideSeconds(siteId: string): Promise<number> {
+	const row = await first<{ slide_seconds: number }>(
+		"select slide_seconds from slideshow_settings where site_id = ?",
+		[siteId],
+	);
+	if (!row) return SLIDESHOW_DEFAULT_SECONDS;
+	return clampSlideSeconds(row.slide_seconds);
 }
 
-export async function setSlideSeconds(seconds: number): Promise<number> {
+export async function setSlideSeconds(
+	siteId: string,
+	seconds: number,
+): Promise<number> {
 	const slideSeconds = clampSlideSeconds(seconds);
-	const { error } = await supabaseAdmin()
-		.from("slideshow_settings")
-		.update({ slide_seconds: slideSeconds })
-		.eq("id", true);
-	if (error) throw error;
+	await run(
+		`insert into slideshow_settings (site_id, slide_seconds, updated_at) values (?, ?, ?)
+		 on conflict (site_id) do update set slide_seconds = excluded.slide_seconds, updated_at = excluded.updated_at`,
+		[siteId, slideSeconds, nowIso()],
+	);
 	return slideSeconds;
 }
 
@@ -51,14 +53,15 @@ export type SlideshowJoinInfo = {
 };
 
 /**
- * The corner QR shown during the show. Only exists when GUEST_JOIN_CODE is
- * configured; the QR encodes `/p/<code>`, which the proxy exchanges for a
- * guest session. Colors mirror scripts/generate-qr.ts.
+ * The corner QR shown during the show. Only exists when the site has a join
+ * code; the QR encodes `/p/<code>`, which the proxy exchanges for a guest
+ * session. Colors mirror scripts/generate-qr.ts.
  */
-export async function getSlideshowJoinInfo(): Promise<SlideshowJoinInfo | null> {
-	const env = serverEnv();
-	if (!env.GUEST_JOIN_CODE) return null;
-	const joinUrl = `${env.APP_ORIGIN}/p/${encodeURIComponent(env.GUEST_JOIN_CODE)}`;
+export async function getSlideshowJoinInfo(
+	site: Pick<Site, "guest_join_code" | "origin">,
+): Promise<SlideshowJoinInfo | null> {
+	if (!site.guest_join_code) return null;
+	const joinUrl = `${site.origin}/p/${encodeURIComponent(site.guest_join_code)}`;
 	const qrDataUrl = await QRCode.toDataURL(joinUrl, {
 		width: 240,
 		margin: 1,
@@ -86,21 +89,17 @@ type SlideRow = {
 	title: string | null;
 	subtitle: string | null;
 	photo_id: string | null;
-	photos: {
-		id: string;
-		storage_path: string;
-		width: number | null;
-		height: number | null;
-		hot_status: string;
-		moderation_status: string;
-	} | null;
+	photo_width: number | null;
+	photo_height: number | null;
+	photo_hot_status: string | null;
+	photo_moderation_status: string | null;
 };
 
-function isPhotoVisible(photo: SlideRow["photos"]) {
+function isPhotoVisible(row: SlideRow) {
 	return (
-		photo !== null &&
-		photo.hot_status === "uploaded" &&
-		photo.moderation_status === "approved"
+		row.photo_id !== null &&
+		row.photo_hot_status === "uploaded" &&
+		row.photo_moderation_status === "approved"
 	);
 }
 
@@ -112,32 +111,16 @@ export function isValidSlideOrder(currentIds: string[], order: string[]) {
 	return order.every((id) => expected.has(id));
 }
 
-async function fetchSlideRows() {
-	const { data, error } = await supabaseAdmin()
-		.from("slideshow_slides")
-		.select(
-			"id,position,kind,title,subtitle,photo_id,photos(id,storage_path,width,height,hot_status,moderation_status)",
-		)
-		.order("position", { ascending: true })
-		.order("created_at", { ascending: true });
-	if (error) throw error;
-	return (data ?? []) as unknown as SlideRow[];
-}
-
-/**
- * Signs every derivative in one request rather than one per slide — an
- * auto-generated deck can be 150 photos long.
- */
-async function signPaths(paths: string[]): Promise<Map<string, string>> {
-	if (paths.length === 0) return new Map();
-	const { data, error } = await supabaseAdmin()
-		.storage.from(GALLERY_BUCKET)
-		.createSignedUrls(paths, SIGNED_URL_SECONDS);
-	if (error) throw error;
-	return new Map(
-		(data ?? []).flatMap((entry) =>
-			entry.path && entry.signedUrl ? [[entry.path, entry.signedUrl]] : [],
-		),
+async function fetchSlideRows(siteId: string) {
+	return all<SlideRow>(
+		`select s.id, s.position, s.kind, s.title, s.subtitle, s.photo_id,
+		        p.width as photo_width, p.height as photo_height,
+		        p.hot_status as photo_hot_status, p.moderation_status as photo_moderation_status
+		 from slideshow_slides s
+		 left join photos p on p.id = s.photo_id
+		 where s.site_id = ?
+		 order by s.position asc, s.created_at asc`,
+		[siteId],
 	);
 }
 
@@ -146,50 +129,46 @@ async function signPaths(paths: string[]): Promise<Map<string, string>> {
  * (hidden, deleted, unmoderated) are silently dropped: the slideshow obeys
  * the same eligibility rule as the gallery.
  */
-export async function getSlideshowDeck(): Promise<SlideshowDeck> {
-	const all = await fetchSlideRows();
-	if (all.length === 0)
-		return { slides: await getAutoSlides(), source: "auto" };
-	const rows = all.filter(
-		(row) => row.kind === "text" || isPhotoVisible(row.photos),
-	);
-	const signed = await signPaths(
-		rows.flatMap((row) =>
-			row.kind === "photo" && row.photos ? [row.photos.storage_path] : [],
-		),
-	);
-	const slides = rows.map((row): SlideshowSlide => {
-		const photo = row.kind === "photo" ? row.photos : null;
-		return {
-			id: row.id,
-			kind: row.kind,
-			imageUrl: photo ? (signed.get(photo.storage_path) ?? null) : null,
-			width: photo?.width ?? null,
-			height: photo?.height ?? null,
-			title: row.title,
-			subtitle: row.subtitle,
-		};
-	});
+export async function getSlideshowDeck(siteId: string): Promise<SlideshowDeck> {
+	const rows = await fetchSlideRows(siteId);
+	if (rows.length === 0)
+		return { slides: await getAutoSlides(siteId), source: "auto" };
+	const slides = rows
+		.filter((row) => row.kind === "text" || isPhotoVisible(row))
+		.map(
+			(row): SlideshowSlide => ({
+				id: row.id,
+				kind: row.kind,
+				imageUrl:
+					row.kind === "photo" && row.photo_id
+						? derivativeUrl(row.photo_id)
+						: null,
+				width: row.photo_width,
+				height: row.photo_height,
+				title: row.title,
+				subtitle: row.subtitle,
+			}),
+		);
 	return { slides, source: "custom" };
 }
 
 /** Without a curated deck the show plays the gallery chronologically. */
-async function getAutoSlides(): Promise<SlideshowSlide[]> {
-	const { data, error } = await supabaseAdmin()
-		.from("photos")
-		.select("id,storage_path,width,height")
-		.eq("hot_status", "uploaded")
-		.eq("moderation_status", "approved")
-		.order("created_at", { ascending: true })
-		.order("id", { ascending: true })
-		.limit(SLIDESHOW_AUTO_LIMIT);
-	if (error) throw error;
-	const rows = data ?? [];
-	const signed = await signPaths(rows.map((row) => row.storage_path));
+async function getAutoSlides(siteId: string): Promise<SlideshowSlide[]> {
+	const rows = await all<{
+		id: string;
+		width: number | null;
+		height: number | null;
+	}>(
+		`select id, width, height from photos
+		 where site_id = ? and ${GALLERY_ELIGIBLE}
+		 order by created_at asc, id asc
+		 limit ?`,
+		[siteId, SLIDESHOW_AUTO_LIMIT],
+	);
 	return rows.map((row) => ({
 		id: row.id,
 		kind: "photo" as const,
-		imageUrl: signed.get(row.storage_path) ?? null,
+		imageUrl: derivativeUrl(row.id),
 		width: row.width,
 		height: row.height,
 		title: null,
@@ -197,15 +176,10 @@ async function getAutoSlides(): Promise<SlideshowSlide[]> {
 	}));
 }
 
-export async function getAdminSlides(): Promise<AdminSlide[]> {
-	const rows = await fetchSlideRows();
-	const signed = await signPaths(
-		rows.flatMap((row) =>
-			isPhotoVisible(row.photos) && row.photos ? [row.photos.storage_path] : [],
-		),
-	);
+export async function getAdminSlides(siteId: string): Promise<AdminSlide[]> {
+	const rows = await fetchSlideRows(siteId);
 	return rows.map((row): AdminSlide => {
-		const visible = isPhotoVisible(row.photos);
+		const visible = isPhotoVisible(row);
 		return {
 			id: row.id,
 			kind: row.kind,
@@ -214,10 +188,7 @@ export async function getAdminSlides(): Promise<AdminSlide[]> {
 			subtitle: row.subtitle,
 			photoId: row.photo_id,
 			photoVisible: row.kind === "photo" ? visible : true,
-			imageUrl:
-				row.photos && visible
-					? (signed.get(row.photos.storage_path) ?? null)
-					: null,
+			imageUrl: visible && row.photo_id ? derivativeUrl(row.photo_id) : null,
 		};
 	});
 }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { denyAdminRequest } from "@/lib/auth/session";
 import { jsonError, noStoreJson } from "@/lib/http";
+import { siteFromRequest } from "@/lib/sites";
 import { setSlideSeconds } from "@/lib/slideshow";
 import {
 	SLIDESHOW_MAX_SECONDS,
@@ -16,7 +17,9 @@ const bodySchema = z.object({
 });
 
 export async function PATCH(request: Request) {
-	const denied = await denyAdminRequest(request);
+	const site = await siteFromRequest(request);
+	if (!site) return jsonError("Nie znaleziono strony.", 404);
+	const denied = await denyAdminRequest(request, site);
 	if (denied) return denied;
 	const parsed = bodySchema.safeParse(await request.json().catch(() => null));
 	if (!parsed.success) {
@@ -27,7 +30,7 @@ export async function PATCH(request: Request) {
 	}
 	try {
 		return noStoreJson({
-			slideSeconds: await setSlideSeconds(parsed.data.slideSeconds),
+			slideSeconds: await setSlideSeconds(site.id, parsed.data.slideSeconds),
 		});
 	} catch {
 		return jsonError("Nie udało się zapisać ustawienia.", 500);

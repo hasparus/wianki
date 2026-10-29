@@ -1,8 +1,6 @@
-import { serverEnv } from "@/lib/env";
-
-export function assertSameOrigin(request: Request) {
+export function assertSameOrigin(request: Request, expectedOrigin: string) {
 	const origin = request.headers.get("origin");
-	if (!origin || origin !== serverEnv().APP_ORIGIN) {
+	if (!origin || origin !== expectedOrigin) {
 		throw new Response("Nieprawidłowe źródło żądania.", { status: 403 });
 	}
 }

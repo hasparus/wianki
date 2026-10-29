@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { SiteTheme } from "@/components/site-theme";
+import { currentSite } from "@/lib/sites";
 import "./globals.css";
 
 /**
@@ -26,26 +28,41 @@ const instrumentSerif = localFont({
 	fallback: ["Iowan Old Style", "Georgia", "serif"],
 });
 
-export const metadata: Metadata = {
-	title: "Rosia & Piotrek — galeria zdjęć",
-	description: "Prywatna galeria zdjęć ślubnych dla naszych gości.",
-	robots: {
-		index: false,
-		follow: false,
-		nocache: true,
-	},
-};
+async function safeCurrentSite() {
+	try {
+		return await currentSite();
+	} catch {
+		return null;
+	}
+}
 
-export default function RootLayout({
+export async function generateMetadata(): Promise<Metadata> {
+	const site = await safeCurrentSite();
+	return {
+		title: site ? `${site.title} — galeria zdjęć` : "Wianki — galeria ślubna",
+		description: site
+			? "Prywatna galeria zdjęć ślubnych dla naszych gości."
+			: "Prywatna galeria zdjęć dla gości wesela, bez kont i bez e-maili.",
+		robots: {
+			index: false,
+			follow: false,
+			nocache: true,
+		},
+	};
+}
+
+export default async function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	const site = await safeCurrentSite();
 	return (
 		<html
 			lang="pl"
 			className={`${instrumentSerif.variable} h-full antialiased`}
 		>
+			<head>{site ? <SiteTheme themeJson={site.theme_json} /> : null}</head>
 			<body className="flex min-h-full flex-col">{children}</body>
 		</html>
 	);

@@ -21,11 +21,17 @@ the live slideshow from a laptop at the venue.
 
 ## Product Purpose
 
-A private, Polish-first wedding photo gallery for one wedding. Guests upload
-from their phones; the couple ends the night with every photo their guests
-took, in one place, without anyone creating an account or handing over an email
-address. Success is a guest who uploads without being taught how, and a couple
-who still has the originals a decade later.
+A private, Polish-first wedding photo gallery, sold as a product: a couple
+pays once a year for their own gallery at `<slug>.wianki.app` (or their own
+domain), guests upload from their phones, and the couple ends the night with
+every photo their guests took, in one place, without anyone creating an
+account or handing over an email address. Success is a guest who uploads
+without being taught how, and a couple who still has the originals a decade
+later.
+
+A third audience is the couple as **owner**: they sign in to the console on
+the platform host by e-mail magic link, create the gallery, set passphrases,
+print the QR codes, pick a look (preset, tokens, custom CSS) and pay.
 
 ## Positioning
 
@@ -39,8 +45,10 @@ A shared consumer album gives you one or the other, never both.
 
 ## Operating Context
 
-One deployment serves exactly one wedding. Canonical production site of this
-fork is `https://wesele.monwid-olechnowicz.com`.
+One deployment on Cloudflare (Workers via OpenNext, D1, R2, declared in
+`alchemy.run.ts`) serves every wedding. Each wedding is a site with its own
+subdomain or custom domain, secrets, theme and plan. The canonical wedding of
+this fork, `https://wesele.monwid-olechnowicz.com`, is one such site.
 
 Guest flow: QR or passphrase → signed guest cookie → privacy notice → gallery
 with an upload panel. Photos only, at most 10 files per batch, 25 MiB per
@@ -49,15 +57,21 @@ refreshed by hand — there is no Realtime and no background polling.
 
 Admin flow: private QR token → `/admin` moderation and recovery queues —
 approve, hide, retry moderation, reconcile archive, confirm deletion. Deletion
-can half-fail, so both the Supabase side and the archive side stay retryable.
+can half-fail, so both the gallery bucket side and the archive side stay
+retryable.
+
+Owner flow: `/konto` on the platform host — magic-link login, sites list, site
+settings (names, passphrases, QR codes, open house, join code, moderation,
+custom domain), look (`/konto/strony/<id>/wyglad`), plan and billing.
 
 Evening flow: a live slideshow at `/pokaz`, curated from `/admin/pokaz`, run by
 a PartyServer Durable Object. Guests send ephemeral reactions and comments that
 float over the projected photo and are never persisted. The gallery itself has
 no comments and no likes.
 
-External services, none preconfigured: Supabase, Cloudflare Workers, R2 or
-Google Drive, Google Vision SafeSearch, Vercel.
+External services: Cloudflare (Workers, D1, R2, optional Email Sending),
+Stripe (optional; without it every site is free), Google Vision SafeSearch
+(optional; per-site moderation switch).
 
 ## Capabilities and Constraints
 
@@ -65,7 +79,9 @@ Google Drive, Google Vision SafeSearch, Vercel.
 - Three independent statuses per photo: `hot_status`, `archive_status`,
   `moderation_status`. Gallery = `hot_status=uploaded` AND
   `moderation_status=approved`. That rule never changes.
-- Private Supabase bucket; no public table or object policies.
+- Private R2 buckets; derivatives are read only through an authorized route.
+- $49 per year per site, 10 GB of originals included, $5 per extra 10 GB
+  block per year metered through Stripe; a trial site stops at 100 photos.
 - Moderation runs Vision SafeSearch on the derivative; with
   `MODERATION_ENABLED=false` uploads auto-approve and Vision is skipped.
 - Admin entry is a bearer QR token, not a user account.

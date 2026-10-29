@@ -1,36 +1,47 @@
 import { z } from "zod";
+import { runtimeEnv } from "@/lib/cloudflare";
 
 const visionKeys = [
 	"GOOGLE_VISION_CLIENT_EMAIL",
 	"GOOGLE_VISION_PRIVATE_KEY",
 ] as const;
 
+const stripeKeys = [
+	"STRIPE_SECRET_KEY",
+	"STRIPE_WEBHOOK_SECRET",
+	"STRIPE_PRICE_YEARLY",
+	"STRIPE_PRICE_OVERAGE",
+] as const;
+
+/**
+ * Platform-wide configuration. Everything that used to be one wedding's
+ * `.env` (passphrases, entry tokens, couple's names, moderation switch) now
+ * lives per site in D1; what is left here is shared by every wedding the
+ * deployment serves.
+ */
 const serverSchema = z
 	.object({
-		NEXT_PUBLIC_SUPABASE_URL: z.url(),
-		NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+		/** Host (no scheme) the owner console lives on; sites are subdomains of it. */
+		PLATFORM_HOST: z
+			.string()
+			.min(1)
+			.regex(/^[a-z0-9.-]+(:\d+)?$/i, "host bez schematu, np. wianki.app"),
 		NEXT_PUBLIC_ARCHIVE_WORKER_URL: z.url(),
-		SUPABASE_SECRET_KEY: z.string().min(1),
-		APP_ORIGIN: z.url(),
-		GUEST_ENTRY_TOKEN: z.string().min(32),
-		GUEST_JOIN_CODE: z.string().min(6).optional(),
-		GUEST_ACCESS_PASSPHRASE: z.string().min(8),
-		// While this is in the future, the site hands every first visit a guest
-		// session instead of asking for the passphrase. Unset = always ask.
-		GUEST_OPEN_UNTIL: z.coerce.date().optional(),
-		GUEST_SESSION_SECRET: z.string().min(32),
-		ADMIN_ENTRY_TOKEN: z.string().min(32),
-		ADMIN_ACCESS_PASSPHRASE: z.string().min(16).optional(),
-		ADMIN_SESSION_SECRET: z.string().min(32),
+		/** Root of every derived cookie and token key. Rotating it logs everyone out. */
+		SESSION_SECRET: z.string().min(32),
 		ARCHIVE_WORKER_URL: z.url(),
 		ARCHIVE_TOKEN_SECRET: z.string().min(32),
-		ARCHIVE_BACKEND: z.enum(["r2", "drive"]).default("r2"),
-		MODERATION_ENABLED: z.stringbool().default(true),
 		SLIDESHOW_LIVE_URL: z.url().optional(),
 		SLIDESHOW_LIVE_SECRET: z.string().min(32).optional(),
 		GOOGLE_VISION_CLIENT_EMAIL: z.email().optional(),
 		GOOGLE_VISION_PRIVATE_KEY: z.string().min(1).optional(),
-		DELETION_CONTACT_EMAIL: z.email(),
+		STRIPE_SECRET_KEY: z.string().min(1).optional(),
+		STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+		STRIPE_PRICE_YEARLY: z.string().min(1).optional(),
+		STRIPE_PRICE_OVERAGE: z.string().min(1).optional(),
+		/** Sender for magic links. Unset = links are logged, not mailed (dev only). */
+		EMAIL_FROM: z.email().optional(),
+		SIGNUP_ENABLED: z.stringbool().default(true),
 		CONSENT_VERSION: z.string().min(1).default("2026-07-23"),
 	})
 	.superRefine((env, ctx) => {
@@ -48,18 +59,28 @@ const serverSchema = z
 					"SLIDESHOW_LIVE_URL i SLIDESHOW_LIVE_SECRET muszą być ustawione razem.",
 			});
 		}
-		if (!env.MODERATION_ENABLED) return;
-		for (const key of visionKeys) {
-			if (!env[key]) {
-				ctx.addIssue({
-					code: "custom",
-					path: [key],
-					message:
-						"Wymagane, gdy MODERATION_ENABLED nie jest ustawione na false.",
-				});
-			}
-		}
+		requireAllOrNone(env, ctx, visionKeys, "Google Vision");
+		requireAllOrNone(env, ctx, stripeKeys, "Stripe");
 	});
+
+function requireAllOrNone(
+	env: Record<string, unknown>,
+	ctx: z.RefinementCtx,
+	keys: readonly string[],
+	label: string,
+) {
+	const set = keys.filter((key) => env[key]);
+	if (set.length === 0 || set.length === keys.length) return;
+	for (const key of keys) {
+		if (!env[key]) {
+			ctx.addIssue({
+				code: "custom",
+				path: [key],
+				message: `Wymagane, gdy skonfigurowano ${label} (ustawiono ${set.join(", ")}).`,
+			});
+		}
+	}
+}
 
 export type ServerEnv = z.infer<typeof serverSchema>;
 
@@ -88,7 +109,7 @@ function normalizeEnvIssues(
 
 function envErrorMessage(issues: ServerEnvIssue[]) {
 	return [
-		"Środowisko serwera jest źle skonfigurowane. Ustaw brakujące zmienne w Vercel (właściwe środowisko: Production lub Preview) albo w .env.local:",
+		"Środowisko serwera jest źle skonfigurowane. Ustaw brakujące zmienne w alchemy.run.ts (sekrety Workera) albo w .env.local:",
 		...issues.map(({ key, reason }) => `- ${key}: ${reason}`),
 	].join("\n");
 }
@@ -115,14 +136,45 @@ export function describeEnvIssues(
 	return envErrorMessage(normalizeEnvIssues(issues, env));
 }
 
+export function parseServerEnv(
+	source: Record<string, string | undefined>,
+): ServerEnv {
+	const result = serverSchema.safeParse(source);
+	if (!result.success) {
+		throw new ServerEnvError(normalizeEnvIssues(result.error.issues, source));
+	}
+	return result.data;
+}
+
 export function serverEnv(): ServerEnv {
 	if (cachedServerEnv) return cachedServerEnv;
-	const result = serverSchema.safeParse(process.env);
-	if (!result.success) {
-		throw new ServerEnvError(
-			normalizeEnvIssues(result.error.issues, process.env),
-		);
-	}
-	cachedServerEnv = result.data;
+	cachedServerEnv = parseServerEnv(runtimeEnv());
 	return cachedServerEnv;
+}
+
+/** Tests and the dev server re-read the environment after changing it. */
+export function resetServerEnvCache() {
+	cachedServerEnv = undefined;
+}
+
+export function isLocalHost(host: string) {
+	return /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
+}
+
+export function platformScheme(host: string) {
+	return isLocalHost(host) ? "http" : "https";
+}
+
+export function platformOrigin(env: ServerEnv = serverEnv()) {
+	return `${platformScheme(env.PLATFORM_HOST)}://${env.PLATFORM_HOST}`;
+}
+
+export function moderationConfigured(env: ServerEnv = serverEnv()) {
+	return Boolean(
+		env.GOOGLE_VISION_CLIENT_EMAIL && env.GOOGLE_VISION_PRIVATE_KEY,
+	);
+}
+
+export function billingConfigured(env: ServerEnv = serverEnv()) {
+	return Boolean(env.STRIPE_SECRET_KEY);
 }
