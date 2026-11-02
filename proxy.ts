@@ -134,7 +134,12 @@ function siteProxy(request: NextRequest) {
 	) {
 		const enter = new URL("/api/auth/enter", request.url);
 		enter.searchParams.set("token", searchParams.get("token") ?? "");
-		enter.searchParams.set("next", pathname);
+		// Everything but the token survives the exchange, so a QR that also
+		// addresses one photograph (`/?token=…&p=…`) still opens on it.
+		const rest = new URLSearchParams(searchParams);
+		rest.delete("token");
+		const query = rest.toString();
+		enter.searchParams.set("next", query ? `${pathname}?${query}` : pathname);
 		return NextResponse.redirect(enter);
 	}
 

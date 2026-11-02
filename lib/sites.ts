@@ -2,7 +2,12 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { first, nowIso, run } from "@/lib/db";
-import { platformScheme, type ServerEnv, serverEnv } from "@/lib/env";
+import {
+	isLocalHost,
+	platformScheme,
+	type ServerEnv,
+	serverEnv,
+} from "@/lib/env";
 
 /**
  * A site is one wedding: its own subdomain, secrets, theme and plan. Rows
@@ -50,11 +55,21 @@ export const SITE_COLUMNS = `id, account_id, slug, custom_domain, title, event_d
 	stripe_customer_id, stripe_subscription_id, current_period_end,
 	included_archive_bytes, overage_blocks_reported, created_at, updated_at`;
 
+/**
+ * The host a site is served from. A custom domain is stored without a port
+ * (Host headers are matched without one); in development, where the platform
+ * runs on a port, a loopback custom domain gets that same port back so the
+ * site's origin matches what the browser actually sends.
+ */
 export function siteHost(
 	site: Pick<SiteRow, "slug" | "custom_domain">,
 	env: ServerEnv = serverEnv(),
 ) {
-	return site.custom_domain ?? `${site.slug}.${env.PLATFORM_HOST}`;
+	if (!site.custom_domain) return `${site.slug}.${env.PLATFORM_HOST}`;
+	const port = env.PLATFORM_HOST.split(":")[1];
+	return port && isLocalHost(site.custom_domain)
+		? `${site.custom_domain}:${port}`
+		: site.custom_domain;
 }
 
 export function siteOrigin(

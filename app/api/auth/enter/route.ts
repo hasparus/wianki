@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 	if (token !== null) {
 		const clean = new URL(next, url);
 		const response = NextResponse.redirect(clean);
-		if (next === "/admin") {
+		if (clean.pathname === "/admin") {
 			if (secretMatches(token, site.admin_entry_token)) {
 				response.cookies.set(
 					ADMIN_COOKIE,

@@ -87,6 +87,13 @@ describe("proxy routing", () => {
 		);
 	});
 
+	it("keeps the rest of the query when exchanging a token", async () => {
+		const response = await visit("/?token=abc&p=photo-1");
+		expect(response.headers.get("location")).toBe(
+			`${SITE}/api/auth/enter?token=abc&next=%2F%3Fp%3Dphoto-1`,
+		);
+	});
+
 	it("lets a signed-in guest through", async () => {
 		const response = await visit("/", "already-signed-in");
 		expect(response.status).toBe(200);
@@ -145,6 +152,15 @@ describe("entry handler", () => {
 			enterRequest(`token=${site.guest_entry_token}&next=%2F`),
 		);
 		expect(response.headers.get("location")).toBe(`${SITE}/`);
+		expect(await readGuestSession(site, cookieFrom(response))).not.toBeNull();
+	});
+
+	it("lands on the addressed photograph after the exchange", async () => {
+		const { site } = await setupSite();
+		const response = await enter(
+			enterRequest(`token=${site.guest_entry_token}&next=%2F%3Fp%3Dphoto-1`),
+		);
+		expect(response.headers.get("location")).toBe(`${SITE}/?p=photo-1`);
 		expect(await readGuestSession(site, cookieFrom(response))).not.toBeNull();
 	});
 

@@ -7,12 +7,18 @@ test("guest entry token is removed and grants a signed session", async ({
 	browserName,
 }) => {
 	if (browserName === "webkit") {
-		const response = await request.get(
+		// Two hops: the proxy hands the token to the entry handler, which sets
+		// the cookie and lands on the clean URL.
+		const hop = await request.get(
 			"/?token=e2e_guest_entry_token_value_32_bytes",
 			{ maxRedirects: 0 },
 		);
+		expect([307, 308]).toContain(hop.status());
+		const location = hop.headers().location;
+		expect(location).toMatch(/^\/api\/auth\/enter\?token=/);
+		const response = await request.get(location, { maxRedirects: 0 });
 		expect([307, 308]).toContain(response.status());
-		expect(response.headers().location).toBe("/");
+		expect(new URL(response.headers().location).pathname).toBe("/");
 		expect(response.headers()["set-cookie"]).toContain("__Host-wianki_guest=");
 		expect(response.headers()["set-cookie"]).toContain("Secure");
 		return;
