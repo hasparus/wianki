@@ -33,7 +33,21 @@ export default defineConfig({
 		trace: "on-first-retry",
 	},
 	projects: [
-		{ name: "chromium", use: { ...devices["Desktop Chrome"] } },
+		{
+			name: "chromium",
+			use: {
+				...devices["Desktop Chrome"],
+				// A sandbox with a preinstalled Chromium but no `playwright install`
+				// points here; CI leaves it unset and uses the downloaded browsers.
+				...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+					? {
+							launchOptions: {
+								executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
+							},
+						}
+					: {}),
+			},
+		},
 		{ name: "mobile-safari", use: { ...devices["iPhone 15"] } },
 	],
 	webServer: process.env.PLAYWRIGHT_EXTERNAL_SERVER
