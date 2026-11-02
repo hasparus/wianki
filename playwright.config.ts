@@ -15,7 +15,9 @@ const origin = `http://localhost:${port}`;
  * and passphrases the specs type in.
  */
 const ciEnv = {
-	PLATFORM_HOST: "platform.localhost",
+	// The port rides along so a site on the loopback custom domain `localhost`
+	// gets an origin that matches what the browser sends (lib/sites.ts).
+	PLATFORM_HOST: `platform.localhost:${port}`,
 	SESSION_SECRET: "e2e_session_secret_value_at_least_32b",
 	ARCHIVE_WORKER_URL: "https://archive.example.workers.dev",
 	NEXT_PUBLIC_ARCHIVE_WORKER_URL: "https://archive.example.workers.dev",

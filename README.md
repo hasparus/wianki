@@ -43,8 +43,15 @@ Checks:
 
 ```powershell
 npm run check
+npm run db:reset:local   # once: local D1 with the demo site the e2e suite logs into
 npm run test:e2e
 ```
+
+The e2e suite starts `next dev` on `http://localhost:3000` with
+`PLATFORM_HOST=platform.localhost:3000`, so `localhost` resolves to the seeded
+demo site by custom domain. In a sandbox that ships a Chromium but cannot run
+`npx playwright install`, point Playwright at it:
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome npm run test:e2e -- --project=chromium`.
 
 ## Integration order
 
