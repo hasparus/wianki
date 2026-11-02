@@ -2,6 +2,20 @@ import { jwtVerify } from "jose";
 
 export const AUDIENCE = "wedding-archive";
 export const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024;
+const MAX_SITE_ID_LENGTH = 64;
+const SITE_ID_PATTERN = /^[A-Za-z0-9-]+$/;
+
+/**
+ * Every operation names the wedding it belongs to and the origin the app
+ * serves that wedding from. The app signs both: it is the authority on which
+ * site a photo belongs to and which origin that site answers on, so the
+ * Worker never has to look either up.
+ */
+type SiteClaims = {
+	photoId: string;
+	siteId: string;
+	origin: string;
+};
 
 /**
  * What a capability token is allowed to say, parsed once. Each operation
@@ -10,15 +24,14 @@ export const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024;
  * happens to be present.
  */
 export type Claims =
-	| {
+	| (SiteClaims & {
 			operation: "upload";
-			photoId: string;
 			filename: string;
 			contentType: string;
 			size: number;
-	  }
-	| { operation: "reconcile"; photoId: string }
-	| { operation: "delete"; photoId: string; archiveKey: string };
+	  })
+	| (SiteClaims & { operation: "reconcile" })
+	| (SiteClaims & { operation: "delete"; archiveKey: string });
 
 /**
  * Distinguishes "your token is bad" from "this deployment is broken" from
@@ -47,6 +60,42 @@ const methodOperation: Record<string, Claims["operation"]> = {
 	DELETE: "delete",
 };
 
+/** `localhost` and its subdomains (`rosia.localhost`) are the only plain-http origins. */
+export function isLoopbackHost(hostname: string) {
+	return (
+		hostname === "localhost" ||
+		hostname.endsWith(".localhost") ||
+		hostname === "127.0.0.1" ||
+		hostname === "[::1]"
+	);
+}
+
+/**
+ * An origin is scheme + host (+ port), nothing else. Anything with a path,
+ * credentials, query or a non-https scheme off localhost is refused, so a
+ * sloppy claim can never be reflected into `Access-Control-Allow-Origin`.
+ */
+export function isValidOrigin(value: string) {
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch {
+		return false;
+	}
+	if (url.origin !== value) return false;
+	if (url.protocol === "https:") return true;
+	return url.protocol === "http:" && isLoopbackHost(url.hostname);
+}
+
+export function isValidSiteId(value: unknown): value is string {
+	return (
+		typeof value === "string" &&
+		value.length > 0 &&
+		value.length <= MAX_SITE_ID_LENGTH &&
+		SITE_ID_PATTERN.test(value)
+	);
+}
+
 function parseClaims(payload: Record<string, unknown>, method: string): Claims {
 	const operation = methodOperation[method];
 	if (!operation) throw new ArchiveError("Niedozwolona metoda.", 405);
@@ -56,15 +105,25 @@ function parseClaims(payload: Record<string, unknown>, method: string): Claims {
 	if (payload.operation !== operation) {
 		throw unauthorized("Token nie pasuje do tej operacji.");
 	}
-	const photoId = payload.photoId;
+	if (!isValidSiteId(payload.siteId)) {
+		throw unauthorized("Token nie wskazuje strony.");
+	}
+	if (typeof payload.origin !== "string" || !isValidOrigin(payload.origin)) {
+		throw unauthorized("Token nie wskazuje źródła.");
+	}
+	const site: SiteClaims = {
+		photoId: payload.photoId,
+		siteId: payload.siteId,
+		origin: payload.origin,
+	};
 
-	if (operation === "reconcile") return { operation, photoId };
+	if (operation === "reconcile") return { ...site, operation };
 
 	if (operation === "delete") {
 		if (typeof payload.archiveKey !== "string" || !payload.archiveKey) {
 			throw badRequest("Brak pliku do usunięcia.");
 		}
-		return { operation, photoId, archiveKey: payload.archiveKey };
+		return { ...site, operation, archiveKey: payload.archiveKey };
 	}
 
 	if (
@@ -78,8 +137,8 @@ function parseClaims(payload: Record<string, unknown>, method: string): Claims {
 		throw badRequest("Nieprawidłowe parametry oryginału.");
 	}
 	return {
+		...site,
 		operation,
-		photoId,
 		filename: payload.filename,
 		contentType: payload.contentType,
 		size: payload.size,

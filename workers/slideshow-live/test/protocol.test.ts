@@ -12,9 +12,14 @@ import {
 } from "../../../lib/slideshow-protocol";
 
 const secret = "0123456789abcdef0123456789abcdef";
+const room = "22222222-2222-4222-8222-222222222222";
+const origin = "https://rosia.wianki.app";
 
-async function token(role: string, audience = SLIDESHOW_LIVE_AUDIENCE) {
-	return new SignJWT({ role })
+async function token(
+	claims: Record<string, unknown>,
+	audience = SLIDESHOW_LIVE_AUDIENCE,
+) {
+	return new SignJWT({ room, origin, ...claims })
 		.setProtectedHeader({ alg: "HS256", typ: "JWT" })
 		.setIssuedAt()
 		.setAudience(audience)
@@ -23,17 +28,41 @@ async function token(role: string, audience = SLIDESHOW_LIVE_AUDIENCE) {
 }
 
 describe("live token verification", () => {
-	it("accepts guest and admin roles", async () => {
-		expect(await verifyLiveToken(await token("guest"), secret)).toBe("guest");
-		expect(await verifyLiveToken(await token("admin"), secret)).toBe("admin");
+	it("returns the role, room and origin for guest and admin tokens", async () => {
+		expect(
+			await verifyLiveToken(await token({ role: "guest" }), secret),
+		).toEqual({ role: "guest", room, origin });
+		expect(
+			await verifyLiveToken(await token({ role: "admin" }), secret),
+		).toEqual({ role: "admin", room, origin });
 	});
 
 	it("rejects missing tokens, foreign audiences, and unknown roles", async () => {
 		expect(await verifyLiveToken(null, secret)).toBeNull();
 		expect(
-			await verifyLiveToken(await token("guest", "other-audience"), secret),
+			await verifyLiveToken(
+				await token({ role: "guest" }, "other-audience"),
+				secret,
+			),
 		).toBeNull();
-		expect(await verifyLiveToken(await token("root"), secret)).toBeNull();
+		expect(
+			await verifyLiveToken(await token({ role: "root" }), secret),
+		).toBeNull();
+	});
+
+	it("rejects a token that names no room or no origin", async () => {
+		expect(
+			await verifyLiveToken(await token({ role: "guest", room: "" }), secret),
+		).toBeNull();
+		expect(
+			await verifyLiveToken(await token({ role: "guest", room: 7 }), secret),
+		).toBeNull();
+		expect(
+			await verifyLiveToken(
+				await token({ role: "guest", origin: undefined }),
+				secret,
+			),
+		).toBeNull();
 	});
 });
 

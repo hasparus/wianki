@@ -1,19 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { parseServerEnv, platformOrigin } from "@/lib/env";
 
 const baseEnv: Record<string, string> = {
-	NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
-	NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
+	PLATFORM_HOST: "wianki.app",
 	NEXT_PUBLIC_ARCHIVE_WORKER_URL: "https://archive.example.workers.dev",
-	SUPABASE_SECRET_KEY: "sb_secret_test",
-	APP_ORIGIN: "http://localhost:3000",
-	GUEST_ENTRY_TOKEN: "guest_entry_token_value_32_bytes!!",
-	GUEST_ACCESS_PASSPHRASE: "test invitation passphrase",
-	GUEST_SESSION_SECRET: "guest_session_secret_value_32b!!!",
-	ADMIN_ENTRY_TOKEN: "admin_entry_token_value_32_bytes!",
-	ADMIN_SESSION_SECRET: "admin_session_secret_value_32b!!!",
+	SESSION_SECRET: "session_secret_value_32_bytes_long!!",
 	ARCHIVE_WORKER_URL: "https://archive.example.workers.dev",
 	ARCHIVE_TOKEN_SECRET: "archive_token_secret_value_32b!!!",
-	DELETION_CONTACT_EMAIL: "couple@example.com",
 };
 
 const visionEnv: Record<string, string> = {
@@ -21,76 +14,66 @@ const visionEnv: Record<string, string> = {
 	GOOGLE_VISION_PRIVATE_KEY: "test-key",
 };
 
-async function loadServerEnv(env: Record<string, string>) {
-	for (const key of [
-		...Object.keys(baseEnv),
-		...Object.keys(visionEnv),
-		"MODERATION_ENABLED",
-	]) {
-		vi.stubEnv(key, env[key]);
-	}
-	const { serverEnv } = await import("@/lib/env");
-	return serverEnv();
-}
-
 describe("server env schema", () => {
-	beforeEach(() => {
-		vi.resetModules();
+	it("accepts the minimal platform configuration", () => {
+		const env = parseServerEnv(baseEnv);
+		expect(env.SIGNUP_ENABLED).toBe(true);
+		expect(env.GOOGLE_VISION_PRIVATE_KEY).toBeUndefined();
+		expect(platformOrigin(env)).toBe("https://wianki.app");
 	});
 
-	afterEach(() => {
-		vi.unstubAllEnvs();
+	it("uses http for a local platform host", () => {
+		expect(
+			platformOrigin(
+				parseServerEnv({ ...baseEnv, PLATFORM_HOST: "localhost:3000" }),
+			),
+		).toBe("http://localhost:3000");
 	});
 
-	it("requires Vision credentials when moderation is enabled", async () => {
-		await expect(loadServerEnv(baseEnv)).rejects.toThrow(
-			/GOOGLE_VISION_PRIVATE_KEY: Wymagane, gdy MODERATION_ENABLED/,
+	it("requires both Vision credentials once one is set", () => {
+		expect(() =>
+			parseServerEnv({
+				...baseEnv,
+				GOOGLE_VISION_CLIENT_EMAIL: visionEnv.GOOGLE_VISION_CLIENT_EMAIL,
+			}),
+		).toThrow(
+			/GOOGLE_VISION_PRIVATE_KEY: Wymagane, gdy skonfigurowano Google Vision/,
 		);
+		expect(
+			parseServerEnv({ ...baseEnv, ...visionEnv }).GOOGLE_VISION_PRIVATE_KEY,
+		).toBe("test-key");
 	});
 
-	it("names every missing or invalid variable in one readable error", async () => {
-		const { NEXT_PUBLIC_SUPABASE_URL: _url, ...withoutUrl } = baseEnv;
-		const promise = loadServerEnv({
-			...withoutUrl,
-			...visionEnv,
-			ADMIN_SESSION_SECRET: "short",
-		});
-		await expect(promise).rejects.toThrow(
-			/NEXT_PUBLIC_SUPABASE_URL: brak wartości/,
-		);
-		await expect(promise).rejects.toThrow(/ADMIN_SESSION_SECRET: /);
-		await expect(promise).rejects.toThrow(/^Środowisko serwera/);
-		await expect(promise).rejects.toMatchObject({
+	it("requires the whole Stripe set once one key is set", () => {
+		expect(() =>
+			parseServerEnv({ ...baseEnv, STRIPE_SECRET_KEY: "sk_test" }),
+		).toThrow(/STRIPE_WEBHOOK_SECRET: Wymagane, gdy skonfigurowano Stripe/);
+	});
+
+	it("names every missing or invalid variable in one readable error", () => {
+		const { PLATFORM_HOST: _host, ...withoutHost } = baseEnv;
+		let error: unknown;
+		try {
+			parseServerEnv({ ...withoutHost, SESSION_SECRET: "short" });
+		} catch (caught) {
+			error = caught;
+		}
+		expect(error).toMatchObject({
 			name: "ServerEnvError",
 			issues: expect.arrayContaining([
-				{ key: "NEXT_PUBLIC_SUPABASE_URL", reason: "brak wartości" },
+				{ key: "PLATFORM_HOST", reason: "brak wartości" },
+				expect.objectContaining({ key: "SESSION_SECRET" }),
 			]),
 		});
-		await expect(promise).rejects.not.toThrow(/ZodError|"code"|expected:/);
+		expect(String((error as Error).message)).toMatch(/^Środowisko serwera/);
+		expect(String((error as Error).message)).not.toMatch(
+			/ZodError|"code"|expected:/,
+		);
 	});
 
-	it("requires the browser-facing archive Worker URL", async () => {
-		const { NEXT_PUBLIC_ARCHIVE_WORKER_URL: _url, ...withoutArchiveUrl } =
-			baseEnv;
-		await expect(
-			loadServerEnv({
-				...withoutArchiveUrl,
-				...visionEnv,
-			}),
-		).rejects.toThrow(/NEXT_PUBLIC_ARCHIVE_WORKER_URL: brak wartości/);
-	});
-
-	it("accepts the two Vision credentials moderation actually uses", async () => {
-		const env = await loadServerEnv({ ...baseEnv, ...visionEnv });
-		expect(env.MODERATION_ENABLED).toBe(true);
-	});
-
-	it("allows omitting Vision credentials when moderation is disabled", async () => {
-		const env = await loadServerEnv({
-			...baseEnv,
-			MODERATION_ENABLED: "false",
-		});
-		expect(env.MODERATION_ENABLED).toBe(false);
-		expect(env.GOOGLE_VISION_PRIVATE_KEY).toBeUndefined();
+	it("rejects a platform host with a scheme", () => {
+		expect(() =>
+			parseServerEnv({ ...baseEnv, PLATFORM_HOST: "https://wianki.app" }),
+		).toThrow(/PLATFORM_HOST/);
 	});
 });

@@ -4,6 +4,8 @@ import {
 	ArchiveError,
 	AUDIENCE,
 	type Claims,
+	isLoopbackHost,
+	isValidOrigin,
 	misconfigured,
 	verifyOperation,
 } from "./claims";
@@ -11,7 +13,8 @@ import { type DriveEnv, driveBackend } from "./drive";
 import { r2Backend } from "./r2";
 
 export interface Env extends DriveEnv {
-	ALLOWED_ORIGIN: string;
+	/** Host (no scheme) the platform lives on, e.g. `wianki.app`; sites are its subdomains. */
+	PLATFORM_HOST: string;
 	ARCHIVE_TOKEN_SECRET: string;
 	/** "r2" (default) or "drive" — see docs/integrations.md. */
 	ARCHIVE_BACKEND?: string;
@@ -38,24 +41,69 @@ export function selectBackend(env: Env): ArchiveBackend {
 	return r2Backend(env.ARCHIVE_BUCKET);
 }
 
-function corsHeaders(origin: string | null, env: Env): Record<string, string> {
-	return origin === env.ALLOWED_ORIGIN
+/** `wianki.app` itself or exactly one label below it (`rosia.wianki.app`). */
+export function isPlatformHost(hostname: string, platformHost: string) {
+	const platform = platformHost.toLowerCase().split(":")[0];
+	const host = hostname.toLowerCase();
+	if (host === platform) return true;
+	if (!host.endsWith(`.${platform}`)) return false;
+	const label = host.slice(0, -platform.length - 1);
+	return label.length > 0 && !label.includes(".");
+}
+
+/**
+ * Origin policy, in two layers.
+ *
+ * The real check is per request: an authenticated request's Origin must equal
+ * the `origin` claim of its token. The app signs that claim, and the app is
+ * the authority on which origin each site answers on — a platform subdomain
+ * or a custom domain alike — so the Worker never keeps a list of its own.
+ *
+ * This function is the coarser layer, for what arrives without a token: the
+ * CORS preflight, and error responses sent before a token could be read. A
+ * preflight unlocks nothing by itself — every GET, PUT and DELETE still needs
+ * a token whose origin claim matches — so it only has to keep junk out.
+ * Allowed: the platform host and its single-label subdomains on the
+ * platform's own scheme, and any https origin, because a custom domain is
+ * always served over https and cannot be known here in advance. Plain http
+ * is accepted for localhost only, for `wrangler dev` next to `next dev`.
+ */
+export function isPlausibleOrigin(origin: string | null, env: Env): boolean {
+	if (!origin || !isValidOrigin(origin)) return false;
+	const url = new URL(origin);
+	if (isPlatformHost(url.hostname, env.PLATFORM_HOST)) {
+		return url.protocol === "https:" || isLoopbackHost(url.hostname);
+	}
+	return url.protocol === "https:";
+}
+
+/** Reflects exactly the request Origin, never a wildcard, and tells caches so. */
+function corsHeaders(
+	origin: string | null,
+	allowed: boolean,
+): Record<string, string> {
+	return allowed && origin
 		? {
-				"Access-Control-Allow-Origin": env.ALLOWED_ORIGIN,
+				"Access-Control-Allow-Origin": origin,
 				"Access-Control-Allow-Headers": "Authorization, Content-Type",
 				"Access-Control-Allow-Methods": "GET, PUT, DELETE, OPTIONS",
 				"Access-Control-Max-Age": "86400",
 				Vary: "Origin",
 			}
-		: {};
+		: { Vary: "Origin" };
 }
 
-function json(value: unknown, status: number, origin: string | null, env: Env) {
+function json(
+	value: unknown,
+	status: number,
+	origin: string | null,
+	allowed: boolean,
+) {
 	return Response.json(value, {
 		status,
 		headers: {
 			"Cache-Control": "no-store",
-			...corsHeaders(origin, env),
+			...corsHeaders(origin, allowed),
 		},
 	});
 }
@@ -90,14 +138,14 @@ async function handle(
 			},
 			201,
 			origin,
-			env,
+			true,
 		);
 	}
 
 	if (claims.operation === "reconcile") {
-		const found = await backend.find(claims.photoId);
+		const found = await backend.find(claims.siteId, claims.photoId);
 		if (!found) {
-			return json({ error: "Nie znaleziono oryginału." }, 404, origin, env);
+			return json({ error: "Nie znaleziono oryginału." }, 404, origin, true);
 		}
 		return json(
 			{
@@ -106,33 +154,40 @@ async function handle(
 			},
 			200,
 			origin,
-			env,
+			true,
 		);
 	}
 
-	await backend.remove(claims.photoId, claims.archiveKey);
-	return json({ ok: true }, 200, origin, env);
+	await backend.remove(claims.siteId, claims.photoId, claims.archiveKey);
+	return json({ ok: true }, 200, origin, true);
 }
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const origin = request.headers.get("Origin");
+		const plausible = isPlausibleOrigin(origin, env);
+
 		if (request.method === "OPTIONS") {
-			if (origin !== env.ALLOWED_ORIGIN) {
-				return json({ error: "Niedozwolone źródło." }, 403, origin, env);
+			if (!plausible) {
+				return json({ error: "Niedozwolone źródło." }, 403, origin, false);
 			}
 			return new Response(null, {
 				status: 204,
-				headers: corsHeaders(origin, env),
+				headers: corsHeaders(origin, true),
 			});
 		}
 
 		const match = new URL(request.url).pathname.match(
 			/^\/v1\/archive\/([0-9a-f-]{36})$/,
 		);
-		if (!match) return json({ error: "Nie znaleziono." }, 404, origin, env);
-		if (origin && origin !== env.ALLOWED_ORIGIN) {
-			return json({ error: "Niedozwolone źródło." }, 403, origin, env);
+		if (!match) {
+			return json({ error: "Nie znaleziono." }, 404, origin, plausible);
+		}
+		// Server-to-server calls from the app (reconcile, delete) carry no
+		// Origin; a browser always does, and a junk one is refused before the
+		// token is even read.
+		if (origin && !plausible) {
+			return json({ error: "Niedozwolone źródło." }, 403, origin, false);
 		}
 
 		try {
@@ -141,16 +196,26 @@ export default {
 				env.ARCHIVE_TOKEN_SECRET,
 				match[1],
 			);
+			if (origin && origin !== claims.origin) {
+				// Signed for another site's origin: not reflected, so the page
+				// that sent it learns nothing but "blocked by CORS".
+				return json({ error: "Niedozwolone źródło." }, 403, origin, false);
+			}
 			return await handle(request, env, selectBackend(env), claims, origin);
 		} catch (error) {
 			if (error instanceof ArchiveError) {
 				if (error.status >= 500) console.error(error.message);
 				const message =
 					error.status >= 500 ? "Archiwum jest niedostępne." : error.message;
-				return json({ error: message }, error.status, origin, env);
+				return json({ error: message }, error.status, origin, plausible);
 			}
 			console.error(error);
-			return json({ error: "Archiwum jest niedostępne." }, 502, origin, env);
+			return json(
+				{ error: "Archiwum jest niedostępne." },
+				502,
+				origin,
+				plausible,
+			);
 		}
 	},
 } satisfies ExportedHandler<Env>;

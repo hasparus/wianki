@@ -6,19 +6,27 @@ import {
 } from "./backend";
 import { badRequest, upstreamFailed } from "./claims";
 
-const keyPrefix = "originals/";
-
 /**
- * Object keys stay human-readable so the couple can browse the bucket, while
- * the `originals/<photoId>__` prefix keeps reconciliation a single
- * deterministic prefix listing instead of a metadata search.
+ * Object keys stay human-readable so an operator can browse the bucket, and
+ * every wedding sits under its own `sites/<siteId>/originals/` tree, so an
+ * export or a deletion of one site is a prefix operation. The
+ * `<photoId>__` segment keeps reconciliation a single deterministic prefix
+ * listing instead of a metadata search.
  */
-export function archiveKeyPrefix(photoId: string) {
-	return `${keyPrefix}${photoId}__`;
+export function siteArchivePrefix(siteId: string) {
+	return `sites/${siteId}/originals/`;
 }
 
-export function buildArchiveKey(photoId: string, filename: string) {
-	return `${archiveKeyPrefix(photoId)}${sanitizeObjectName(filename)}`;
+export function archiveKeyPrefix(siteId: string, photoId: string) {
+	return `${siteArchivePrefix(siteId)}${photoId}__`;
+}
+
+export function buildArchiveKey(
+	siteId: string,
+	photoId: string,
+	filename: string,
+) {
+	return `${archiveKeyPrefix(siteId, photoId)}${sanitizeObjectName(filename)}`;
 }
 
 export function r2Backend(bucket: R2Bucket): ArchiveBackend {
@@ -27,13 +35,17 @@ export function r2Backend(bucket: R2Bucket): ArchiveBackend {
 			body: ReadableStream,
 			claims: UploadClaims,
 		): Promise<ArchivedObject> {
-			const key = buildArchiveKey(claims.photoId, claims.filename);
+			const key = buildArchiveKey(
+				claims.siteId,
+				claims.photoId,
+				claims.filename,
+			);
 			const object = await bucket.put(key, body, {
 				httpMetadata: {
 					contentType: claims.contentType,
 					contentDisposition: `attachment; filename="${sanitizeObjectName(claims.filename)}"`,
 				},
-				customMetadata: { photoId: claims.photoId },
+				customMetadata: { photoId: claims.photoId, siteId: claims.siteId },
 			});
 			if (!object) throw upstreamFailed("Archiwum nie przyjęło oryginału.");
 			if (object.size !== claims.size) {
@@ -43,17 +55,17 @@ export function r2Backend(bucket: R2Bucket): ArchiveBackend {
 			return { key, size: object.size };
 		},
 
-		async find(photoId: string) {
+		async find(siteId: string, photoId: string) {
 			const listed = await bucket.list({
-				prefix: archiveKeyPrefix(photoId),
+				prefix: archiveKeyPrefix(siteId, photoId),
 				limit: 1,
 			});
 			const object = listed.objects[0];
 			return object ? { key: object.key, size: object.size } : null;
 		},
 
-		async remove(photoId: string, key: string) {
-			if (!key.startsWith(archiveKeyPrefix(photoId))) {
+		async remove(siteId: string, photoId: string, key: string) {
+			if (!key.startsWith(archiveKeyPrefix(siteId, photoId))) {
 				throw badRequest("Klucz nie należy do tego zdjęcia.");
 			}
 			await bucket.delete(key);

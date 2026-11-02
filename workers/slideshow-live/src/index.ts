@@ -8,6 +8,7 @@ import {
 import {
 	applyControl,
 	IDLE_SHOW_STATE,
+	type LiveAccessClaims,
 	parseClientMessage,
 	RateLimiter,
 	type ServerMessage,
@@ -18,7 +19,6 @@ import {
 
 export interface Env {
 	SlideshowParty: DurableObjectNamespace<SlideshowParty>;
-	ALLOWED_ORIGIN: string;
 	LIVE_TOKEN_SECRET: string;
 }
 
@@ -29,11 +29,38 @@ function showMessage(state: ShowState): ServerMessage {
 }
 
 /**
- * One room per wedding. Reactions and comments are ephemeral by design:
- * broadcast to whoever is watching right now and never stored. The show
- * state (which slide the presenter is on) is authoritative here, but its
- * source of truth is the presenter's device — if this object restarts, the
- * presenter's client re-claims the show on reconnect.
+ * Who may join which room. The token the app minted names the room (the
+ * site id) and the origin the site is served from; both must match what the
+ * browser actually asked for. The room from the URL keeps a token for one
+ * wedding out of another wedding's room, and the Origin check keeps the
+ * token from being replayed off a page the site does not own — the Worker
+ * holds no list of origins, the app is the authority.
+ *
+ * Returns the claims to bind to the connection, or the refusal to send.
+ */
+export async function authorizeConnection(
+	request: Request,
+	room: string,
+	secret: string,
+): Promise<LiveAccessClaims | Response> {
+	const token = new URL(request.url).searchParams.get("token");
+	const claims = await verifyLiveToken(token, secret);
+	if (!claims) return new Response("Brak dostępu.", { status: 401 });
+	if (claims.room !== room) {
+		return new Response("Token dotyczy innego pokoju.", { status: 403 });
+	}
+	if (request.headers.get("Origin") !== claims.origin) {
+		return new Response("Niedozwolone źródło.", { status: 403 });
+	}
+	return claims;
+}
+
+/**
+ * One room per wedding, named by the site id. Reactions and comments are
+ * ephemeral by design: broadcast to whoever is watching right now and never
+ * stored. The show state (which slide the presenter is on) is authoritative
+ * here, but its source of truth is the presenter's device — if this object
+ * restarts, the presenter's client re-claims the show on reconnect.
  */
 export class SlideshowParty extends Server<Env> {
 	static options = { hibernate: false };
@@ -47,13 +74,16 @@ export class SlideshowParty extends Server<Env> {
 	) {
 		// The worker-level onBeforeConnect already rejected bad tokens; verify
 		// again here to bind the role to the connection (defense in depth).
-		const token = new URL(ctx.request.url).searchParams.get("token");
-		const role = await verifyLiveToken(token, this.env.LIVE_TOKEN_SECRET);
-		if (!role) {
+		const claims = await authorizeConnection(
+			ctx.request,
+			this.name,
+			this.env.LIVE_TOKEN_SECRET,
+		);
+		if (claims instanceof Response) {
 			connection.close(4401, "Brak dostępu.");
 			return;
 		}
-		connection.setState({ role });
+		connection.setState({ role: claims.role });
 		connection.send(JSON.stringify(showMessage(this.show)));
 		this.broadcastPresence();
 	}
@@ -114,13 +144,14 @@ export class SlideshowParty extends Server<Env> {
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const response = await routePartykitRequest(request, env, {
-			onBeforeConnect: async (req) => {
-				if (req.headers.get("Origin") !== env.ALLOWED_ORIGIN) {
-					return new Response("Niedozwolone źródło.", { status: 403 });
-				}
-				const token = new URL(req.url).searchParams.get("token");
-				const role = await verifyLiveToken(token, env.LIVE_TOKEN_SECRET);
-				if (!role) return new Response("Brak dostępu.", { status: 401 });
+			// PartyServer routes /parties/<party>/<room>; `lobby.name` is <room>.
+			onBeforeConnect: async (req, lobby) => {
+				const result = await authorizeConnection(
+					req,
+					lobby.name,
+					env.LIVE_TOKEN_SECRET,
+				);
+				if (result instanceof Response) return result;
 			},
 		});
 		return response ?? new Response("Nie znaleziono.", { status: 404 });

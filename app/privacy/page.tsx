@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { ArrowLeftIcon } from "@/components/slideshow/icons";
+import { currentSite } from "@/lib/sites";
 
-export default function PrivacyPage() {
-	const email = process.env.DELETION_CONTACT_EMAIL ?? "adres pary młodej";
+export default async function PrivacyPage() {
+	const site = await currentSite();
+	const email = site?.deletion_contact_email ?? "adres pary młodej";
+	const moderated = site?.moderationEnabled ?? false;
 	return (
 		<>
 			<main className="relative w-full grow px-5 sm:px-10 lg:px-16">
@@ -14,15 +17,16 @@ export default function PrivacyPage() {
 					<div className="mt-12 grid gap-10 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-x-10">
 						<h2 className="ma-label sm:pt-1">Gdzie trafiają</h2>
 						<p className="max-w-[65ch] leading-relaxed">
-							Zdjęcia są przeznaczone wyłącznie dla naszych gości. Pomniejszone
-							kopie przechowujemy prywatnie w Supabase, a oryginały w prywatnym
-							archiwum Cloudflare R2.
+							Zdjęcia są przeznaczone wyłącznie dla gości. Pomniejszone kopie i
+							oryginały przechowujemy w prywatnych zasobnikach Cloudflare R2 w
+							Unii Europejskiej. Nic nie jest publiczne.
 						</p>
 
 						<h2 className="ma-label sm:pt-1">Kto je widzi</h2>
 						<p className="max-w-[65ch] leading-relaxed">
-							Zdjęcia trafiają do galerii od razu, bez automatycznego
-							sprawdzania treści. Możemy ukryć każde zdjęcie.
+							{moderated
+								? "Każde zdjęcie przechodzi automatyczne sprawdzenie treści (Google Vision SafeSearch) i dopiero potem trafia do galerii. Para młoda może ukryć każde zdjęcie."
+								: "Zdjęcia trafiają do galerii od razu, bez automatycznego sprawdzania treści. Para młoda może ukryć każde zdjęcie."}
 						</p>
 
 						<h2 className="ma-label sm:pt-1">Czego nie zapisujemy</h2>
@@ -34,7 +38,7 @@ export default function PrivacyPage() {
 
 						<h2 className="ma-label sm:pt-1">Jak długo</h2>
 						<p className="max-w-[65ch] leading-relaxed">
-							Trzymamy zdjęcia, dopóki sami ich nie usuniemy. Jeżeli chcesz
+							Zdjęcia zostają, dopóki para młoda ich nie usunie. Jeżeli chcesz
 							usunąć konkretne zdjęcie, napisz na:{" "}
 							<strong className="font-normal underline decoration-ma-ash-deep">
 								{email}
@@ -44,7 +48,7 @@ export default function PrivacyPage() {
 					</div>
 					<Link href="/" className="ma-action ma-action--ghost mt-16">
 						<ArrowLeftIcon />
-						Wróć do galerii
+						{site ? "Wróć do galerii" : "Wróć"}
 					</Link>
 				</article>
 			</main>

@@ -8,6 +8,16 @@ on:
 permissions:
   contents: read
 
+# Values the app validates at build time. None of them is a real credential;
+# the deploy job below takes the real ones from repository secrets.
+env:
+  PLATFORM_HOST: localhost:3000
+  SESSION_SECRET: ci_session_secret_at_least_32_bytes_x
+  ARCHIVE_WORKER_URL: https://archive.example.workers.dev
+  NEXT_PUBLIC_ARCHIVE_WORKER_URL: https://archive.example.workers.dev
+  ARCHIVE_TOKEN_SECRET: ci_archive_token_secret_32_bytes_min
+  CONSENT_VERSION: ci
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -24,25 +34,6 @@ jobs:
       - run: npm run test
       - run: npm run test:worker
       - run: npm run build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
-          SUPABASE_SECRET_KEY: sb_secret_ci_placeholder
-          APP_ORIGIN: http://localhost:3000
-          NEXT_PUBLIC_APP_ORIGIN: http://localhost:3000
-          GUEST_ENTRY_TOKEN: ci_guest_entry_token_32_bytes_minimum
-          GUEST_ACCESS_PASSPHRASE: ci-long-invitation-passphrase
-          GUEST_SESSION_SECRET: ci_guest_session_secret_32_bytes_min
-          ADMIN_ENTRY_TOKEN: ci_admin_entry_token_32_bytes_minimum
-          ADMIN_SESSION_SECRET: ci_admin_session_secret_32_bytes_min
-          ARCHIVE_WORKER_URL: https://archive.example.workers.dev
-          NEXT_PUBLIC_ARCHIVE_WORKER_URL: https://archive.example.workers.dev
-          ARCHIVE_TOKEN_SECRET: ci_archive_token_secret_32_bytes_min
-          GOOGLE_CLOUD_PROJECT_ID: ci-project
-          GOOGLE_VISION_CLIENT_EMAIL: vision@example.iam.gserviceaccount.com
-          GOOGLE_VISION_PRIVATE_KEY: placeholder-key-not-used-during-build
-          DELETION_CONTACT_EMAIL: couple@example.com
-          CONSENT_VERSION: ci
 
   e2e:
     runs-on: ubuntu-latest
@@ -55,4 +46,43 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium webkit
+      # Local D1 (wrangler.local.jsonc, .wrangler/state) with the demo site
+      # the specs sign in to. Playwright starts the dev server afterwards.
+      - run: npm run db:reset:local
       - run: npm run test:e2e
+
+  # Production deploy with Alchemy. Guarded by a repository variable so forks
+  # and branches without Cloudflare credentials never fail on this job.
+  deploy:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ALCHEMY_DEPLOY == 'true' }}
+    needs: [quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci
+      - run: npx alchemy deploy --stage prod
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          # Encrypts secrets inside Alchemy state and unlocks the state store.
+          ALCHEMY_PASSWORD: ${{ secrets.ALCHEMY_PASSWORD }}
+          ALCHEMY_STATE_TOKEN: ${{ secrets.ALCHEMY_STATE_TOKEN }}
+          PLATFORM_HOST: ${{ vars.PLATFORM_HOST }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          ARCHIVE_TOKEN_SECRET: ${{ secrets.ARCHIVE_TOKEN_SECRET }}
+          SLIDESHOW_LIVE_SECRET: ${{ secrets.SLIDESHOW_LIVE_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          GOOGLE_VISION_CLIENT_EMAIL: ${{ secrets.GOOGLE_VISION_CLIENT_EMAIL }}
+          GOOGLE_VISION_PRIVATE_KEY: ${{ secrets.GOOGLE_VISION_PRIVATE_KEY }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          CONSENT_VERSION: ${{ vars.CONSENT_VERSION }}

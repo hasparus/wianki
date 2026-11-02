@@ -1,15 +1,15 @@
 import { z } from "zod";
 import { createArchiveToken } from "@/lib/archive-token";
 import { readGuestSession } from "@/lib/auth/session";
+import { batch, first } from "@/lib/db";
 import {
 	acceptedOriginalTypes,
-	GALLERY_BUCKET,
 	MAX_BATCH_FILES,
 	MAX_ORIGINAL_BYTES,
+	TRIAL_PHOTO_LIMIT,
 } from "@/lib/domain";
-import { serverEnv } from "@/lib/env";
 import { assertSameOrigin, jsonError, noStoreJson } from "@/lib/http";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { siteAcceptsUploads, siteFromRequest } from "@/lib/sites";
 
 const fileSchema = z.object({
 	name: z.string().min(1).max(180),
@@ -32,12 +32,17 @@ function safeFilename(name: string) {
 }
 
 export async function POST(request: Request) {
-	const session = await readGuestSession();
+	const site = await siteFromRequest(request);
+	if (!site) return jsonError("Nie znaleziono strony.", 404);
+	const session = await readGuestSession(site);
 	if (!session) return jsonError("Sesja gościa wygasła.", 401);
 	try {
-		assertSameOrigin(request);
+		assertSameOrigin(request, site.origin);
 	} catch (response) {
 		return response as Response;
+	}
+	if (!siteAcceptsUploads(site)) {
+		return jsonError("Ta galeria nie przyjmuje już zdjęć.", 403);
 	}
 
 	const parsed = requestSchema.safeParse(
@@ -47,14 +52,26 @@ export async function POST(request: Request) {
 		return jsonError("Wybierz od 1 do 10 obsługiwanych zdjęć.", 400);
 	}
 
-	const supabase = supabaseAdmin();
+	// A trial site is for trying: it stops at a modest number of photos until
+	// the owner pays. A paid site has no cap; heavy use is metered instead.
+	if (site.plan_status === "trial") {
+		const used = await first<{ count: number }>(
+			"select count(*) as count from photos where site_id = ? and hot_status <> 'deleted'",
+			[site.id],
+		);
+		if ((used?.count ?? 0) + parsed.data.files.length > TRIAL_PHOTO_LIMIT) {
+			return jsonError(
+				"Ta galeria jest w wersji próbnej i osiągnęła limit zdjęć. Para młoda musi ją opłacić, aby przyjąć więcej.",
+				402,
+			);
+		}
+	}
+
 	const batchId = crypto.randomUUID();
 	const rows = parsed.data.files.map((file) => {
 		const id = crypto.randomUUID();
 		return {
 			id,
-			batch_id: batchId,
-			guest_id: session.guestId,
 			original_filename: safeFilename(file.name),
 			original_content_type: file.type,
 			original_size: file.size,
@@ -62,45 +79,59 @@ export async function POST(request: Request) {
 		};
 	});
 
-	const { error: batchError } = await supabase.from("upload_batches").insert({
-		id: batchId,
-		guest_id: session.guestId,
-		item_count: rows.length,
-		consent_version: serverEnv().CONSENT_VERSION,
-	});
-	if (batchError) return jsonError("Nie udało się rozpocząć wysyłania.", 500);
-
-	const { error: photoError } = await supabase.from("photos").insert(rows);
-	if (photoError) {
-		await supabase.from("upload_batches").delete().eq("id", batchId);
-		return jsonError("Nie udało się przygotować zdjęć.", 500);
+	try {
+		await batch([
+			{
+				sql: "insert into upload_batches (id, site_id, guest_id, item_count, consent_version) values (?, ?, ?, ?, ?)",
+				params: [
+					batchId,
+					site.id,
+					session.guestId,
+					rows.length,
+					site.consent_version,
+				],
+			},
+			...rows.map((row) => ({
+				sql: `insert into photos (id, site_id, batch_id, guest_id, original_filename,
+				        original_content_type, original_size, storage_path)
+				      values (?, ?, ?, ?, ?, ?, ?, ?)`,
+				params: [
+					row.id,
+					site.id,
+					batchId,
+					session.guestId,
+					row.original_filename,
+					row.original_content_type,
+					row.original_size,
+					row.storage_path,
+				],
+			})),
+		]);
+	} catch {
+		return jsonError("Nie udało się rozpocząć wysyłania.", 500);
 	}
 
 	try {
 		const uploads = await Promise.all(
-			rows.map(async (row, index) => {
-				const { data, error } = await supabase.storage
-					.from(GALLERY_BUCKET)
-					.createSignedUploadUrl(row.storage_path);
-				if (error) throw error;
-				return {
+			rows.map(async (row, index) => ({
+				photoId: row.id,
+				archiveToken: await createArchiveToken({
 					photoId: row.id,
-					path: row.storage_path,
-					uploadToken: data.token,
-					archiveToken: await createArchiveToken({
-						photoId: row.id,
-						operation: "upload",
-						filename: row.original_filename,
-						contentType: parsed.data.files[index].type,
-						size: parsed.data.files[index].size,
-					}),
-				};
-			}),
+					siteId: site.id,
+					origin: site.origin,
+					operation: "upload",
+					filename: row.original_filename,
+					contentType: parsed.data.files[index].type,
+					size: parsed.data.files[index].size,
+				}),
+			})),
 		);
 		return noStoreJson({ batchId, uploads });
 	} catch {
-		await supabase.from("photos").delete().eq("batch_id", batchId);
-		await supabase.from("upload_batches").delete().eq("id", batchId);
+		await batch([
+			{ sql: "delete from photos where batch_id = ?", params: [batchId] },
+			{ sql: "delete from upload_batches where id = ?", params: [batchId] },
+		]);
 		return jsonError(
 			"Nie udało się utworzyć bezpiecznych adresów wysyłki.",
 			500,

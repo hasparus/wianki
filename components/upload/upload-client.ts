@@ -7,7 +7,6 @@ import {
 	BLUR_IMAGE_SIZE,
 	MAX_DERIVATIVE_BYTES,
 } from "@/lib/domain";
-import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type ArchiveUploadResult = {
 	receipt: string | null;
@@ -115,19 +114,31 @@ function archiveUrl(photoId: string) {
 	return `${process.env.NEXT_PUBLIC_ARCHIVE_WORKER_URL ?? ""}/v1/archive/${photoId}`;
 }
 
+/**
+ * The derivative is small enough to ride through the app itself: one PUT of
+ * raw JPEG bytes to a handler that checks the guest cookie and ownership.
+ * Errors are returned, not thrown, so finalization can still record them.
+ */
 export async function uploadDerivative(
 	init: InitUpload,
 	derivative: File | Blob,
 ): Promise<GalleryUploadResult> {
 	try {
 		const body = await derivative.arrayBuffer();
-		const { error } = await supabaseBrowser()
-			.storage.from("gallery")
-			.uploadToSignedUrl(init.path, init.uploadToken, body, {
-				contentType: "image/jpeg",
-				cacheControl: "3600",
-			});
-		return { error };
+		const response = await fetch(`/api/uploads/${init.photoId}/derivative`, {
+			method: "PUT",
+			headers: { "Content-Type": "image/jpeg" },
+			body,
+		});
+		if (!response.ok) {
+			const payload = (await response.json().catch(() => null)) as {
+				error?: string;
+			} | null;
+			return {
+				error: new Error(payload?.error ?? "Kopia galeryjna nie dotarła."),
+			};
+		}
+		return { error: null };
 	} catch (error) {
 		return {
 			error:

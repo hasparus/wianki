@@ -21,8 +21,6 @@ export type UploadItem = {
 
 export type InitUpload = {
 	photoId: string;
-	path: string;
-	uploadToken: string;
 	archiveToken: string;
 };
 

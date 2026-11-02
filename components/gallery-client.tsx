@@ -10,6 +10,7 @@ import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import { PhotoLightbox } from "@/components/gallery/photo-lightbox";
 import { PhotoChallenge } from "@/components/photo-challenge";
 import { UploadPanel } from "@/components/upload-panel";
+import { Wordmark } from "@/components/wordmark";
 import type { GalleryItem } from "@/lib/domain";
 
 /**
@@ -50,7 +51,13 @@ function usePhotoParam() {
 	return { photoId, open, close };
 }
 
-export function GalleryClient({ initial }: { initial: GalleryResponse }) {
+export function GalleryClient({
+	title,
+	initial,
+}: {
+	title: string;
+	initial: GalleryResponse;
+}) {
 	const { items, stats, cursor, pending, message, refresh, loadMore } =
 		useGalleryFeed(initial);
 	const { photoId, open, close } = usePhotoParam();
@@ -74,9 +81,10 @@ export function GalleryClient({ initial }: { initial: GalleryResponse }) {
 				 * is the line that reaches the viewer, inside the first viewport.
 				 */}
 				<header className="relative mx-auto w-full max-w-6xl pb-[6vh] pt-[5vh] sm:pb-[7vh] sm:pt-[11vh]">
-					<h1 className="font-serif text-[clamp(3.25rem,13vw,7.5rem)] leading-[0.92] tracking-[-0.02em]">
-						Rosia <span className="text-ma-pine">&amp;</span> Piotrek
-					</h1>
+					<Wordmark
+						title={title}
+						className="font-serif text-[clamp(3.25rem,13vw,7.5rem)] leading-[0.92] tracking-[-0.02em]"
+					/>
 					<hr className="ma-rule mt-7" />
 
 					<div className="mt-[4vh] grid gap-7 sm:grid-cols-12">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SlideshowClient } from "@/components/slideshow/slideshow-client";
 import { readAdminSession, readGuestSession } from "@/lib/auth/session";
+import { requireSite, type Site } from "@/lib/sites";
 import {
 	getSlideSeconds,
 	getSlideshowDeck,
@@ -11,24 +12,25 @@ import {
 import { SLIDESHOW_DEFAULT_SECONDS } from "@/lib/slideshow-protocol";
 
 export const metadata: Metadata = {
-	title: "Rosia & Piotrek — pokaz slajdów",
+	title: "Pokaz slajdów",
 };
 
-async function loadDeck(): Promise<SlideshowDeck> {
+async function loadDeck(site: Site): Promise<SlideshowDeck> {
 	try {
-		return await getSlideshowDeck();
+		return await getSlideshowDeck(site.id);
 	} catch {
 		return { slides: [], source: "auto" };
 	}
 }
 
 export default async function SlideshowPage() {
-	const guest = await readGuestSession();
-	if (!guest && !(await readAdminSession())) redirect("/login");
+	const site = await requireSite();
+	const guest = await readGuestSession(site);
+	if (!guest && !(await readAdminSession(site))) redirect("/login");
 	const [deck, join, slideSeconds] = await Promise.all([
-		loadDeck(),
-		getSlideshowJoinInfo().catch(() => null),
-		getSlideSeconds().catch(() => SLIDESHOW_DEFAULT_SECONDS),
+		loadDeck(site),
+		getSlideshowJoinInfo(site).catch(() => null),
+		getSlideSeconds(site.id).catch(() => SLIDESHOW_DEFAULT_SECONDS),
 	]);
 	return (
 		<SlideshowClient deck={deck} join={join} slideSeconds={slideSeconds} />

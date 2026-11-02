@@ -1,12 +1,14 @@
 import { GalleryClient } from "@/components/gallery-client";
+import { PlatformHome } from "@/components/platform/home";
 import { requireGuest } from "@/lib/auth/session";
 import { getGalleryPage, getGalleryStats } from "@/lib/gallery";
+import { currentSite } from "@/lib/sites";
 
-async function loadInitialGallery() {
+async function loadInitialGallery(siteId: string) {
 	try {
 		const [page, stats] = await Promise.all([
-			getGalleryPage(),
-			getGalleryStats(),
+			getGalleryPage(siteId),
+			getGalleryStats(siteId),
 		]);
 		return { ...page, stats };
 	} catch {
@@ -19,7 +21,15 @@ async function loadInitialGallery() {
 	}
 }
 
+/** The platform host shows the console's front door; a site host, its gallery. */
 export default async function Home() {
-	await requireGuest();
-	return <GalleryClient initial={await loadInitialGallery()} />;
+	const site = await currentSite();
+	if (!site) return <PlatformHome />;
+	await requireGuest(site);
+	return (
+		<GalleryClient
+			title={site.title}
+			initial={await loadInitialGallery(site.id)}
+		/>
+	);
 }

@@ -13,6 +13,13 @@ export type DriveEnv = {
 	GOOGLE_DRIVE_FOLDER_ID: string;
 };
 
+type DriveFile = {
+	id: string;
+	size?: string;
+	trashed?: boolean;
+	appProperties?: { photoId?: string; siteId?: string };
+};
+
 async function accessToken(env: DriveEnv) {
 	const response = await fetch("https://oauth2.googleapis.com/token", {
 		method: "POST",
@@ -32,27 +39,39 @@ async function accessToken(env: DriveEnv) {
 	return body.access_token;
 }
 
-async function trash(env: DriveEnv, fileId: string) {
-	const token = await accessToken(env);
-	const response = await fetch(
-		`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`,
-		{
-			method: "PATCH",
-			headers: {
-				Authorization: `Bearer ${token}`,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({ trashed: true }),
-		},
+function fileUrl(fileId: string, fields?: string) {
+	const url = new URL(
+		`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`,
 	);
+	url.searchParams.set("supportsAllDrives", "true");
+	if (fields) url.searchParams.set("fields", fields);
+	return url;
+}
+
+async function trash(token: string, fileId: string) {
+	const response = await fetch(fileUrl(fileId), {
+		method: "PATCH",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ trashed: true }),
+	});
 	if (!response.ok) throw upstreamFailed("Drive nie przeniósł pliku do kosza.");
 }
 
 /**
- * Originals land in one user-owned Drive folder, tagged with `appProperties.
- * photoId` so a lost `archive_key` can be recovered by searching rather than
- * guessing a name. Deleting trashes the file: Drive keeps it recoverable for
- * 30 days, unlike the R2 backend, where removal is immediate and final.
+ * Originals land in one user-owned Drive folder, tagged with
+ * `appProperties.photoId` and `appProperties.siteId` so a lost `archive_key`
+ * can be recovered by searching rather than guessing a name, and so a file
+ * id handed to `remove` can be checked against the site and photo the token
+ * names before anything is trashed. Deleting trashes the file: Drive keeps
+ * it recoverable for 30 days, unlike the R2 backend, where removal is
+ * immediate and final.
+ *
+ * Drive is the self-hoster's alternative to R2: one deployment, one folder.
+ * The site id still travels with every file so a later move to R2 can put
+ * each original under its site prefix.
  */
 export function driveBackend(env: DriveEnv): ArchiveBackend {
 	return {
@@ -74,7 +93,7 @@ export function driveBackend(env: DriveEnv): ArchiveBackend {
 					body: JSON.stringify({
 						name: sanitizeObjectName(claims.filename),
 						parents: [env.GOOGLE_DRIVE_FOLDER_ID],
-						appProperties: { photoId: claims.photoId },
+						appProperties: { photoId: claims.photoId, siteId: claims.siteId },
 					}),
 				},
 			);
@@ -100,18 +119,18 @@ export function driveBackend(env: DriveEnv): ArchiveBackend {
 			// truncated upload cannot produce a receipt that finalization trusts.
 			const stored = Number(file.size);
 			if (!Number.isFinite(stored) || stored !== claims.size) {
-				await trash(env, file.id).catch(() => {});
+				await trash(token, file.id).catch(() => {});
 				throw badRequest("Zapisany rozmiar nie zgadza się z tokenem.");
 			}
 			return { key: file.id, size: stored };
 		},
 
-		async find(photoId: string) {
+		async find(siteId: string, photoId: string) {
 			const token = await accessToken(env);
 			const url = new URL("https://www.googleapis.com/drive/v3/files");
 			url.searchParams.set(
 				"q",
-				`trashed = false and appProperties has { key='photoId' and value='${photoId}' }`,
+				`trashed = false and appProperties has { key='photoId' and value='${photoId}' } and appProperties has { key='siteId' and value='${siteId}' }`,
 			);
 			url.searchParams.set("fields", "files(id,size)");
 			url.searchParams.set("pageSize", "1");
@@ -121,15 +140,30 @@ export function driveBackend(env: DriveEnv): ArchiveBackend {
 				headers: { Authorization: `Bearer ${token}` },
 			});
 			if (!response.ok) throw upstreamFailed("Nie udało się przeszukać Drive.");
-			const body = (await response.json()) as {
-				files?: Array<{ id: string; size?: string }>;
-			};
+			const body = (await response.json()) as { files?: DriveFile[] };
 			const file = body.files?.[0];
 			return file ? { key: file.id, size: Number(file.size ?? 0) } : null;
 		},
 
-		async remove(_photoId: string, key: string) {
-			await trash(env, key);
+		async remove(siteId: string, photoId: string, key: string) {
+			const token = await accessToken(env);
+			// A Drive file id carries no site prefix, so the file's own tags are
+			// the guard: the one the token names, or nothing happens.
+			const response = await fetch(fileUrl(key, "id,appProperties"), {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (response.status === 404) {
+				throw badRequest("Klucz nie należy do tego zdjęcia.");
+			}
+			if (!response.ok) throw upstreamFailed("Nie udało się odczytać Drive.");
+			const file = (await response.json()) as DriveFile;
+			if (
+				file.appProperties?.photoId !== photoId ||
+				file.appProperties?.siteId !== siteId
+			) {
+				throw badRequest("Klucz nie należy do tego zdjęcia.");
+			}
+			await trash(token, key);
 		},
 	};
 }

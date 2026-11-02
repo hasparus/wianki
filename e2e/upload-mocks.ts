@@ -7,10 +7,10 @@ const corsHeaders = {
 };
 
 /**
- * Stubs every network dependency of a photo upload (init, Supabase storage,
+ * Stubs every network dependency of a photo upload (init, derivative PUT,
  * archive worker, finalize, gallery refresh) so the real browser-side flow —
  * derivative compression included — can run against the dev server without
- * Supabase, Drive, or Vision being configured.
+ * R2, the archive Worker, or Vision being configured.
  */
 export async function installUploadBackendMocks(page: Page) {
 	let nextPhotoId = 0;
@@ -25,8 +25,6 @@ export async function installUploadBackendMocks(page: Page) {
 					nextPhotoId += 1;
 					return {
 						photoId: `e2e-photo-${nextPhotoId}`,
-						path: `e2e/photo-${nextPhotoId}.jpg`,
-						uploadToken: `upload-token-${nextPhotoId}`,
 						archiveToken: `archive-token-${nextPhotoId}`,
 					};
 				}),
@@ -34,15 +32,8 @@ export async function installUploadBackendMocks(page: Page) {
 		});
 	});
 
-	await page.route("https://example.supabase.co/**", async (route) => {
-		if (route.request().method() === "OPTIONS") {
-			await route.fulfill({ status: 200, headers: corsHeaders });
-			return;
-		}
-		await route.fulfill({
-			headers: corsHeaders,
-			json: { Key: "gallery/e2e" },
-		});
+	await page.route("**/api/uploads/*/derivative", async (route) => {
+		await route.fulfill({ json: { ok: true, size: 1 } });
 	});
 
 	await page.route("https://archive.example.workers.dev/**", async (route) => {

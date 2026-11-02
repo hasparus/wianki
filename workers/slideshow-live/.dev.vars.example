@@ -1,4 +1,4 @@
-# Shared with Vercel as SLIDESHOW_LIVE_SECRET. At least 32 random bytes.
+# Shared with the app as SLIDESHOW_LIVE_SECRET. At least 32 random bytes.
+# The origin and the room each connection may use travel inside the token
+# the app mints, so there is nothing else to configure here.
 LIVE_TOKEN_SECRET=replace_with_256_bit_random_value
-# Origin allowed to open WebSocket connections.
-ALLOWED_ORIGIN=http://localhost:3000

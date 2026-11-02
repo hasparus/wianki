@@ -1,14 +1,15 @@
 import { getAdminPhotosPage } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth/session";
-import { serverEnv } from "@/lib/env";
+import { requireSite } from "@/lib/sites";
 import { AdminClient } from "./admin-client";
 
 export default async function AdminPage() {
-	await requireAdmin();
+	const site = await requireSite();
+	await requireAdmin(site);
 	return (
 		<AdminClient
-			initial={await getAdminPhotosPage()}
-			archiveBackend={serverEnv().ARCHIVE_BACKEND}
+			initial={await getAdminPhotosPage(site.id)}
+			archiveBackend="r2"
 		/>
 	);
 }

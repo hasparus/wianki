@@ -7,20 +7,26 @@ test("guest entry token is removed and grants a signed session", async ({
 	browserName,
 }) => {
 	if (browserName === "webkit") {
-		const response = await request.get(
+		// Two hops: the proxy hands the token to the entry handler, which sets
+		// the cookie and lands on the clean URL.
+		const hop = await request.get(
 			"/?token=e2e_guest_entry_token_value_32_bytes",
 			{ maxRedirects: 0 },
 		);
+		expect([307, 308]).toContain(hop.status());
+		const location = hop.headers().location;
+		expect(location).toMatch(/^\/api\/auth\/enter\?token=/);
+		const response = await request.get(location, { maxRedirects: 0 });
 		expect([307, 308]).toContain(response.status());
-		expect(response.headers().location).toBe("/");
-		expect(response.headers()["set-cookie"]).toContain("__Host-wedding_guest=");
+		expect(new URL(response.headers().location).pathname).toBe("/");
+		expect(response.headers()["set-cookie"]).toContain("__Host-wianki_guest=");
 		expect(response.headers()["set-cookie"]).toContain("Secure");
 		return;
 	}
 	await page.goto("/?token=e2e_guest_entry_token_value_32_bytes");
 	await expect(page).toHaveURL("/");
 	const cookies = await page.context().cookies();
-	expect(cookies.some((cookie) => cookie.name === "__Host-wedding_guest")).toBe(
+	expect(cookies.some((cookie) => cookie.name === "__Host-wianki_guest")).toBe(
 		true,
 	);
 });
@@ -52,7 +58,7 @@ test("short join code grants a guest session and opens the slideshow", async ({
 	await page.goto("/p/e2e-join-code");
 	await expect(page).toHaveURL("/pokaz");
 	const cookies = await page.context().cookies();
-	expect(cookies.some((cookie) => cookie.name === "__Host-wedding_guest")).toBe(
+	expect(cookies.some((cookie) => cookie.name === "__Host-wianki_guest")).toBe(
 		true,
 	);
 });
@@ -61,7 +67,7 @@ test("wrong join code bounces to login without a session", async ({ page }) => {
 	await page.goto("/p/definitely-wrong");
 	await expect(page).toHaveURL("/login");
 	const cookies = await page.context().cookies();
-	expect(cookies.some((cookie) => cookie.name === "__Host-wedding_guest")).toBe(
+	expect(cookies.some((cookie) => cookie.name === "__Host-wianki_guest")).toBe(
 		false,
 	);
 });

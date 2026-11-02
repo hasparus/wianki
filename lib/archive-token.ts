@@ -8,6 +8,10 @@ export type ArchiveOperation = "upload" | "delete" | "reconcile";
 
 export type ArchiveClaims = {
 	photoId: string;
+	/** Which wedding the original belongs to; the Worker prefixes keys with it. */
+	siteId: string;
+	/** The site's origin, so the Worker can answer CORS for exactly this site. */
+	origin: string;
 	operation: ArchiveOperation;
 	filename?: string;
 	contentType?: string;

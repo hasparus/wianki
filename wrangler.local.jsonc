@@ -1,0 +1,31 @@
+{
+	// Local-only bindings for the Next.js dev server when alchemy has not
+	// written wrangler.jsonc (plain `next dev`, CI, Playwright). Nothing here
+	// is deployed and nothing here is secret: the real configuration is
+	// alchemy.run.ts. The ids match what `alchemy dev` generates for the "dev"
+	// stage, so both flows share the SQLite file under .wrangler/state/v3.
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "wianki-app-local",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": ["nodejs_compat"],
+	// Only `npm run preview` (wrangler dev of the OpenNext bundle) uses these.
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "wianki-dev",
+			"database_id": "wianki-dev",
+			"migrations_dir": "db/migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "GALLERY",
+			"bucket_name": "wianki-gallery-dev"
+		}
+	]
+}
